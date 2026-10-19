@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Check,
   ClipboardCopy,
   Download,
+  FileArchive,
   FileCode2,
   HardDriveDownload,
   Loader2,
@@ -30,18 +31,22 @@ import {
 } from "@/components/builder/controls";
 import { EXPORT_FORMATS, EXPORT_SIZES, type ExportFormat } from "@/lib/qr-design";
 import { exportQr } from "@/lib/qr-export";
-import { ShareError, shareQrImage } from "@/lib/qr-share";
+import { isShareSupported, ShareError, shareQrImage } from "@/lib/qr-share";
 import { useBuilder } from "@/lib/builder-store";
 import { payloadSize } from "@/lib/qr-payload";
 import { scanLabel } from "@/lib/qr-analysis";
+import { describeError } from "@/lib/qcp";
 import { cn } from "@/lib/utils";
 
 /** Onglet « Export » : formats, résolution et téléchargement local (spec 005). */
 export function ModuleExport() {
-  const { state, dispatch, type, debouncedPayload, missingField, progress } = useBuilder();
-  const [busy, setBusy] = useState<ExportFormat | "clipboard" | "share" | null>(null);
+  const { state, dispatch, type, debouncedPayload, missingField, progress, saveProjectAsQcp } =
+    useBuilder();
+  const [busy, setBusy] = useState<ExportFormat | "clipboard" | "share" | "qcp" | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Feuille de partage disponible ? (Tauri natif, ou Web Share côté navigateur.)
+  const shareSupported = useMemo(() => isShareSupported(), []);
 
   const run = async (format: ExportFormat) => {
     if (missingField) {
@@ -103,6 +108,21 @@ export function ModuleExport() {
           ? shareError.message
           : "Le partage a échoué. Exportez le fichier puis partagez-le manuellement.",
       );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Export du projet complet (contenu, design, médias) en archive .qcp. */
+  const exportProjectQcp = async () => {
+    setBusy("qcp");
+    setError(null);
+    setDone(null);
+    try {
+      const path = await saveProjectAsQcp();
+      if (path) setDone(`Projet exporté : ${path}`);
+    } catch (cause) {
+      setError(describeError(cause, "Enregistrement du projet impossible."));
     } finally {
       setBusy(null);
     }
@@ -249,11 +269,26 @@ export function ModuleExport() {
           variant="outline"
           className="w-full"
           disabled={busy !== null}
+          onClick={exportProjectQcp}
+        >
+          {busy === "qcp" ? <Loader2 className="animate-spin" /> : <FileArchive />}
+          Exporter le projet (.qcp)
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={busy !== null || !shareSupported}
           onClick={shareNative}
         >
           {busy === "share" ? <Loader2 className="animate-spin" /> : <Share2 />}
-          Partager (menu natif)
+          Partager
         </Button>
+        {!shareSupported ? (
+          <p className="text-[0.62rem] leading-relaxed text-muted-foreground">
+            Le partage système n&apos;est pas pris en charge par ce navigateur.
+          </p>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
