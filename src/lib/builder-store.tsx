@@ -24,7 +24,7 @@ import {
 import { DEFAULT_DESIGN, type QrDesign } from "@/lib/qr-design";
 import { buildPayload } from "@/lib/qr-payload";
 import { sanitizeFileName } from "@/lib/qr-export";
-
+import { contentFromPayload } from "@/lib/qr-import";
 import { applyQcpManifest, buildQcpManifest, type QcpFilePayload } from "@/lib/qcp";
 
 export type BuilderModule =
@@ -111,8 +111,7 @@ function createProjectId(): string {
 }
 
 /** Nom de projet unique à la Photoshop : « Sans titre », « Sans titre 2 »… */
-function uniqueProjectName(existing: string[]): string {
-  const base = "Sans titre";
+function uniqueProjectName(existing: string[], base = "Sans titre"): string {
   if (!existing.includes(base)) return base;
   let index = 2;
   while (existing.includes(`${base} ${index}`)) index += 1;
@@ -281,6 +280,8 @@ export type BuilderContextValue = {
   saveProjectAsQcp: () => Promise<string>;
   /** Ouvre un fichier .qcp et l'ajoute au registre comme nouveau projet. */
   openProjectFromQcp: (path: string) => Promise<void>;
+  /** Crée un projet depuis un QR existant (image, SVG ou PDF). */
+  newProjectFromQr: (path: string) => Promise<void>;
 };
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -549,6 +550,35 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [registerAndActivate],
   );
 
+  const newProjectFromQr = useCallback(
+    async (path: string): Promise<void> => {
+      const result = await invoke<{ payload: string; errorCorrection: string | null }>(
+        "import_qr_from_file",
+        { path },
+      );
+      const content = contentFromPayload(result.payload);
+      const type = getQrType(content.typeId);
+      const errorCorrection = ["L", "M", "Q", "H"].includes(result.errorCorrection ?? "")
+        ? (result.errorCorrection as QrDesign["errorCorrection"])
+        : DEFAULT_DESIGN.errorCorrection;
+      registerAndActivate({
+        projectId: createProjectId(),
+        projectName: uniqueProjectName(
+          projectsData.items.map((item) => item.state.projectName),
+          "QR importé",
+        ),
+        typeId: type.id,
+        valuesByType: { [type.id]: { ...defaultValuesFor(type), ...content.values } },
+        design: { ...DEFAULT_DESIGN, errorCorrection },
+        activeModule: "content",
+        mockupId: "plain",
+        saveSize: 1024,
+        savedAt: null,
+      });
+    },
+    [projectsData.items, registerAndActivate],
+  );
+
   const setValue = useCallback(
     (field: string, value: string) => dispatch({ type: "setValue", field, value }),
     [],
@@ -587,6 +617,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       deleteProject,
       saveProjectAsQcp,
       openProjectFromQcp,
+      newProjectFromQr,
     }),
     [
       state,
@@ -606,6 +637,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       deleteProject,
       saveProjectAsQcp,
       openProjectFromQcp,
+      newProjectFromQr,
     ],
   );
 

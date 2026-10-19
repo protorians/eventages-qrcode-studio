@@ -5,6 +5,7 @@ import {
   Copy,
   FileDown,
   FolderOpen,
+  ImageUp,
   Layers,
   Loader2,
   Plus,
@@ -32,6 +33,12 @@ import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { cn } from "@/lib/utils";
 
 const QCP_FILTERS = [{ name: "Projet QR Code Studio", extensions: ["qcp"] }];
+const QR_SOURCE_FILTERS = [
+  {
+    name: "QR code (image, SVG, PDF)",
+    extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "pdf"],
+  },
+];
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -60,10 +67,11 @@ export function ProjectDialog({
     deleteProject,
     saveProjectAsQcp,
     openProjectFromQcp,
+    newProjectFromQr,
   } = useBuilder();
   const [query, setQuery] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"open" | "save" | null>(null);
+  const [busy, setBusy] = useState<"open" | "import" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const confirmTimer = useRef<number | null>(null);
@@ -137,6 +145,27 @@ export function ProjectDialog({
     }
   };
 
+  /** Décode un QR existant (image, SVG, PDF) et crée un projet pré-rempli. */
+  const handleImportQr = async () => {
+    setError(null);
+    setNotice(null);
+    const selection = await openFileDialog({
+      multiple: false,
+      directory: false,
+      filters: QR_SOURCE_FILTERS,
+    });
+    if (typeof selection !== "string") return;
+    setBusy("import");
+    try {
+      await newProjectFromQr(selection);
+      onOpenChange(false);
+    } catch (cause) {
+      setError(describeError(cause, "Import du QR code impossible."));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   /** Écrit le projet actif dans une archive .qcp via le backend Rust. */
   const handleSaveQcp = async () => {
     setError(null);
@@ -175,6 +204,16 @@ export function ProjectDialog({
               aria-label="Ouvrir un fichier projet"
             >
               <FolderOpen />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled={busy !== null}
+              onClick={handleImportQr}
+              aria-label="Importer un QR existant"
+            >
+              <ImageUp />
             </Button>
             <Button
               type="button"
@@ -220,6 +259,17 @@ export function ProjectDialog({
               >
                 {busy === "open" ? <Loader2 className="animate-spin" /> : <FolderOpen />}
                 Ouvrir un fichier…
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-1.5"
+                disabled={busy !== null}
+                onClick={handleImportQr}
+              >
+                {busy === "import" ? <Loader2 className="animate-spin" /> : <ImageUp />}
+                Importer un QR…
               </Button>
               <Button
                 type="button"

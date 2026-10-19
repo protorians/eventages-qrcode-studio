@@ -25,6 +25,18 @@ en `0.x` et le produit n'est pas encore promis stable.
   `dialog:default`), boutons dédiés dans le gestionnaire de projets
   (rail latéral + raccourcis mobiles).
 
+#### Importer un QR existant
+- **Import d'un QR existant** : décodage natif hors ligne d'un QR depuis une image
+  (PNG, JPEG, WebP, GIF, BMP, TIFF), un fichier vectoriel SVG (rasterisé par
+  usvg/resvg) ou un PDF (extraction des images embarquées via lopdf, JPEG ou
+  échantillons bruts, avec gestion DeviceGray/RGB/CMYK, Indexed, ICCBased et
+  masques 1 bit) ; détection du payload et du niveau de correction d'erreur,
+  avec réessai en négatif pour les QR clairs sur fond sombre
+  (`src-tauri/src/import.rs`, `src/lib/qr-import.ts`).
+- Le contenu importé pré-remplit le bon type de projet : URL, Wi-Fi (avec
+  échappements), e-mail (mailto), SMS (SMSTO/sms/tel), sinon texte brut ;
+  le niveau de correction détecté est repris dans le design du nouveau projet.
+
 ---
 
 ## [0.1.0] — 2026-10-19 · Première version

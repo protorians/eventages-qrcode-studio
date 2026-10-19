@@ -1,3 +1,4 @@
+mod import;
 mod qcp;
 mod share;
 
@@ -6,7 +7,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![share_image, save_project_qcp, open_project_qcp])
+        .invoke_handler(tauri::generate_handler![
+            share_image,
+            save_project_qcp,
+            open_project_qcp,
+            import_qr_from_file
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -38,4 +44,11 @@ fn save_project_qcp(
 #[tauri::command]
 fn open_project_qcp(path: String) -> Result<qcp::QcpContents, String> {
     qcp::open_project(&path)
+}
+
+/// Décode un QR code existant depuis une image, un SVG ou un PDF, entièrement
+/// en local. Renvoie le contenu encodé et le niveau de correction détecté.
+#[tauri::command]
+fn import_qr_from_file(path: String) -> Result<import::QrImport, String> {
+    import::import_qr(&path)
 }
