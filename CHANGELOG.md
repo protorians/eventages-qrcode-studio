@@ -8,6 +8,30 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [0.3.0] — 2026-10-19 · Export .qcp et partage web
+
+### Ajouté
+
+#### Exporter le projet en .qcp depuis l'onglet Export
+- **Nouvelle option d'export** : le bouton « Exporter le projet (.qcp) » dans la
+  section « Exports rapides » écrit l'archive projet complète — contenu, design,
+  mockup, résolution et fichiers média — via le même flux que le gestionnaire de
+  projets, avec boîte de dialogue native et extension imposée
+  (`src/components/builder/module-export.tsx`).
+
+### Modifié
+
+#### Partage : Navigator.share sur le web, option désactivée sinon
+- **Web Share API** : sur le web, le bouton « Partager » passe par le menu de
+  partage du navigateur (`navigator.share`), après sondage de la compatibilité
+  pour le partage de fichiers (`navigator.canShare`) (`src/lib/qr-share.ts`).
+- **Bouton grisé si non compatible** : dans un navigateur sans Web Share
+  exploitable pour les fichiers, l'option « Partager » est désactivée avec un
+  message explicatif ; sous Tauri (desktop), le partage natif du système reste
+  inchangé et la commande `share_image` n'est plus invoquée hors du shell.
+
+---
+
 ## [0.2.0] — 2026-10-19 · Fichiers projet et import
 
 ### Ajouté
@@ -82,4 +106,6 @@ compte ni serveur — desktop Tauri avec partage système natif.
 
 ---
 
+[0.3.0]: https://example.invalid/releases/v0.3.0
+[0.2.0]: https://example.invalid/releases/v0.2.0
 [0.1.0]: https://example.invalid/releases/v0.1.0
