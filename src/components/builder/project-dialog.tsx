@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Check,
   CloudOff,
   Copy,
+  FileDown,
   FolderOpen,
   Layers,
+  Loader2,
   Plus,
   Search,
   Trash2,
+  TriangleAlert,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +27,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { QrGlyph } from "@/components/builder/previews";
 import { getQrType } from "@/lib/qr-catalog";
 import { useBuilder, type ProjectSummary } from "@/lib/builder-store";
+import { describeError } from "@/lib/qcp";
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { cn } from "@/lib/utils";
+
+const QCP_FILTERS = [{ name: "Projet QR Code Studio", extensions: ["qcp"] }];
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -42,10 +51,21 @@ export function ProjectDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { state, projects, newProject, openProject, duplicateProject, deleteProject } =
-    useBuilder();
+  const {
+    state,
+    projects,
+    newProject,
+    openProject,
+    duplicateProject,
+    deleteProject,
+    saveProjectAsQcp,
+    openProjectFromQcp,
+  } = useBuilder();
   const [query, setQuery] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"open" | "save" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const confirmTimer = useRef<number | null>(null);
 
   // Réinitialise la recherche et la confirmation à chaque ouverture.
@@ -53,6 +73,8 @@ export function ProjectDialog({
     if (open) {
       setQuery("");
       setConfirmDeleteId(null);
+      setError(null);
+      setNotice(null);
     }
   }, [open]);
 
@@ -94,6 +116,42 @@ export function ProjectDialog({
     onOpenChange(false);
   };
 
+  /** Ouvre un fichier .qcp et l'ajoute au registre comme nouveau projet. */
+  const handleOpenQcp = async () => {
+    setError(null);
+    setNotice(null);
+    const selection = await openFileDialog({
+      multiple: false,
+      directory: false,
+      filters: QCP_FILTERS,
+    });
+    if (typeof selection !== "string") return;
+    setBusy("open");
+    try {
+      await openProjectFromQcp(selection);
+      onOpenChange(false);
+    } catch (cause) {
+      setError(describeError(cause, "Ouverture du fichier projet impossible."));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Écrit le projet actif dans une archive .qcp via le backend Rust. */
+  const handleSaveQcp = async () => {
+    setError(null);
+    setNotice(null);
+    setBusy("save");
+    try {
+      const path = await saveProjectAsQcp();
+      if (path) setNotice(`Projet enregistré : ${path}`);
+    } catch (cause) {
+      setError(describeError(cause, "Enregistrement du projet impossible."));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -104,8 +162,30 @@ export function ProjectDialog({
           <div className="space-y-0.5">
             <DialogTitle>Projets</DialogTitle>
             <DialogDescription>
-              Créez, dupliquez et rouvrez vos codes QR, enregistrés localement.
+              Créez, rouvrez et partagez vos codes QR — y compris via des fichiers .qcp.
             </DialogDescription>
+          </div>
+          <div className="flex items-center gap-0.5 sm:hidden">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled={busy !== null}
+              onClick={handleOpenQcp}
+              aria-label="Ouvrir un fichier projet"
+            >
+              <FolderOpen />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled={busy !== null}
+              onClick={handleSaveQcp}
+              aria-label="Enregistrer le projet en .qcp"
+            >
+              <FileDown />
+            </Button>
           </div>
           <div className="relative hidden sm:block">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -130,6 +210,48 @@ export function ProjectDialog({
             </Button>
 
             <div className="space-y-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-1.5"
+                disabled={busy !== null}
+                onClick={handleOpenQcp}
+              >
+                {busy === "open" ? <Loader2 className="animate-spin" /> : <FolderOpen />}
+                Ouvrir un fichier…
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full justify-start gap-1.5"
+                disabled={busy !== null}
+                onClick={handleSaveQcp}
+              >
+                {busy === "save" ? <Loader2 className="animate-spin" /> : <FileDown />}
+                Enregistrer (.qcp)
+              </Button>
+            </div>
+
+            {error ? (
+              <Alert variant="destructive" className="animate-fade-in">
+                <TriangleAlert />
+                <AlertDescription className="text-[0.66rem] leading-snug">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {notice ? (
+              <Alert className="animate-fade-in">
+                <Check />
+                <AlertDescription className="font-mono text-[0.62rem] leading-snug break-all">
+                  {notice}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            <div className="space-y-1">
               <FilterRow icon={<Layers />} label="Tous les projets" count={projects.length} active />
             </div>
 
@@ -139,8 +261,9 @@ export function ProjectDialog({
                 100 % hors ligne
               </p>
               <p className="text-[0.62rem] leading-relaxed text-muted-foreground">
-                Chaque projet (contenu et design) est enregistré automatiquement sur cet
-                appareil. Dupliquez un projet pour décliner un design.
+                Chaque projet est enregistré automatiquement sur cet appareil. Le format
+                .qcp regroupe contenu, design et fichiers média dans un seul fichier
+                partageable — ouvrable ici à tout moment.
               </p>
             </div>
           </aside>

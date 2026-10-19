@@ -8,6 +8,25 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [Non publié]
+
+### Ajouté
+
+#### Format de fichier projet .qcp
+- **Nouveau format de projet** : une archive zip générée par le backend Rust, contenant
+  un `manifest.json` (tous les paramètres : contenu par type, design, mockup,
+  résolution) et un dossier `assets/` avec les fichiers média du projet (logo,
+  visuels, PDF, audio…) (`src-tauri/src/qcp.rs`, `src/lib/qcp.ts`).
+- **Enregistrement** du projet actif en `.qcp` depuis le gestionnaire de projets
+  (boîte de dialogue native, extension imposée).
+- **Ouverture** d'un fichier `.qcp` : le projet est reconstruit et ajouté au registre
+  local, médias rechargés sous forme de data URLs — aucun changement de modèle.
+- Boîtes de dialogue fichiers natives via `tauri-plugin-dialog` (permission
+  `dialog:default`), boutons dédiés dans le gestionnaire de projets
+  (rail latéral + raccourcis mobiles).
+
+---
+
 ## [0.1.0] — 2026-10-19 · Première version
 
 Tranche initiale de l'application : création de QR personnalisés **100 % locale**, sans

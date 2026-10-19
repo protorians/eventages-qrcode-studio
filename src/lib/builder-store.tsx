@@ -9,6 +9,8 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import {
   defaultValuesFor,
   formProgress,
@@ -21,6 +23,9 @@ import {
 } from "@/lib/qr-catalog";
 import { DEFAULT_DESIGN, type QrDesign } from "@/lib/qr-design";
 import { buildPayload } from "@/lib/qr-payload";
+import { sanitizeFileName } from "@/lib/qr-export";
+
+import { applyQcpManifest, buildQcpManifest, type QcpFilePayload } from "@/lib/qcp";
 
 export type BuilderModule =
   | "content"
@@ -272,6 +277,10 @@ export type BuilderContextValue = {
   openProject: (id: string) => void;
   duplicateProject: (id: string) => void;
   deleteProject: (id: string) => void;
+  /** Écrit le projet actif dans un fichier .qcp ; renvoie le chemin. */
+  saveProjectAsQcp: () => Promise<string>;
+  /** Ouvre un fichier .qcp et l'ajoute au registre comme nouveau projet. */
+  openProjectFromQcp: (path: string) => Promise<void>;
 };
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -493,6 +502,53 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [projectsData.items, state.projectId],
   );
 
+  /** Enregistre le projet dans le registre et en fait le projet actif. */
+  const registerAndActivate = useCallback((imported: BuilderState) => {
+    const now = Date.now();
+    projectsDispatch({
+      type: "add",
+      project: { id: imported.projectId, createdAt: now, updatedAt: now, state: imported },
+    });
+    dispatch({ type: "hydrate", state: imported });
+  }, []);
+
+  const saveProjectAsQcp = useCallback(async (): Promise<string> => {
+    const { manifest, assets } = buildQcpManifest({
+      name: state.projectName,
+      typeId: state.typeId,
+      valuesByType: state.valuesByType,
+      design: state.design,
+      mockupId: state.mockupId,
+      saveSize: state.saveSize,
+    });
+    const target = await save({
+      title: "Enregistrer le projet",
+      defaultPath: `${sanitizeFileName(state.projectName)}.qcp`,
+      filters: [{ name: "Projet QR Code Studio", extensions: ["qcp"] }],
+    });
+    if (!target) return "";
+    return await invoke<string>("save_project_qcp", { path: target, manifest, assets });
+  }, [state]);
+
+  const openProjectFromQcp = useCallback(
+    async (path: string): Promise<void> => {
+      const file = await invoke<QcpFilePayload>("open_project_qcp", { path });
+      const data = applyQcpManifest({ manifest: file.manifest, assets: file.assets ?? [] });
+      registerAndActivate({
+        projectId: createProjectId(),
+        projectName: data.name,
+        typeId: data.typeId,
+        valuesByType: data.valuesByType,
+        design: data.design,
+        activeModule: "content",
+        mockupId: data.mockupId,
+        saveSize: data.saveSize,
+        savedAt: null,
+      });
+    },
+    [registerAndActivate],
+  );
+
   const setValue = useCallback(
     (field: string, value: string) => dispatch({ type: "setValue", field, value }),
     [],
@@ -529,6 +585,8 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       openProject,
       duplicateProject,
       deleteProject,
+      saveProjectAsQcp,
+      openProjectFromQcp,
     }),
     [
       state,
@@ -546,6 +604,8 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       openProject,
       duplicateProject,
       deleteProject,
+      saveProjectAsQcp,
+      openProjectFromQcp,
     ],
   );
 
