@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Thèmes de couleurs nommés (sélectionnés via [data-theme] sur <html>,
+   cf. use-settings.tsx). Le défaut « Or Studio » vit ci-dessous. */
+@import "./themes.css";
 
 /* Manrope Variable, latin subset only (normal style, variable weight 200-800).
    Kept inline instead of importing the full @fontsource-variable/manrope css:
@@ -19,7 +22,7 @@
 }
 
 /* JetBrains Mono Variable, latin subset only (normal style, variable weight 100-800).
-   Used for monospace contexts: URLs, payloads, code. */
+   Used for monospace contexts: URLs, payloads, code, readouts HUD. */
 @font-face {
   font-family: "JetBrains Mono Variable";
   font-style: normal;
@@ -34,76 +37,80 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  /* QR Code Studio — Light theme */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+/* Jetons du thème par défaut : applicables uniquement sans [data-theme]
+   (les thèmes nommés de themes.css prennent sinon le dessus). */
+:root:not([data-theme]) {
+  /* QR Code Studio — thème clair « blueprint » : papier froid, traits techniques,
+     accent doré sobre (la version diurne du HUD). */
+  --background: oklch(0.965 0.004 240);
+  --foreground: oklch(0.21 0.02 245);
+  --card: oklch(0.985 0.003 240);
+  --card-foreground: oklch(0.21 0.02 245);
+  --popover: oklch(0.985 0.003 240);
+  --popover-foreground: oklch(0.21 0.02 245);
+  --primary: oklch(0.55 0.1 83);
+  --primary-foreground: oklch(0.985 0.008 90);
+  --secondary: oklch(0.925 0.008 240);
+  --secondary-foreground: oklch(0.25 0.02 245);
+  --muted: oklch(0.925 0.008 240);
+  --muted-foreground: oklch(0.5 0.02 245);
+  --accent: oklch(0.925 0.008 240);
+  --accent-foreground: oklch(0.25 0.02 245);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --border: oklch(0.86 0.012 240);
+  --input: oklch(0.83 0.014 240);
+  --ring: oklch(0.55 0.1 83);
+  --radius: 0.25rem;
+  --chart-1: oklch(0.55 0.1 83);
+  --chart-2: oklch(0.55 0.12 220);
+  --chart-3: oklch(0.55 0.14 155);
+  --chart-4: oklch(0.5 0.19 26);
+  --chart-5: oklch(0.5 0.13 300);
+  --sidebar: oklch(0.945 0.005 240);
+  --sidebar-foreground: oklch(0.21 0.02 245);
+  --sidebar-primary: oklch(0.55 0.1 83);
+  --sidebar-primary-foreground: oklch(0.985 0.008 90);
+  --sidebar-accent: oklch(0.925 0.008 240);
+  --sidebar-accent-foreground: oklch(0.25 0.02 245);
+  --sidebar-border: oklch(0.86 0.012 240);
+  --sidebar-ring: oklch(0.55 0.1 83);
 }
 
-.dark {
-  /* QR Code Studio — Dark theme (adapted for desktop app) */
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --radius: 0.625rem;
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+.dark:not([data-theme]) {
+  /* QR Code Studio — thème sombre « HUD » : coque anthracite bleutée, accents
+     dorés, lueurs et lignes de scan (références FUI). */
+  --background: oklch(0.165 0.015 240);
+  --foreground: oklch(0.93 0.008 240);
+  --card: oklch(0.205 0.017 240);
+  --card-foreground: oklch(0.93 0.008 240);
+  --popover: oklch(0.21 0.018 240);
+  --popover-foreground: oklch(0.93 0.008 240);
+  --primary: oklch(0.775 0.105 85);
+  --primary-foreground: oklch(0.185 0.04 85);
+  --secondary: oklch(0.26 0.02 240);
+  --secondary-foreground: oklch(0.93 0.008 240);
+  --muted: oklch(0.26 0.02 240);
+  --muted-foreground: oklch(0.68 0.015 240);
+  --accent: oklch(0.26 0.02 240);
+  --accent-foreground: oklch(0.93 0.008 240);
+  --destructive: oklch(0.66 0.2 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.775 0.105 85);
+  --radius: 0.25rem;
+  --chart-1: oklch(0.775 0.105 85);
+  --chart-2: oklch(0.75 0.1 215);
+  --chart-3: oklch(0.75 0.15 160);
+  --chart-4: oklch(0.66 0.2 25);
+  --chart-5: oklch(0.68 0.15 300);
+  --sidebar: oklch(0.19 0.016 240);
+  --sidebar-foreground: oklch(0.93 0.008 240);
+  --sidebar-primary: oklch(0.775 0.105 85);
+  --sidebar-primary-foreground: oklch(0.185 0.04 85);
+  --sidebar-accent: oklch(0.26 0.02 240);
+  --sidebar-accent-foreground: oklch(0.93 0.008 240);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.775 0.105 85);
 }
 
 @theme inline {
@@ -125,7 +132,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 4px);
   --radius-xl: calc(var(--radius) + 8px);
@@ -145,9 +152,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-2xl: calc(var(--radius) * 3);
+  --radius-3xl: calc(var(--radius) * 4);
+  --radius-4xl: calc(var(--radius) * 5);
 }
 
 @layer base {
@@ -163,8 +170,9 @@
 }
 
 /* ---------------------------------------------------------------------------
-   QR Code Studio — animations & surfaces de l'atelier
-   (transitions « organiques » : courbes douces, apparitions décalées)
+   QR Code Studio — direction artistique « HUD »
+   Coques sombres à coins coupés, brackets d'angle, readouts mono, scanlines,
+   balayages de scan ; mouvements doux et organiques (courbes d'acier).
 --------------------------------------------------------------------------- */
 
 @keyframes qs-fade-in {
@@ -200,6 +208,7 @@
   }
 }
 
+/* Dérive lente des nappes lumineuses du fond. */
 @keyframes qs-aurora {
   0% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -212,13 +221,48 @@
   }
 }
 
+/* Balayage vertical du faisceau de scan (scène centrale). */
+@keyframes qs-scan-y {
+  from {
+    transform: translateY(-130%);
+  }
+  to {
+    transform: translateY(430%);
+  }
+}
+
+/* Pulsation d'une lueur (valeurs « actives », cible de scan). */
 @keyframes qs-glow {
   0%,
   100% {
     opacity: 0.35;
   }
   50% {
-    opacity: 0.7;
+    opacity: 0.8;
+  }
+}
+
+/* Clignement d'un voyant d'état (readout actif). */
+@keyframes qs-blink {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+/* Tracé progressif d'un bracket (apparition des panneaux). */
+@keyframes qs-draw {
+  from {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -233,6 +277,10 @@
 
   .animate-module-in {
     animation: qs-module-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-draw {
+    animation: qs-draw 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .no-scrollbar {
@@ -259,43 +307,488 @@
       -9px 0;
   }
 
-  /* Repère de mise en page de l'atelier. */
+  /* Grille de mise en page « blueprint » : traits fins + repères d'axe. */
   .stage-grid {
-    background-image: radial-gradient(
-      color-mix(in oklch, var(--foreground) 12%, transparent) 1px,
-      transparent 1px
-    );
-    background-size: 22px 22px;
+    background-image:
+      linear-gradient(
+        color-mix(in oklch, var(--foreground) 10%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--foreground) 10%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        color-mix(in oklch, var(--foreground) 4.5%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in oklch, var(--foreground) 4.5%, transparent) 1px,
+        transparent 1px
+      );
+    background-size:
+      110px 110px,
+      110px 110px,
+      22px 22px,
+      22px 22px;
   }
 
+  /* Ambiance du fond : nappes doré/cyan en dérive + traînées diagonales. */
   .aurora {
     background:
+      repeating-linear-gradient(
+        -24deg,
+        transparent 0 46px,
+        color-mix(in oklch, var(--foreground) 2.5%, transparent) 46px 47px
+      ),
       radial-gradient(
         62rem 40rem at 8% -12%,
-        color-mix(in oklch, var(--primary) 20%, transparent),
+        color-mix(in oklch, var(--primary) 14%, transparent),
         transparent 62%
       ),
       radial-gradient(
-        54rem 36rem at 94% -6%,
-        oklch(0.72 0.17 318 / 0.18),
+        54rem 36rem at 96% -4%,
+        color-mix(in oklch, oklch(0.72 0.11 215) 12%, transparent),
         transparent 60%
       ),
       radial-gradient(
-        46rem 30rem at 50% 112%,
-        oklch(0.75 0.14 196 / 0.14),
+        46rem 30rem at 50% 114%,
+        color-mix(in oklch, oklch(0.72 0.11 215) 9%, transparent),
         transparent 62%
       );
     animation: qs-aurora 26s ease-in-out infinite alternate;
+  }
+
+  /* Voile global : scanlines CRT discrètes + vignettage de dalle. */
+  .hud-overlay {
+    background:
+      repeating-linear-gradient(
+        0deg,
+        color-mix(in oklch, var(--foreground) 2.2%, transparent) 0 1px,
+        transparent 1px 3px
+      ),
+      radial-gradient(
+        120% 90% at 50% 40%,
+        transparent 55%,
+        color-mix(in oklch, var(--background) 72%, black) 100%
+      );
+  }
+
+  /* Coque HUD : coins supérieur droit et inférieur gauche coupés. */
+  .hud-clip {
+    clip-path: polygon(
+      0 0,
+      calc(100% - 0.75rem) 0,
+      100% 0.75rem,
+      100% 100%,
+      0.75rem 100%,
+      0 calc(100% - 0.75rem)
+    );
+  }
+
+  /* Variante à un seul angle coupé (haut droit). */
+  .hud-clip-tr {
+    clip-path: polygon(0 0, calc(100% - 0.65rem) 0, 100% 0.65rem, 100% 100%, 0 100%);
+  }
+
+  /* Faisceau de scan : à placer dans un conteneur overflow-hidden. */
+  .hud-sweep {
+    animation: qs-scan-y 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in oklch, var(--primary) 26%, transparent) 80%,
+      var(--primary)
+    );
   }
 
   .animate-glow {
     animation: qs-glow 3.6s ease-in-out infinite;
   }
 
+  .animate-blink {
+    animation: qs-blink 1.5s steps(1) infinite;
+  }
+
+  /* Lueur néon autour d'une surface active. */
+  .glow-primary {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--primary) 45%, transparent),
+      0 0 18px color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+
+  /* Barre de progression à crans (graduations découpées). */
+  .progress-ticks {
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0 5px,
+      color-mix(in oklch, var(--background) 88%, transparent) 5px 7px
+    );
+  }
+
+  /* Étiquette technique : mono, capitales, très espacée. */
+  .text-hud {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* Règles graduées de la scène (ticks horizontaux / verticaux). */
+  .ruler-x {
+    background-image: repeating-linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--foreground) 20%, transparent) 0 1px,
+      transparent 1px 24px
+    );
+  }
+
+  .ruler-y {
+    background-image: repeating-linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--foreground) 20%, transparent) 0 1px,
+      transparent 1px 24px
+    );
+  }
+
   /* Barres de défilement discrètes dans les panneaux. */
   .panel-scroll {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) transparent;
+  }
+
+  /* -------------------------------------------------------------------------
+     D.A. HUD étendue aux contrôles shadcn (boutons, champs, onglets…).
+     Habillage 100 % CSS ciblé par [data-slot] : aucun fichier de
+     src/components/ui n'est modifié. Le scope html:not([data-hud="off"])
+     rend le tout auto-réversible — HUD désactivé, les utilitaires Tailwind
+     d'origine (radius, typo, anneaux de focus) redeviennent prioritaires
+     et les contrôles retrouvent la D.A. shadcn pure.
+  ------------------------------------------------------------------------- */
+
+  /* Géométrie : arêtes vives, coin supérieur droit coupé (échelle contrôle). */
+  html:not([data-hud="off"]) [data-slot="button"],
+  html:not([data-hud="off"]) [data-slot="input"],
+  html:not([data-hud="off"]) [data-slot="textarea"],
+  html:not([data-hud="off"]) [data-slot="select-trigger"],
+  html:not([data-hud="off"]) [data-slot="tabs-list"],
+  html:not([data-hud="off"]) [data-slot="toggle"] {
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 0.5rem) 0, 100% 0.5rem, 100% 100%, 0 100%);
+  }
+
+  /* Étiquetage technique : mono, capitales, interlettrage large. */
+  html:not([data-hud="off"]) [data-slot="button"],
+  html:not([data-hud="off"]) [data-slot="select-trigger"],
+  html:not([data-hud="off"]) [data-slot="tabs-trigger"],
+  html:not([data-hud="off"]) [data-slot="toggle"] {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Badge : readout miniature — chip carré à coin coupé, mono capitales. */
+  html:not([data-hud="off"]) [data-slot="badge"] {
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 0.375rem) 0, 100% 0.375rem, 100% 100%, 0 100%);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* Switch : loquet rectangulaire cranté, curseur carré. */
+  html:not([data-hud="off"]) [data-slot="switch"] {
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 0.25rem) 0, 100% 0.25rem, 100% 100%, 0 100%);
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0 5px,
+      color-mix(in oklch, var(--background) 55%, transparent) 5px 6px
+    );
+  }
+
+  /* Curseurs carrés (switch) + rail de slider gradué façon règle. */
+  html:not([data-hud="off"]) [data-slot="switch"] [data-slot="switch-thumb"],
+  html:not([data-hud="off"]) [data-slot="slider"] [data-slot="slider-thumb"] {
+    border-radius: 0;
+  }
+
+  html:not([data-hud="off"]) [data-slot="slider-track"] {
+    border-radius: 0;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0 7px,
+      color-mix(in oklch, var(--foreground) 18%, transparent) 7px 8px
+    );
+  }
+
+  /* Onglet actif : soulignement accent posé à l'intérieur de la liste. */
+  html:not([data-hud="off"])
+    [data-slot="tabs-list"]:not([data-variant="line"])
+    [data-slot="tabs-trigger"][data-active] {
+    box-shadow: inset 0 -2px 0 0 var(--primary);
+  }
+
+  /* Contrôle segmenté maison (controls.tsx) : mêmes langue et accents que
+     les onglets — coque carrée à coin coupé, déclencheurs mono, actif
+     souligné. React rend data-active="true"/"false" : tester la valeur. */
+  html:not([data-hud="off"]) [data-slot="segmented-control"] {
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 0.5rem) 0, 100% 0.5rem, 100% 100%, 0 100%);
+  }
+
+  html:not([data-hud="off"]) [data-slot="segmented-trigger"] {
+    border-radius: 0;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  html:not([data-hud="off"])
+    [data-slot="segmented-trigger"][data-active="true"]:not(:focus-visible) {
+    box-shadow: inset 0 -2px 0 0 var(--primary);
+  }
+
+  /* Focus clavier : le clip-path découpe les anneaux externes (ring) posés
+     par les utilitaires shadcn — on les remplace par un cerclage intérieur
+     doublé d'une lueur douce. Pour l'onglet actif, on garde le soulignement. */
+  html:not([data-hud="off"])
+    [data-slot="tabs-list"]:not([data-variant="line"])
+    [data-slot="tabs-trigger"][data-active]:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--ring),
+      inset 0 -2px 0 0 var(--primary),
+      inset 0 0 12px color-mix(in oklch, var(--ring) 22%, transparent);
+  }
+
+  html:not([data-hud="off"]) [data-slot="button"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="input"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="textarea"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="select-trigger"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="tabs-trigger"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="switch"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="toggle"]:focus-visible,
+  html:not([data-hud="off"]) [data-slot="badge"]:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--ring),
+      inset 0 0 12px color-mix(in oklch, var(--ring) 22%, transparent);
+  }
+
+  /* Champ invalide : l'accent (bordure, cerclage et lueur de focus) bascule
+     en rouge — mêmes couleurs que les variantes aria-invalid de shadcn. */
+  html:not([data-hud="off"]) [data-slot="input"][aria-invalid="true"],
+  html:not([data-hud="off"]) [data-slot="textarea"][aria-invalid="true"],
+  html:not([data-hud="off"]) [data-slot="select-trigger"][aria-invalid="true"],
+  html:not([data-hud="off"]) [data-slot="button"][aria-invalid="true"],
+  html:not([data-hud="off"]) [data-slot="toggle"][aria-invalid="true"] {
+    --ring: var(--destructive);
+  }
+
+  /* -------------------------------------------------------------------------
+     Surfaces structurantes : modales (dialog, sheet, popover, select),
+     cartes et listes. Même principe que les contrôles : habillage 100 % CSS
+     par [data-slot], aucun fichier de src/components/ui n'est modifié.
+  ------------------------------------------------------------------------- */
+
+  /* Coques de modales : panneaux à double cran (haut droit + bas gauche).
+     Le clip-path découperait l'anneau et l'ombre externes — on les remplace
+     par un liseré et une lueur posés à l'intérieur. */
+  html:not([data-hud="off"]) [data-slot="dialog-content"],
+  html:not([data-hud="off"]) [data-slot="sheet-content"] {
+    border-radius: 0;
+    clip-path: polygon(
+      0 0,
+      calc(100% - 0.75rem) 0,
+      100% 0.75rem,
+      100% 100%,
+      0.75rem 100%,
+      0 calc(100% - 0.75rem)
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklch, var(--ring) 28%, transparent),
+      inset 0 0 26px color-mix(in oklch, var(--ring) 9%, transparent);
+  }
+
+  /* Surfaces flottantes compactes (popover, liste déroulante) : mêmes
+     langue et accents, à l'échelle des contrôles (cran 0.5rem). */
+  html:not([data-hud="off"]) [data-slot="popover-content"],
+  html:not([data-hud="off"]) [data-slot="select-content"] {
+    border-radius: 0;
+    clip-path: polygon(
+      0 0,
+      calc(100% - 0.5rem) 0,
+      100% 0.5rem,
+      100% 100%,
+      0.5rem 100%,
+      0 calc(100% - 0.5rem)
+    );
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklch, var(--ring) 28%, transparent),
+      inset 0 0 18px color-mix(in oklch, var(--ring) 9%, transparent);
+  }
+
+  /* Fonds de modale : scanlines discrètes par-dessus le voile assombri.
+     Posées en background-image pour composer avec bg-black/10. */
+  html:not([data-hud="off"]) [data-slot="dialog-overlay"],
+  html:not([data-hud="off"]) [data-slot="sheet-overlay"] {
+    background-image: repeating-linear-gradient(
+      0deg,
+      color-mix(in oklch, var(--foreground) 2.2%, transparent) 0 1px,
+      transparent 1px 3px
+    );
+  }
+
+  /* Brackets d'angle sur les deux coins non coupés des grandes modales —
+     pseudo-éléments en absolu (hors flux grid/flex, non cliquables). */
+  html:not([data-hud="off"]) [data-slot="dialog-content"]::before,
+  html:not([data-hud="off"]) [data-slot="sheet-content"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+      linear-gradient(90deg, var(--ring) 0 1.25rem, transparent 1.25rem),
+      linear-gradient(180deg, var(--ring) 0 1.25rem, transparent 1.25rem),
+      linear-gradient(270deg, var(--ring) 0 1.25rem, transparent 1.25rem),
+      linear-gradient(0deg, var(--ring) 0 1.25rem, transparent 1.25rem);
+    background-position:
+      0 0,
+      0 0,
+      100% 100%,
+      100% 100%;
+    background-size:
+      100% 1px,
+      1px 100%,
+      100% 1px,
+      1px 100%;
+    background-repeat: no-repeat;
+  }
+
+  /* Titres de panneaux : readouts mono capitales (la taille reste celle
+     du composant ; le scope rend le tout réversible hors HUD). */
+  html:not([data-hud="off"]) [data-slot="dialog-title"],
+  html:not([data-hud="off"]) [data-slot="sheet-title"],
+  html:not([data-hud="off"]) [data-slot="popover-title"],
+  html:not([data-hud="off"]) [data-slot="card-title"] {
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Blocs internes : arêtes vives — plus d'arrondis sous les coupes. */
+  html:not([data-hud="off"]) [data-slot="dialog-footer"],
+  html:not([data-hud="off"]) [data-slot="card-header"],
+  html:not([data-hud="off"]) [data-slot="card-footer"] {
+    border-radius: 0;
+  }
+
+  /* Carte : panneau à double cran, liseré intérieur neutre (équivalent
+     de son ring-1, que le clip-path découperait). */
+  html:not([data-hud="off"]) [data-slot="card"] {
+    border-radius: 0;
+    clip-path: polygon(
+      0 0,
+      calc(100% - 0.75rem) 0,
+      100% 0.75rem,
+      100% 100%,
+      0.75rem 100%,
+      0 calc(100% - 0.75rem)
+    );
+    box-shadow: inset 0 0 0 1px
+      color-mix(in oklch, var(--foreground) 10%, transparent);
+  }
+
+  html:not([data-hud="off"]) [data-slot="card"] img {
+    border-radius: 0;
+  }
+
+  /* Listes maison (data-slot="list") : rangées carrées à cran court.
+     Leur anneau de focus externe serait découpé par le clip — remplacé
+     par le cerclage intérieur des contrôles. */
+  html:not([data-hud="off"]) [data-slot="list"] button {
+    border-radius: 0;
+    clip-path: polygon(
+      0 0,
+      calc(100% - 0.375rem) 0,
+      100% 0.375rem,
+      100% 100%,
+      0 100%
+    );
+  }
+
+  html:not([data-hud="off"]) [data-slot="list"] button:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--ring),
+      inset 0 0 12px color-mix(in oklch, var(--ring) 22%, transparent);
+  }
+
+  /* Liste déroulante : items carrés, libellés de groupe en readout. */
+  html:not([data-hud="off"]) [data-slot="select-item"] {
+    border-radius: 0;
+  }
+
+  html:not([data-hud="off"]) [data-slot="select-label"] {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* -------------------------------------------------------------------------
+     Mode HUD désactivé ([data-hud="off"], réglage dans use-settings.tsx) :
+     l'interface garde ses couleurs mais perd ses ornements — plus de
+     scanlines, de coins coupés ni de lueurs ; la typo technique redevient
+     sobre. Les contrôles shadcn repassent en D.A. d'origine (le scope
+     :not([data-hud="off"]) de la section précédente cesse de s'appliquer).
+     Les composants d'ornement (hud.tsx) se masquent côté React.
+  ------------------------------------------------------------------------- */
+  html[data-hud="off"] .hud-overlay,
+  html[data-hud="off"] .ruler-x,
+  html[data-hud="off"] .ruler-y,
+  html[data-hud="off"] .hud-sweep,
+  html[data-hud="off"] .animate-glow {
+    display: none;
+  }
+
+  html[data-hud="off"] .hud-clip {
+    clip-path: none;
+    border-radius: 0.5rem;
+  }
+
+  html[data-hud="off"] .hud-clip-tr {
+    clip-path: none;
+    border-radius: 0.25rem;
+  }
+
+  html[data-hud="off"] .glow-primary {
+    box-shadow: none;
+  }
+
+  html[data-hud="off"] .text-hud {
+    font-family: var(--font-sans, inherit);
+    font-size: 0.6875rem;
+    letter-spacing: 0.01em;
+    text-transform: none;
+  }
+
+  html[data-hud="off"] .progress-ticks {
+    background-image: none;
+  }
+
+  /* Animations désactivées ([data-anim="off"]) : tout est figé. */
+  html[data-anim="off"] *,
+  html[data-anim="off"] *::before,
+  html[data-anim="off"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }
 

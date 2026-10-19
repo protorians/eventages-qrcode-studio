@@ -16,11 +16,12 @@ import { OptionsPanel } from "@/components/builder/options-panel";
 import { ProjectDialog } from "@/components/builder/project-dialog";
 import { Stage } from "@/components/builder/stage";
 import { BuilderProvider, useBuilder } from "@/lib/builder-store";
+import { SettingsDialog } from "@/components/builder/settings-dialog";
 import { useIsDesktop, useIsTablet } from "@/hooks/use-media-query";
-import { useTheme } from "@/hooks/use-theme";
+import { SettingsProvider, useSettings } from "@/hooks/use-settings";
 
 function BuilderShell() {
-  const { theme, toggle } = useTheme();
+  const { mode, toggleMode, hud } = useSettings();
   const { state, dispatch } = useBuilder();
   const isTablet = useIsTablet();
   const isDesktop = useIsDesktop();
@@ -28,6 +29,7 @@ function BuilderShell() {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
   const [projectsOpen, setProjectsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Fermer les feuilles quand la place disponible permet le panneau fixe.
   useEffect(() => {
@@ -48,10 +50,14 @@ function BuilderShell() {
   return (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       <div className="aurora pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
+      {hud ? (
+        <div className="hud-overlay pointer-events-none absolute inset-0 -z-10" aria-hidden="true" />
+      ) : null}
 
       <AppHeader
-        theme={theme}
-        onToggleTheme={toggle}
+        theme={mode}
+        onToggleTheme={toggleMode}
+        onOpenSettings={() => setSettingsOpen(true)}
         showLibraryButton={!isDesktop}
         onOpenLibrary={() => setLibraryOpen(true)}
         onOpenModules={() => setModulesOpen(true)}
@@ -80,6 +86,7 @@ function BuilderShell() {
         onOpenLibrary={() => setLibraryOpen(true)}
         onOpenModules={() => setModulesOpen(true)}
         onOpenProjects={() => setProjectsOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         onExport={exportModule}
       />
 
@@ -110,17 +117,20 @@ function BuilderShell() {
       </Sheet>
 
       <ProjectDialog open={projectsOpen} onOpenChange={setProjectsOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }
 
 function App() {
   return (
-    <TooltipProvider delay={200}>
-      <BuilderProvider>
-        <BuilderShell />
-      </BuilderProvider>
-    </TooltipProvider>
+    <SettingsProvider>
+      <TooltipProvider delay={200}>
+        <BuilderProvider>
+          <BuilderShell />
+        </BuilderProvider>
+      </TooltipProvider>
+    </SettingsProvider>
   );
 }
 

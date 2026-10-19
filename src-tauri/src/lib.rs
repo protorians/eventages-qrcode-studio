@@ -36,8 +36,7 @@ fn save_project_qcp(
     manifest: String,
     assets: Vec<qcp::AssetInput>,
 ) -> Result<String, String> {
-    qcp::save_project(&path, &manifest, &assets)?;
-    Ok(path)
+    qcp::save_project(&path, &manifest, &assets)
 }
 
 /// Lit un fichier `.qcp` et renvoie le manifeste plus les fichiers média.

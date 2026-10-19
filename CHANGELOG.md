@@ -8,6 +8,63 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [0.5.0] — 2026-10-19 · Paramètres, D.A. HUD et fichier lié
+
+### Ajouté
+
+#### Panneau de paramètres de l'application
+- **Nouvelle boîte de dialogue « Paramètres »** (bouton dans le bandeau
+  supérieur et la navigation mobile, `settings-dialog.tsx`) : apparence, effets
+  d'interface et enregistrement, avec rappel du fonctionnement 100 % local.
+- **Thèmes de couleurs** : en plus du défaut « Or Studio », quatre thèmes
+  nommés — Crimson, Cramoisy, Shalk, Violate — posés par l'attribut
+  `data-theme` (`src/themes.css`), avec aperçu clair/sombre et sélection
+  persistée.
+- **Mode HUD désactivable** : les ornements (coins coupés, brackets,
+  scanlines, readouts) se coupent d'un seul réglage — `data-hud="off"` rend la
+  priorité aux utilitaires Tailwind d'origine, sans neutralisations manuelles.
+- **Animations désactivables** : `data-anim="off"` fige transitions et
+  keyframes côté CSS.
+- **Préférences persistées localement** (`qrcode-studio:settings:v1`) ;
+  l'ancienne clé de thème est migrée au premier lancement et `use-theme.ts`
+  disparaît au profit du provider `use-settings.tsx` (mode clair/sombre,
+  thème, HUD, animations, enregistrement auto).
+
+#### D.A. HUD appliquée à toute l'interface
+- **Habillage des contrôles shadcn** dans `src/index.css` (scopé sous
+  `html:not([data-hud="off"])`, ciblé par `[data-slot="…"]`) : boutons,
+  inputs, textarea, switch, tabs, select, slider, badge, toggle et composites
+  maison (`SegmentedControl`) adoptent coins coupés, typo mono capitales et
+  focus clavier reposé en intérieur — `src/components/ui/*` reste inchangé.
+- **Primitives HUD réutilisables** (`hud.tsx`) : `HudCorners`, `HudLabel`,
+  `HudReadout`, `HudCross`, `HudStatusDot`.
+- **Bandeau supérieur façon console de contrôle** : ligne d'énergie, télémétrie
+  (`SYS:LOCAL`, jauge `PRG` à crans) et export en surbrillance ; bibliothèque,
+  projets, scène et dock reprennent labels, numérotations et marques
+  d'activité.
+
+#### Enregistrement lié et automatique du fichier .qcp
+- **Fichier lié** : après un « Enregistrer sous… », le projet retient son
+  chemin — « Enregistrer » (⌘S) réécrit directement le `.qcp`, sans boîte de
+  dialogue (`builder-store.tsx` : `filePath`, `dirty`, `saveProject`).
+- **Enregistrement automatique** : une fois le fichier lié, chaque
+  modification stabilisée (1,6 s) réécrit le `.qcp` ; désactivable dans les
+  paramètres. Les projets non liés restent des brouillons locaux.
+- **Raccourcis clavier** : ⌘S enregistre, ⌘⇧S ouvre « Enregistrer sous… », avec
+  retour visuel (voyant d'état, flash, erreur) dans le bandeau.
+- **Bibliothèque** : le panneau affiche le fichier lié et son état
+  (auto-enregistré, en attente, non lié).
+- Backend : `save_project` renvoie désormais le chemin réel écrit (extension
+  `.qcp` imposée), utilisé pour lier le fichier au projet.
+
+### Modifié
+- `AGENTS.md` : nouvelle convention « D.A. HUD : habillage des contrôles dans
+  index.css ».
+- Versions alignées sur 0.5.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`) — `tauri.conf.json` et `Cargo.toml` étaient restés à 0.3.0.
+
+---
+
 ## [0.4.0] — 2026-10-19 · CLI headless (`qrs`)
 
 ### Ajouté
@@ -143,6 +200,7 @@ compte ni serveur — desktop Tauri avec partage système natif.
 
 ---
 
+[0.5.0]: https://example.invalid/releases/v0.5.0
 [0.4.0]: https://example.invalid/releases/v0.4.0
 [0.3.0]: https://example.invalid/releases/v0.3.0
 [0.2.0]: https://example.invalid/releases/v0.2.0

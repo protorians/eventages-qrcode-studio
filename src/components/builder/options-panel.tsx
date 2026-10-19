@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Crop, Download, Frame, Image as ImageIcon, Shapes, Type } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HudCorners, HudLabel } from "@/components/builder/hud";
 import { ModuleContent } from "@/components/builder/module-content";
 import { ModuleCorners } from "@/components/builder/module-corners";
 import { ModuleExport } from "@/components/builder/module-export";
@@ -54,6 +55,7 @@ export function OptionsPanel({
   const active = state.activeModule;
   const Module = RENDERERS[active];
   const meta = MODULE_TITLES[active];
+  const moduleCode = `0${BUILDER_MODULES.findIndex((m) => m.id === active) + 1}`;
 
   return (
     <aside
@@ -63,11 +65,27 @@ export function OptionsPanel({
       )}
       aria-label="Options de création"
     >
-      <header className="space-y-3 border-b border-border/60 px-3.5 py-3">
-        <div className="flex items-baseline justify-between gap-2">
+      <header className="relative space-y-3 border-b border-border/60 px-3.5 py-3">
+        <HudCorners
+          inset="0.4rem"
+          size="0.4rem"
+          thickness={1}
+          className="text-primary/50"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-linear-to-r from-primary/60 via-primary/15 to-transparent"
+        />
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="hud-clip-tr flex size-7 shrink-0 items-center justify-center bg-primary/15 font-mono text-[0.58rem] text-primary"
+          >
+            {moduleCode}
+          </span>
           <div className="min-w-0">
-            <h2 className="font-heading truncate text-sm font-semibold">{meta.title}</h2>
-            <p className="truncate text-[0.68rem] text-muted-foreground">{meta.detail}</p>
+            <HudLabel className="block">MOD — {meta.title}</HudLabel>
+            <h2 className="truncate text-[0.68rem] text-muted-foreground">{meta.detail}</h2>
           </div>
         </div>
 

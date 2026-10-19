@@ -302,6 +302,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       role="tablist"
+      data-slot="segmented-control"
       className={cn(
         "flex items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5",
         className,
@@ -316,6 +317,7 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={active}
             data-active={active}
+            data-slot="segmented-trigger"
             onClick={() => onChange(option.value)}
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-[7px] font-medium whitespace-nowrap transition-all duration-300 ease-out",

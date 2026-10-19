@@ -61,7 +61,8 @@ fn sanitize_asset_path(raw: &str) -> Result<String, String> {
 }
 
 /// Écrit l'archive `.qcp` : `manifest.json` puis les actifs sous `assets/`.
-pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result<(), String> {
+/// Renvoie le chemin réel cible (extension `.qcp` imposée).
+pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result<String, String> {
     if assets.len() > MAX_ASSETS {
         return Err(format!(
             "Trop de fichiers média ({}) : la limite est de {MAX_ASSETS}.",
@@ -112,7 +113,7 @@ pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result
 
     zip.finish()
         .map_err(|error| format!("Fermeture de l'archive impossible : {error}"))?;
-    Ok(())
+    Ok(target.to_string_lossy().to_string())
 }
 
 #[cfg(test)]
@@ -150,7 +151,8 @@ mod tests {
             data_base64: base64::engine::general_purpose::STANDARD.encode(b"logo-bytes"),
         }];
 
-        save_project(&path, SAMPLE_MANIFEST, &assets).expect("écriture réussie");
+        let returned = save_project(&path, SAMPLE_MANIFEST, &assets).expect("écriture réussie");
+        assert!(returned.ends_with("round-trip.qcp"));
 
         let contents = open_project(&path).expect("lecture réussie");
         assert_eq!(contents.manifest, SAMPLE_MANIFEST);

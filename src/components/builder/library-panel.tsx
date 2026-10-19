@@ -4,6 +4,7 @@ import {
   CloudOff,
   LayoutGrid,
   Library,
+  Save,
   Search,
   Shapes,
   Sparkles,
@@ -19,7 +20,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { QrGlyph } from "@/components/builder/previews";
-import {
+import { HudLabel, HudStatusDot } from "@/components/builder/hud";
+import { useSettings } from "@/hooks/use-settings";import {
   QR_FAMILIES,
   QR_TYPES,
   formProgress,
@@ -31,12 +33,18 @@ import { cn } from "@/lib/utils";
 
 type LibraryTab = "types" | "mockups" | "templates";
 
+/** Dernier segment d'un chemin de fichier, pour un affichage compact. */
+function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
+
 /**
  * Panneau de gauche (colonne de référence) : projet courant, galerie de types,
  * mises en situation et modèles de design.
  */
 export function LibraryPanel({ className }: { className?: string }) {
-  const { state, dispatch, type, values, savedLabel } = useBuilder();
+  const { state, dispatch, type, values, savedLabel, dirty } = useBuilder();
+  const { hud, autoSaveFile } = useSettings();
   const [tab, setTab] = useState<LibraryTab>("types");
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<QrFamily | null>(null);
@@ -64,8 +72,9 @@ export function LibraryPanel({ className }: { className?: string }) {
       aria-label="Bibliothèque"
     >
       <header className="space-y-3 border-b border-border/60 p-3.5">
+        <HudLabel className="block">BIBLIO — PROJET</HudLabel>
         <div className="flex items-start gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/25 to-primary/5 text-primary ring-1 ring-primary/20">
+          <span className="hud-clip-tr relative flex size-9 shrink-0 items-center justify-center bg-linear-to-br from-primary/30 to-primary/5 text-primary ring-1 ring-primary/25">
             <Library className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
@@ -75,7 +84,7 @@ export function LibraryPanel({ className }: { className?: string }) {
               onChange={(event) =>
                 dispatch({ type: "setProjectName", name: event.currentTarget.value })
               }
-              className="h-7 border-transparent bg-transparent px-1.5 text-[0.8rem] font-medium focus-visible:border-input"
+              className="h-7 border-transparent bg-transparent px-1.5 font-mono text-[0.8rem] font-medium focus-visible:border-input"
             />
             <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground">
               <CloudOff className="size-3" />
@@ -83,11 +92,30 @@ export function LibraryPanel({ className }: { className?: string }) {
                 ? `Brouillon local · enregistré à ${savedLabel}`
                 : "Enregistrement local en cours…"}
             </p>
+            {state.filePath ? (
+              <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground">
+                <Save className={cn("size-3 shrink-0", dirty && autoSaveFile ? "animate-pulse" : "")} />
+                <span className="truncate">
+                  {dirty
+                    ? autoSaveFile
+                      ? `Fichier .qcp : enregistrement auto… (${fileName(state.filePath)})`
+                      : `Fichier .qcp : non enregistré (${fileName(state.filePath)})`
+                    : autoSaveFile
+                      ? `Fichier .qcp lié · auto-enregistré (${fileName(state.filePath)})`
+                      : `Fichier .qcp lié (${fileName(state.filePath)})`}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground/70">
+                <Save className="size-3 shrink-0 opacity-60" />
+                <span className="truncate">Aucun fichier lié · « Enregistrer » lie un .qcp</span>
+              </p>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="text-[0.6rem]">
+          <Badge variant="outline" className="rounded-none text-[0.6rem]">
             <Shapes className="size-3" />
             {type.label}
           </Badge>
@@ -95,9 +123,9 @@ export function LibraryPanel({ className }: { className?: string }) {
             {completion}%
           </span>
         </div>
-        <div className="h-1 overflow-hidden rounded-full bg-muted">
+        <div className="h-1 overflow-hidden bg-muted">
           <div
-            className="h-full rounded-full bg-linear-to-r from-primary to-primary/60 transition-[width] duration-500 ease-out"
+            className="progress-ticks h-full bg-primary transition-[width] duration-500 ease-out"
             style={{ width: `${completion}%` }}
           />
         </div>
@@ -153,7 +181,7 @@ export function LibraryPanel({ className }: { className?: string }) {
           </div>
 
           <ScrollArea className="mt-2 min-h-0 flex-1">
-            <ul className="space-y-1 px-3.5 pb-6">
+            <ul data-slot="list" className="space-y-1 px-3.5 pb-6">
               {filtered.map((candidate, index) => {
                 const active = candidate.id === state.typeId;
                 return (
@@ -166,17 +194,23 @@ export function LibraryPanel({ className }: { className?: string }) {
                       }}
                       aria-current={active}
                       className={cn(
-                        "animate-rise group/row flex w-full items-center gap-2.5 rounded-xl border border-transparent p-2 text-left transition-all duration-300 ease-out",
+                        "animate-rise group/row flex w-full items-center gap-2.5 rounded-sm border border-transparent p-2 text-left transition-all duration-300 ease-out",
                         "hover:-translate-y-px hover:border-border/70 hover:bg-accent/50",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                         active
-                          ? "border-primary/40 bg-primary/10"
+                          ? "border-primary/40 bg-primary/10 shadow-[inset_2px_0_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)]"
                           : "bg-card/40",
                       )}
                     >
                       <span
+                        aria-hidden="true"
+                        className="w-4 shrink-0 text-right font-mono text-[0.56rem] text-muted-foreground/60"
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span
                         className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
+                          "flex size-8 shrink-0 items-center justify-center rounded-sm transition-colors duration-300",
                           active
                             ? "bg-primary/15 text-primary"
                             : "bg-muted/60 text-muted-foreground group-hover/row:text-foreground",
@@ -229,11 +263,11 @@ export function LibraryPanel({ className }: { className?: string }) {
                       onClick={() => dispatch({ type: "setMockup", mockupId: mockup.id })}
                       aria-pressed={active}
                       className={cn(
-                        "group/mock animate-rise overflow-hidden rounded-xl border text-left transition-all duration-300 ease-out",
+                        "group/mock animate-rise overflow-hidden rounded-sm border text-left transition-all duration-300 ease-out",
                         "hover:-translate-y-0.5 hover:shadow-md",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                         active
-                          ? "border-primary/50 ring-2 ring-primary/25"
+                          ? "border-primary/50 shadow-[inset_0_2px_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)] ring-2 ring-primary/25"
                           : "border-border/70",
                       )}
                     >
@@ -284,14 +318,16 @@ export function LibraryPanel({ className }: { className?: string }) {
                       dispatch({ type: "setModule", module: "style" });
                     }}
                     className={cn(
-                      "group/tpl animate-rise flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-300 ease-out",
+                      "group/tpl animate-rise flex w-full items-center gap-3 rounded-sm border p-2.5 text-left transition-all duration-300 ease-out",
                       "hover:-translate-y-0.5 hover:border-border hover:shadow-md",
                       "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
-                      active ? "border-primary/50 bg-primary/8" : "border-border/70 bg-card/40",
+                      active
+                        ? "border-primary/50 bg-primary/8 shadow-[inset_2px_0_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)]"
+                        : "border-border/70 bg-card/40",
                     )}
                   >
                     <span
-                      className="flex size-12 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-black/10"
+                      className="flex size-12 shrink-0 items-center justify-center rounded-sm ring-1 ring-inset ring-black/10"
                       style={{
                         background: `linear-gradient(135deg, ${template.preview[0]}, ${template.preview[1]})`,
                       }}
@@ -317,12 +353,16 @@ export function LibraryPanel({ className }: { className?: string }) {
       </Tabs>
 
       <footer className="border-t border-border/60 p-3">
-        <div className="flex items-center justify-between text-[0.62rem] text-muted-foreground">
+        <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            Fonctionne hors ligne
+            <HudStatusDot tone="ok" />
+            {hud ? (
+              <span className="text-hud">OFFLINE:OK</span>
+            ) : (
+              <span>Hors ligne</span>
+            )}
           </span>
-          <span className="font-mono">{QR_TYPES.length} types</span>
+          <span>{QR_TYPES.length} types</span>
         </div>
       </footer>
     </aside>

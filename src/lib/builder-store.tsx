@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -26,6 +27,7 @@ import { buildPayload } from "@/lib/qr-payload";
 import { sanitizeFileName } from "@/lib/qr-svg";
 import { contentFromPayload } from "@/lib/qr-import";
 import { applyQcpManifest, buildQcpManifest, type QcpFilePayload } from "@/lib/qcp";
+import { useSettings } from "@/hooks/use-settings";
 
 export type BuilderModule =
   | "content"
@@ -55,6 +57,12 @@ export type BuilderState = {
   saveSize: number;
   /** Enregistrement local du brouillon (spec 001, FR-8). */
   savedAt: number | null;
+  /**
+   * Chemin du fichier .qcp lié au projet. Un projet lié s'écrit sur le disque
+   * sans repasser par la boîte de dialogue : enregistrement manuel (⌘S) et
+   * enregistrement automatique écrivent directement à cet emplacement.
+   */
+  filePath: string | null;
 };
 
 export type BuilderAction =
@@ -67,6 +75,7 @@ export type BuilderAction =
   | { type: "setMockup"; mockupId: string }
   | { type: "setSaveSize"; size: number }
   | { type: "markSaved"; at: number }
+  | { type: "setFilePath"; path: string }
   | { type: "hydrate"; state: BuilderState };
 
 /** Projet complet stocké dans le registre local (100 % hors ligne). */
@@ -130,6 +139,7 @@ function createInitialState(projectId = createProjectId()): BuilderState {
     mockupId: "plain",
     saveSize: 1024,
     savedAt: null,
+    filePath: null,
   };
 }
 
@@ -242,6 +252,9 @@ function reducer(state: BuilderState, action: BuilderAction): BuilderState {
     case "setSaveSize":
       return { ...state, saveSize: action.size };
 
+    case "setFilePath":
+      return state.filePath === action.path ? state : { ...state, filePath: action.path };
+
     case "markSaved": {
       // Idempotent à la minute près : évite une boucle d'enregistrement infinie.
       const sameMinute =
@@ -278,6 +291,16 @@ export type BuilderContextValue = {
   deleteProject: (id: string) => void;
   /** Écrit le projet actif dans un fichier .qcp ; renvoie le chemin. */
   saveProjectAsQcp: () => Promise<string>;
+  /**
+   * Enregistre le projet actif : écrit directement dans le fichier .qcp lié
+   * s'il existe, sinon ouvre la boîte de dialogue « Enregistrer sous… »
+   * (et lie le nouveau chemin). Renvoie le chemin écrit, ou "" si annulé.
+   */
+  saveProject: () => Promise<string>;
+  /** Chemin du fichier .qcp lié au projet actif (null = non lié). */
+  filePath: string | null;
+  /** Vrai si des modifications ne sont pas encore écrites dans le fichier lié. */
+  dirty: boolean;
   /** Ouvre un fichier .qcp et l'ajoute au registre comme nouveau projet. */
   openProjectFromQcp: (path: string) => Promise<void>;
   /** Crée un projet depuis un QR existant (image, SVG ou PDF). */
@@ -292,6 +315,9 @@ const PREVIEW_DEBOUNCE_MS = 180;
 /** Délai de debounce avant enregistrement local du projet actif. */
 const SAVE_DEBOUNCE_MS = 400;
 
+/** Délai de stabilisation avant l'enregistrement auto du fichier .qcp lié. */
+const FILE_SAVE_DEBOUNCE_MS = 1600;
+
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -303,6 +329,9 @@ function useDebounced<T>(value: T, delay: number): T {
 
 export function BuilderProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+  // Réglage applicatif : l'enregistrement auto du fichier lié est activé par
+  // défaut et désactivable dans les paramètres (préférence persistée).
+  const { autoSaveFile } = useSettings();
   const [projectsData, projectsDispatch] = useReducer(projectsReducer, {
     activeId: "",
     items: [],
@@ -395,6 +424,37 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
   const missingField = useMemo(() => firstMissingField(type, values), [type, values]);
   const progress = useMemo(() => formProgress(type, values), [type, values]);
 
+  // Empreinte de l'état project (hors métadonnées d'affichage) : tout écart
+  // avec la dernière empreinte écrite signale des modifications non enregistrées.
+  const stateSignature = useMemo(
+    () =>
+      JSON.stringify({
+        projectName: state.projectName,
+        typeId: state.typeId,
+        valuesByType: state.valuesByType,
+        design: state.design,
+        mockupId: state.mockupId,
+        saveSize: state.saveSize,
+      }),
+    [state.projectName, state.typeId, state.valuesByType, state.design, state.mockupId, state.saveSize],
+  );
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
+  const dirty = savedSignature !== null && savedSignature !== stateSignature;
+
+  // Références synchronisées à chaque rendu : les sauvegardes lisent l'état
+  // courant sans recréer leurs callbacks à chaque frappe.
+  const stateRef = useRef(state);
+  const signatureRef = useRef(stateSignature);
+  useEffect(() => {
+    stateRef.current = state;
+    signatureRef.current = stateSignature;
+  });
+
+  // Changer de projet actif établit une nouvelle base « enregistrée ».
+  useEffect(() => {
+    setSavedSignature(signatureRef.current);
+  }, [state.projectId]);
+
   const projects = useMemo<ProjectSummary[]>(() => {
     return projectsData.items
       .map((project) => {
@@ -464,6 +524,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         projectName: name,
         activeModule: "content",
         savedAt: null,
+        filePath: null,
       };
       projectsDispatch({
         type: "insert",
@@ -513,23 +574,47 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "hydrate", state: imported });
   }, []);
 
-  const saveProjectAsQcp = useCallback(async (): Promise<string> => {
+  /** Écrit l'archive .qcp du projet courant à un chemin donné, sans dialogue. */
+  const writeProjectQcp = useCallback(async (target: string): Promise<string> => {
+    const current = stateRef.current;
     const { manifest, assets } = buildQcpManifest({
-      name: state.projectName,
-      typeId: state.typeId,
-      valuesByType: state.valuesByType,
-      design: state.design,
-      mockupId: state.mockupId,
-      saveSize: state.saveSize,
+      name: current.projectName,
+      typeId: current.typeId,
+      valuesByType: current.valuesByType,
+      design: current.design,
+      mockupId: current.mockupId,
+      saveSize: current.saveSize,
     });
+    return await invoke<string>("save_project_qcp", { path: target, manifest, assets });
+  }, []);
+
+  /** Enregistre sous… : dialogue fichier, puis liaison du chemin au projet. */
+  const saveProjectAsQcp = useCallback(async (): Promise<string> => {
+    // Empreinte prise avant le dialogue : c'est l'état qui ira dans l'archive.
+    const writtenSignature = signatureRef.current;
     const target = await save({
       title: "Enregistrer le projet",
-      defaultPath: `${sanitizeFileName(state.projectName)}.qcp`,
+      defaultPath: `${sanitizeFileName(stateRef.current.projectName)}.qcp`,
       filters: [{ name: "Projet QR Code Studio", extensions: ["qcp"] }],
     });
     if (!target) return "";
-    return await invoke<string>("save_project_qcp", { path: target, manifest, assets });
-  }, [state]);
+    const path = await writeProjectQcp(target);
+    dispatch({ type: "setFilePath", path });
+    dispatch({ type: "markSaved", at: Date.now() });
+    setSavedSignature(writtenSignature);
+    return path;
+  }, [writeProjectQcp]);
+
+  /** Enregistre le projet : fichier lié sans dialogue, sinon « sous… ». */
+  const saveProject = useCallback(async (): Promise<string> => {
+    const target = stateRef.current.filePath;
+    if (!target) return await saveProjectAsQcp();
+    const writtenSignature = signatureRef.current;
+    const path = await writeProjectQcp(target);
+    dispatch({ type: "markSaved", at: Date.now() });
+    setSavedSignature(writtenSignature);
+    return path;
+  }, [saveProjectAsQcp, writeProjectQcp]);
 
   const openProjectFromQcp = useCallback(
     async (path: string): Promise<void> => {
@@ -545,6 +630,8 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         mockupId: data.mockupId,
         saveSize: data.saveSize,
         savedAt: null,
+        // Nouveau projet dans le registre : non lié à l'archive d'origine.
+        filePath: null,
       });
     },
     [registerAndActivate],
@@ -574,10 +661,37 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         mockupId: "plain",
         saveSize: 1024,
         savedAt: null,
+        filePath: null,
       });
     },
     [projectsData.items, registerAndActivate],
   );
+
+  // Enregistrement automatique du fichier .qcp lié : après stabilisation des
+  // modifications (debounce), le projet déjà enregistré sur disque est réécrit
+  // sans aucune action. Désactivable dans les paramètres ; les projets non
+  // liés restent des brouillons locaux.
+  useEffect(() => {
+    if (!ready || !autoSaveFile || !state.filePath || !dirty) return;
+    const target = state.filePath;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        // Empreinte prise au moment de la collecte : état réellement écrit.
+        const writtenSignature = signatureRef.current;
+        try {
+          await writeProjectQcp(target);
+          dispatch({ type: "markSaved", at: Date.now() });
+          setSavedSignature(writtenSignature);
+        } catch {
+          // Échec silencieux : le projet reste signalé « non enregistré »
+          // jusqu'à la prochaine modification ou à un enregistrement manuel.
+          console.warn("Enregistrement automatique du projet impossible.");
+        }
+      })();
+    }, FILE_SAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+    // stateSignature redémarre le délai à chaque modification de contenu.
+  }, [ready, autoSaveFile, state.filePath, dirty, stateSignature, writeProjectQcp]);
 
   const setValue = useCallback(
     (field: string, value: string) => dispatch({ type: "setValue", field, value }),
@@ -616,6 +730,9 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       duplicateProject,
       deleteProject,
       saveProjectAsQcp,
+      saveProject,
+      dirty,
+      filePath: state.filePath,
       openProjectFromQcp,
       newProjectFromQr,
     }),
@@ -636,6 +753,8 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       duplicateProject,
       deleteProject,
       saveProjectAsQcp,
+      saveProject,
+      dirty,
       openProjectFromQcp,
       newProjectFromQr,
     ],
