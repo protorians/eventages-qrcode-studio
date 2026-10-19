@@ -252,7 +252,7 @@ export function ModuleExport() {
           onClick={shareNative}
         >
           {busy === "share" ? <Loader2 className="animate-spin" /> : <Share2 />}
-          Partager (menu natif)
+          Partager
         </Button>
         <Button
           type="button"
