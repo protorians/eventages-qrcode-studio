@@ -23,7 +23,7 @@ import {
 } from "@/lib/qr-catalog";
 import { DEFAULT_DESIGN, type QrDesign } from "@/lib/qr-design";
 import { buildPayload } from "@/lib/qr-payload";
-import { sanitizeFileName } from "@/lib/qr-export";
+import { sanitizeFileName } from "@/lib/qr-svg";
 import { contentFromPayload } from "@/lib/qr-import";
 import { applyQcpManifest, buildQcpManifest, type QcpFilePayload } from "@/lib/qcp";
 

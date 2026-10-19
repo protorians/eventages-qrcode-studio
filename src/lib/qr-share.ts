@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { renderExportBlob, sanitizeFileName } from "@/lib/qr-export";
+import { renderExportBlob } from "@/lib/qr-export";
+import { sanitizeFileName } from "@/lib/qr-svg";
 import type { ExportFormat, QrDesign } from "@/lib/qr-design";
 
 /** Résultat d'un partage : fichier transmis, ou fenêtre refermée par l'utilisateur. */

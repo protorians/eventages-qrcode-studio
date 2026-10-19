@@ -8,6 +8,43 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [0.4.0] — 2026-10-19 · CLI headless (`qrs`)
+
+### Ajouté
+
+#### Créer, gérer et composer des projets en ligne de commande
+- **Nouveau CLI headless `qrs`** (`bun run cli <commande>`) : un parcours sans
+  interface, sans ouvrir l'app desktop — utile pour les scripts, l'automatisation
+  et les traitements en masse (`cli/qrs.ts`).
+- **Commandes de projet** : `init`, `create`, `list`, `show`, `set`, `rename`
+  (via `--rename`), `duplicate`, `delete`, `payload` — projets stockés comme
+  fichiers JSON dans un espace de travail (`./studio` par défaut, substituable
+  par `QRS_STUDIO_DIR` ou `--dir`), même modèle et mêmes défauts que le store de
+  l'interface (`cli/workspace.ts`, `builder-store.tsx`).
+- **Catalogue partagé** : les types, formulaires et validation viennent des
+  mêmes modules que l'app (`src/lib/qr-catalog.ts`, `qr-payload.ts`,
+  `qr-design.ts`) — `qrs types [type]` documente champs, options et encodage.
+- **Composition headless** : `qrs render <projet>` écrit le QR en **SVG**
+  (toujours sans DOM) ou **PNG** (rasterisation via `@resvg/resvg-js`), avec le
+  même tracé que l'application — styles de modules, marqueurs de coin,
+  dégradés, logo et cadre composés à l'identique (`cli/render.ts`).
+- **Interchange avec l'app desktop** : `qrs pack <projet>` produit une archive
+  `.qcp` (même structure que le backend Rust) et `qrs import <fichier.qcp>`
+  reconstruit un projet complet, médias inclus, dans l'espace de travail.
+
+#### Utilitaires d'export partagés
+- **`src/lib/qr-svg.ts`** : `wrapSvg`, `escapeXml` et `sanitizeFileName`
+  quittent `qr-export.ts` pour un module 100 % DOM-free, réutilisé par le CLI
+  (composition de cadre et noms de fichiers identiques partout).
+
+### Modifié
+- `package.json` : script `cli`, dépendances CLI (`qrcode`, `fflate`,
+  `image-size`, `@resvg/resvg-js`, `@types/qrcode`) ; `tsconfig.json` inclut
+  désormais `cli/` au typecheck.
+- `.gitignore` : l'espace de travail CLI par défaut (`studio/`) est ignoré.
+
+---
+
 ## [0.3.0] — 2026-10-19 · Export .qcp et partage web
 
 ### Ajouté
@@ -106,6 +143,7 @@ compte ni serveur — desktop Tauri avec partage système natif.
 
 ---
 
+[0.4.0]: https://example.invalid/releases/v0.4.0
 [0.3.0]: https://example.invalid/releases/v0.3.0
 [0.2.0]: https://example.invalid/releases/v0.2.0
 [0.1.0]: https://example.invalid/releases/v0.1.0
