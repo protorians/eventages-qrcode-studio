@@ -1,0 +1,294 @@
+import { useState } from "react";
+import {
+  Check,
+  ClipboardCopy,
+  Download,
+  FileCode2,
+  HardDriveDownload,
+  Loader2,
+  Printer,
+  Share,
+  Share2,
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ControlStack,
+  InfoTip,
+  SectionTitle,
+} from "@/components/builder/controls";
+import { EXPORT_FORMATS, EXPORT_SIZES, type ExportFormat } from "@/lib/qr-design";
+import { exportQr } from "@/lib/qr-export";
+import { ShareError, shareQrImage } from "@/lib/qr-share";
+import { useBuilder } from "@/lib/builder-store";
+import { payloadSize } from "@/lib/qr-payload";
+import { scanLabel } from "@/lib/qr-analysis";
+import { cn } from "@/lib/utils";
+
+/** Onglet « Export » : formats, résolution et téléchargement local (spec 005). */
+export function ModuleExport() {
+  const { state, dispatch, type, debouncedPayload, missingField, progress } = useBuilder();
+  const [busy, setBusy] = useState<ExportFormat | "clipboard" | "share" | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (format: ExportFormat) => {
+    if (missingField) {
+      setError(`Contenu incomplet : « ${missingField.label} » est requis.`);
+      return;
+    }
+    setBusy(format);
+    setError(null);
+    setDone(null);
+    try {
+      const filename = await exportQr({
+        design: state.design,
+        payload: debouncedPayload,
+        qrSize: state.saveSize,
+        format,
+        fileName: state.projectName,
+      });
+      setDone(filename);
+    } catch {
+      setError("Le téléchargement a échoué. Réessayez ou changez de format.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const copyPayload = async () => {
+    setBusy("clipboard");
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(debouncedPayload);
+      setDone("Contenu copié dans le presse-papiers");
+    } catch {
+      setError("Copie impossible : accès au presse-papiers refusé.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Partage natif : menu de partage de l'OS sur l'image rendue, sans serveur. */
+  const shareNative = async () => {
+    if (missingField) {
+      setError(`Contenu incomplet : « ${missingField.label} » est requis.`);
+      return;
+    }
+    setBusy("share");
+    setError(null);
+    setDone(null);
+    try {
+      const outcome = await shareQrImage({
+        design: state.design,
+        payload: debouncedPayload,
+        qrSize: state.saveSize,
+        fileName: state.projectName,
+      });
+      if (outcome.kind === "shared") setDone(outcome.message);
+    } catch (shareError) {
+      setError(
+        shareError instanceof ShareError
+          ? shareError.message
+          : "Le partage a échoué. Exportez le fichier puis partagez-le manuellement.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const quality = scanLabel(state.design, debouncedPayload);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge
+          variant={quality.level === "ok" ? "secondary" : "destructive"}
+          className="text-[0.62rem]"
+        >
+          {quality.level === "ok" ? <Check /> : <FileCode2 />}
+          {quality.label}
+        </Badge>
+        <Badge variant="outline" className="font-mono text-[0.62rem]">
+          {payloadSize(debouncedPayload)} o
+        </Badge>
+        <Badge variant="outline" className="text-[0.62rem]">
+          {type.label}
+        </Badge>
+      </div>
+
+      <ControlStack
+        label="Format"
+        hint="PNG et SVG pour l'impression, JPEG et WebP pour le web."
+      >
+        <div className="grid grid-cols-2 gap-2">
+          {EXPORT_FORMATS.map((format) => (
+            <button
+              key={format.id}
+              type="button"
+              disabled={busy !== null}
+              onClick={() => run(format.id)}
+              className={cn(
+                "group/tile flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card/50 p-2.5 text-left transition-all duration-300 ease-out",
+                "hover:-translate-y-0.5 hover:border-border hover:bg-accent/60 hover:shadow-sm",
+                "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
+                "disabled:pointer-events-none disabled:opacity-60",
+              )}
+            >
+              <span className="flex w-full items-center justify-between">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-transform duration-300 group-hover/tile:scale-110">
+                  {format.id === "svg" ? (
+                    <FileCode2 className="size-4" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                </span>
+                {busy === format.id ? (
+                  <Loader2 className="size-3.5 animate-spin text-primary" />
+                ) : null}
+              </span>
+              <span className="space-y-0.5">
+                <span className="block text-[0.72rem] font-medium">{format.label}</span>
+                <span className="block text-[0.62rem] text-muted-foreground">
+                  {format.detail}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </ControlStack>
+
+      <Separator />
+
+      <ControlStack
+        label="Résolution d'export"
+        hint="La résolution du QR hors cadre. 2048 px suffit pour un tirage A3."
+      >
+        <Select
+          items={EXPORT_SIZES.map((size) => ({
+            value: String(size),
+            label: `${size} × ${size} px`,
+          }))}
+          value={String(state.saveSize)}
+          onValueChange={(next) => dispatch({ type: "setSaveSize", size: Number(next) })}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {EXPORT_SIZES.map((size) => (
+              <SelectItem key={size} value={String(size)}>
+                {size} × {size} px
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </ControlStack>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <Label htmlFor="export-name" className="text-[0.8rem]">
+            Nom du fichier
+          </Label>
+          <InfoTip>Le nom du projet sert aussi de titre par défaut à l&apos;export.</InfoTip>
+        </div>
+        <Input
+          id="export-name"
+          value={state.projectName}
+          onChange={(event) => dispatch({ type: "setProjectName", name: event.currentTarget.value })}
+          className="font-mono text-[0.75rem]"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <SectionTitle hint="Aucune donnée ne quitte l'appareil : tout est généré localement.">
+          Exports rapides
+        </SectionTitle>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={busy !== null}
+          onClick={() => run("png")}
+        >
+          {busy === "png" ? <Loader2 className="animate-spin" /> : <HardDriveDownload />}
+          Télécharger en PNG
+        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => run("svg")}
+          >
+            {busy === "svg" ? <Loader2 className="animate-spin" /> : <Printer />}
+            Vectoriel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => run("jpeg")}
+          >
+            {busy === "jpeg" ? <Loader2 className="animate-spin" /> : <Share />}
+            Réseaux
+          </Button>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={busy !== null}
+          onClick={shareNative}
+        >
+          {busy === "share" ? <Loader2 className="animate-spin" /> : <Share2 />}
+          Partager (menu natif)
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          disabled={busy !== null}
+          onClick={copyPayload}
+        >
+          {busy === "clipboard" ? <Loader2 className="animate-spin" /> : <ClipboardCopy />}
+          Copier le contenu encodé
+        </Button>
+      </div>
+
+      {done ? (
+        <Alert className="animate-fade-in">
+          <Check />
+          <AlertDescription className="font-mono text-[0.7rem] break-all">
+            {done}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {error ? (
+        <Alert variant="destructive" className="animate-fade-in">
+          <FileCode2 />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+        <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+          {progress === 100
+            ? "Le contenu est complet : le fichier exporté est directement exploitable."
+            : "Certains champs obligatoires restent vides ; l'export utilisera le contenu saisi."}
+        </p>
+      </div>
+    </div>
+  );
+}
