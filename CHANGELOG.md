@@ -17,6 +17,58 @@ Tranche d'infrastructure : aucune évolution fonctionnelle, l'application est in
   `main`, `beta` et `alpha` (drafts glissants), publication directe à la poussée d'un
   tag `v*`.
 - Correctif CI : `tauri-action` épinglé sur `v1` (le tag `v2` n'existe pas).
+## [0.3.0] — 2026-10-19 · Export .qcp et partage web
+
+### Ajouté
+
+#### Exporter le projet en .qcp depuis l'onglet Export
+- **Nouvelle option d'export** : le bouton « Exporter le projet (.qcp) » dans la
+  section « Exports rapides » écrit l'archive projet complète — contenu, design,
+  mockup, résolution et fichiers média — via le même flux que le gestionnaire de
+  projets, avec boîte de dialogue native et extension imposée
+  (`src/components/builder/module-export.tsx`).
+
+### Modifié
+
+#### Partage : Navigator.share sur le web, option désactivée sinon
+- **Web Share API** : sur le web, le bouton « Partager » passe par le menu de
+  partage du navigateur (`navigator.share`), après sondage de la compatibilité
+  pour le partage de fichiers (`navigator.canShare`) (`src/lib/qr-share.ts`).
+- **Bouton grisé si non compatible** : dans un navigateur sans Web Share
+  exploitable pour les fichiers, l'option « Partager » est désactivée avec un
+  message explicatif ; sous Tauri (desktop), le partage natif du système reste
+  inchangé et la commande `share_image` n'est plus invoquée hors du shell.
+
+---
+
+## [0.2.0] — 2026-10-19 · Fichiers projet et import
+
+### Ajouté
+
+#### Format de fichier projet .qcp
+- **Nouveau format de projet** : une archive zip générée par le backend Rust, contenant
+  un `manifest.json` (tous les paramètres : contenu par type, design, mockup,
+  résolution) et un dossier `assets/` avec les fichiers média du projet (logo,
+  visuels, PDF, audio…) (`src-tauri/src/qcp.rs`, `src/lib/qcp.ts`).
+- **Enregistrement** du projet actif en `.qcp` depuis le gestionnaire de projets
+  (boîte de dialogue native, extension imposée).
+- **Ouverture** d'un fichier `.qcp` : le projet est reconstruit et ajouté au registre
+  local, médias rechargés sous forme de data URLs — aucun changement de modèle.
+- Boîtes de dialogue fichiers natives via `tauri-plugin-dialog` (permission
+  `dialog:default`), boutons dédiés dans le gestionnaire de projets
+  (rail latéral + raccourcis mobiles).
+
+#### Importer un QR existant
+- **Import d'un QR existant** : décodage natif hors ligne d'un QR depuis une image
+  (PNG, JPEG, WebP, GIF, BMP, TIFF), un fichier vectoriel SVG (rasterisé par
+  usvg/resvg) ou un PDF (extraction des images embarquées via lopdf, JPEG ou
+  échantillons bruts, avec gestion DeviceGray/RGB/CMYK, Indexed, ICCBased et
+  masques 1 bit) ; détection du payload et du niveau de correction d'erreur,
+  avec réessai en négatif pour les QR clairs sur fond sombre
+  (`src-tauri/src/import.rs`, `src/lib/qr-import.ts`).
+- Le contenu importé pré-remplit le bon type de projet : URL, Wi-Fi (avec
+  échappements), e-mail (mailto), SMS (SMSTO/sms/tel), sinon texte brut ;
+  le niveau de correction détecté est repris dans le design du nouveau projet.
 
 ---
 
@@ -64,4 +116,6 @@ compte ni serveur — desktop Tauri avec partage système natif.
 ---
 
 [0.1.1]: https://example.invalid/releases/v0.1.1
+[0.3.0]: https://example.invalid/releases/v0.3.0
+[0.2.0]: https://example.invalid/releases/v0.2.0
 [0.1.0]: https://example.invalid/releases/v0.1.0

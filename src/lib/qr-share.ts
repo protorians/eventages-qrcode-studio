@@ -30,11 +30,41 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+/** Vrai si l'app tourne dans le shell Tauri (desktop) plutôt que dans un simple navigateur. */
+function isTauriRuntime(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)
+  );
+}
+
+/**
+ * Indique si le partage système est disponible : toujours sous Tauri (la
+ * commande native prend le relais), sinon selon la compatibilité du navigateur
+ * avec l'API Web Share pour les fichiers (`navigator.share` + `canShare`).
+ * Sert à désactiver le bouton « Partager » quand aucun chemin n'existe.
+ */
+export function isShareSupported(): boolean {
+  if (isTauriRuntime()) return true;
+  const nav = navigator as unknown as NavigatorWithShare;
+  if (typeof nav.share !== "function") return false;
+  if (typeof nav.canShare !== "function") return true;
+  try {
+    // Sondage minimal : certains navigateurs exposent `share` mais refusent les fichiers.
+    const probe = new File(["qrcode-studio"], "probe.png", { type: "image/png" });
+    return nav.canShare({ files: [probe] });
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Partage natif du QR rendu (aucun serveur) :
  * 1. API Web Share si le webview l'expose ;
- * 2. feuille de partage du système via Tauri (macOS) ;
- * 3. à défaut, le fichier est déposé et révélé dans le dossier système.
+ * 2. sous Tauri, feuille de partage du système (macOS) ou fichier déposé et
+ *    révélé dans le dossier système ;
+ * 3. sinon, échec avec un message prêt à afficher — sur le web, le bouton est
+ *    désactivé en amont (voir `isShareSupported`).
  */
 export async function shareQrImage({
   design,
@@ -69,19 +99,25 @@ export async function shareQrImage({
     }
   }
 
-  const dataBase64 = await blobToBase64(blob);
-  try {
-    const method = await invoke<string>("share_image", { name, dataBase64 });
-    return {
-      kind: "shared",
-      message:
-        method === "sheet"
-          ? `Menu de partage ouvert pour ${name}.`
-          : `${name} enregistré et affiché dans le dossier système.`,
-    };
-  } catch {
-    throw new ShareError(
-      "Partage natif indisponible ici. Exportez le fichier puis partagez-le depuis votre dossier.",
-    );
+  // Feuille de partage du système, uniquement sous Tauri (desktop).
+  if (isTauriRuntime()) {
+    const dataBase64 = await blobToBase64(blob);
+    try {
+      const method = await invoke<string>("share_image", { name, dataBase64 });
+      return {
+        kind: "shared",
+        message:
+          method === "sheet"
+            ? `Menu de partage ouvert pour ${name}.`
+            : `${name} enregistré et affiché dans le dossier système.`,
+      };
+    } catch {
+      throw new ShareError(
+        "Partage natif indisponible ici. Exportez le fichier puis partagez-le depuis votre dossier.",
+      );
+    }
   }
+
+  // Navigateur sans Web Share exploitable : le bouton devrait être désactivé.
+  throw new ShareError("Le partage n'est pas pris en charge par ce navigateur.");
 }
