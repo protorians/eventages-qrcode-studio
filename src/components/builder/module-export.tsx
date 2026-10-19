@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Check,
   ClipboardCopy,
@@ -30,7 +30,7 @@ import {
 } from "@/components/builder/controls";
 import { EXPORT_FORMATS, EXPORT_SIZES, type ExportFormat } from "@/lib/qr-design";
 import { exportQr } from "@/lib/qr-export";
-import { ShareError, shareQrImage } from "@/lib/qr-share";
+import { isShareSupported, ShareError, shareQrImage } from "@/lib/qr-share";
 import { useBuilder } from "@/lib/builder-store";
 import { payloadSize } from "@/lib/qr-payload";
 import { scanLabel } from "@/lib/qr-analysis";
@@ -42,6 +42,8 @@ export function ModuleExport() {
   const [busy, setBusy] = useState<ExportFormat | "clipboard" | "share" | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Feuille de partage disponible ? (Tauri natif, ou Web Share côté navigateur.)
+  const shareSupported = useMemo(() => isShareSupported(), []);
 
   const run = async (format: ExportFormat) => {
     if (missingField) {
@@ -248,12 +250,17 @@ export function ModuleExport() {
           type="button"
           variant="outline"
           className="w-full"
-          disabled={busy !== null}
+          disabled={busy !== null || !shareSupported}
           onClick={shareNative}
         >
           {busy === "share" ? <Loader2 className="animate-spin" /> : <Share2 />}
           Partager
         </Button>
+        {!shareSupported ? (
+          <p className="text-[0.62rem] leading-relaxed text-muted-foreground">
+            Le partage système n&apos;est pas pris en charge par ce navigateur.
+          </p>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
