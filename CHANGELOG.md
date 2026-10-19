@@ -8,7 +8,7 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
-## [Non publié]
+## [0.2.0] — 2026-10-19 · Fichiers projet et import
 
 ### Ajouté
 
