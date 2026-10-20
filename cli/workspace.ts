@@ -32,7 +32,7 @@ const MAX_ASSETS = 64;
 export type ProjectFile = {
   format: typeof PROJECT_FORMAT;
   version: 1;
-  app: "qrcode-studio";
+  app: "Eventages Lite";
   id: string;
   name: string;
   typeId: string;
@@ -56,7 +56,7 @@ export function createProjectFile(input: {
   return {
     format: PROJECT_FORMAT,
     version: 1,
-    app: "qrcode-studio",
+    app: "Eventages Lite",
     id: randomUUID(),
     createdAt: now,
     updatedAt: now,

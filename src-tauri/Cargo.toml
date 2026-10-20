@@ -1,5 +1,5 @@
 [package]
-name = "qrcode-studio"
+name = "Eventages-Lite"
 version = "0.6.0"
 description = "A Tauri App"
 authors = ["you"]

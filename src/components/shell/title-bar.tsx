@@ -74,6 +74,12 @@ export function TitleBar(
                 {/*  <QrCode className="size-3.5" />*/}
                 {/*  <span className="animate-glow absolute inset-0 -z-10 bg-primary/50 blur-md" />*/}
                 {/*</span>*/}
+                <div className="w-8 h-8">
+                    <img
+                        src={`./assets/images/${theme === 'light' ? 'app-icon' : 'app-icon-white'}.png`}
+                        alt="Eventages Lite"
+                    />
+                </div>
                 <p className="hud-heading hidden truncate text-[0.78rem] leading-tight font-bold sm:block">
                     Eventages Lite
                 </p>

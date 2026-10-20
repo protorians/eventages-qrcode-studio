@@ -123,7 +123,7 @@ mod tests {
     const SAMPLE_MANIFEST: &str = r#"{
         "format": "qcp",
         "version": 1,
-        "app": "qrcode-studio",
+        "app": "eventages-lite",
         "savedAt": 1760000000000,
         "project": {
             "name": "Menu du soir",
