@@ -9,8 +9,9 @@
  * les fichiers média sous forme de data URLs, sans changer le modèle du store.
  */
 
-import { getQrType, QR_TYPES_BY_ID, QR_TYPE_DEFAULT, type QrValues } from "@/lib/qr-catalog";
+import { getQrType, QR_TYPE_DEFAULT, resolveTypeId, type QrValues } from "@/lib/qr-catalog";
 import { DEFAULT_DESIGN, MOCKUPS_BY_ID, type QrDesign } from "@/lib/qr-design";
+import { normalizeBarcodeDesign, type BarcodeDesign } from "@/lib/barcode";
 
 /** Échec de lecture d'une archive projet, avec un message prêt à afficher. */
 export class QcpError extends Error {}
@@ -31,6 +32,8 @@ export type QcpManifest = {
     typeId: string;
     valuesByType: Record<string, QrValues>;
     design: QrDesign;
+    /** Habillage du code-barres 1D ; absent des archives antérieures. */
+    barcode?: BarcodeDesign;
     mockupId: string;
     saveSize: number;
   };
@@ -52,6 +55,7 @@ export type QcpProjectData = {
   typeId: string;
   valuesByType: Record<string, QrValues>;
   design: QrDesign;
+  barcode: BarcodeDesign;
   mockupId: string;
   saveSize: number;
 };
@@ -123,6 +127,7 @@ type QcpBuildInput = {
   typeId: string;
   valuesByType: Record<string, QrValues>;
   design: QrDesign;
+  barcode?: BarcodeDesign;
   mockupId: string;
   saveSize: number;
 };
@@ -183,6 +188,7 @@ export function buildQcpManifest(input: QcpBuildInput): {
       typeId: input.typeId,
       valuesByType,
       design,
+      barcode: input.barcode,
       mockupId: input.mockupId,
       saveSize: input.saveSize,
     },
@@ -203,7 +209,7 @@ export function applyQcpManifest({ manifest, assets }: QcpFilePayload): QcpProje
     throw new QcpError("Fichier projet illisible : manifest.json est corrompu.");
   }
   if (!parsed || parsed.format !== "qcp" || !parsed.project) {
-    throw new QcpError("Ce fichier n'est pas un projet QR Code Studio (.qcp).");
+    throw new QcpError("Ce fichier n'est pas un projet Eventages Lite (.qcp).");
   }
 
   const mediaByPath = new Map(assets.map((asset) => [asset.path, asset.dataBase64]));
@@ -241,9 +247,10 @@ export function applyQcpManifest({ manifest, assets }: QcpFilePayload): QcpProje
   return {
     name:
       typeof raw.name === "string" && raw.name.trim() ? raw.name : "Projet importé",
-    typeId: QR_TYPES_BY_ID[raw.typeId] ? raw.typeId : QR_TYPE_DEFAULT,
+    typeId: resolveTypeId(raw.typeId ?? "") ?? QR_TYPE_DEFAULT,
     valuesByType,
     design,
+    barcode: normalizeBarcodeDesign(raw.barcode),
     mockupId: MOCKUPS_BY_ID[raw.mockupId] ? raw.mockupId : "plain",
     saveSize:
       typeof raw.saveSize === "number" && Number.isFinite(raw.saveSize) && raw.saveSize > 0

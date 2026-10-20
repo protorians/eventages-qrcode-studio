@@ -1,5 +1,6 @@
 import { CheckCircle2, RotateCcw, ShieldAlert, Sparkles, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HudLabel } from "@/components/builder/hud";
 import { useBuilder } from "@/lib/builder-store";
 import { analyzeDesign, type ScanIssue } from "@/lib/qr-analysis";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,8 @@ export function TipsCard() {
   const offset = circumference * (1 - score / 100);
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-3">
+    <div className="space-y-3 rounded-sm border border-border/70 bg-card/60 p-3">
+      <HudLabel className="block">SYS.DIAG</HudLabel>
       <div className="flex items-center gap-3">
         <div className="relative size-12 shrink-0">
           <svg viewBox="0 0 44 44" className="size-full -rotate-90">
@@ -71,7 +73,7 @@ export function TipsCard() {
             return (
               <div
                 key={issue.id}
-                className="animate-fade-in space-y-1.5 rounded-xl border border-border/60 bg-background/60 p-2.5"
+                className="animate-fade-in space-y-1.5 rounded-sm border border-border/60 bg-background/60 p-2.5"
               >
                 <div className="flex items-start gap-2">
                   <Icon className={cn("mt-0.5 size-3.5 shrink-0", style.ring)} />
@@ -100,7 +102,7 @@ export function TipsCard() {
       ) : null}
 
       {others.length > 0 ? (
-        <ul className="space-y-1">
+        <ul data-slot="list" className="space-y-1">
           {others.map((issue) => (
             <li key={issue.id} className="flex items-center gap-1.5 text-[0.64rem] text-muted-foreground">
               <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />

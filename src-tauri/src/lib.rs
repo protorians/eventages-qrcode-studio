@@ -1,3 +1,4 @@
+mod export;
 mod import;
 mod qcp;
 mod share;
@@ -11,7 +12,8 @@ pub fn run() {
             share_image,
             save_project_qcp,
             open_project_qcp,
-            import_qr_from_file
+            import_qr_from_file,
+            save_export_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -36,8 +38,7 @@ fn save_project_qcp(
     manifest: String,
     assets: Vec<qcp::AssetInput>,
 ) -> Result<String, String> {
-    qcp::save_project(&path, &manifest, &assets)?;
-    Ok(path)
+    qcp::save_project(&path, &manifest, &assets)
 }
 
 /// Lit un fichier `.qcp` et renvoie le manifeste plus les fichiers média.
@@ -51,4 +52,11 @@ fn open_project_qcp(path: String) -> Result<qcp::QcpContents, String> {
 #[tauri::command]
 fn import_qr_from_file(path: String) -> Result<import::QrImport, String> {
     import::import_qr(&path)
+}
+
+/// Écrit le fichier exporté (image ou SVG) à l'emplacement choisi côté
+/// interface : le webview ne sait pas télécharger par ancre `blob:`.
+#[tauri::command]
+fn save_export_file(path: String, data_base64: String) -> Result<String, String> {
+    export::save_file(&path, &data_base64)
 }

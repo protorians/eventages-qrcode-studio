@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Check,
   ChevronsUpDown,
+  Clock,
   RotateCcw,
   Search,
   WandSparkles,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { FileControl, SectionTitle, SwitchControl } from "@/components/builder/controls";
+import { barcodeFormat } from "@/lib/barcode";
 import {
   QR_FAMILIES,
   QR_TYPES,
@@ -43,9 +45,23 @@ export function ModuleContent() {
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<string | null>(null);
 
+  // Aide du champ « valeur » du code-barres : adaptée à la symbologie choisie.
+  const fields = useMemo<QrField[]>(() => {
+    if (type.id !== "barcode") return type.fields;
+    return type.fields.map((field) =>
+      field.name === "data"
+        ? {
+            ...field,
+            help: barcodeFormat(values.symbology).hint,
+            placeholder: barcodeFormat(values.symbology).sample,
+          }
+        : field,
+    );
+  }, [type, values.symbology]);
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return QR_TYPES.filter((candidate) => {
+    const matched = QR_TYPES.filter((candidate) => {
       if (family && candidate.family !== family) return false;
       if (!term) return true;
       return (
@@ -54,6 +70,8 @@ export function ModuleContent() {
         candidate.id.includes(term)
       );
     });
+    // Types actifs d'abord, désactivés (« bientôt ») regroupés à la fin.
+    return matched.sort((a, b) => Number(Boolean(a.comingSoon)) - Number(Boolean(b.comingSoon)));
   }, [query, family]);
 
   return (
@@ -117,6 +135,7 @@ export function ModuleContent() {
                   <button
                     key={candidate.id}
                     type="button"
+                    disabled={candidate.comingSoon}
                     onClick={() => {
                       dispatch({ type: "setType", typeId: candidate.id });
                       setQuery("");
@@ -125,6 +144,8 @@ export function ModuleContent() {
                       "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
                       "hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
                       candidate.id === state.typeId && "bg-primary/10",
+                      candidate.comingSoon &&
+                        "cursor-not-allowed opacity-[0.43] grayscale hover:bg-transparent",
                     )}
                   >
                     <candidate.icon className="size-4 shrink-0 text-muted-foreground" />
@@ -136,7 +157,11 @@ export function ModuleContent() {
                         {candidate.tagline}
                       </span>
                     </span>
-                    {candidate.id === state.typeId ? (
+                    {candidate.comingSoon ? (
+                      <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[0.55rem] font-medium tracking-wide text-muted-foreground uppercase">
+                        Bientôt
+                      </span>
+                    ) : candidate.id === state.typeId ? (
                       <Check className="size-3.5 text-primary" />
                     ) : null}
                   </button>
@@ -155,6 +180,11 @@ export function ModuleContent() {
           <Badge variant="secondary" className="text-[0.62rem]">
             {type.encoding === "direct" ? "Encodage direct" : "Page autonome"}
           </Badge>
+          {type.comingSoon ? (
+            <Badge variant="outline" className="text-[0.62rem]">
+              Bientôt
+            </Badge>
+          ) : null}
           <Badge variant="outline" className="text-[0.62rem]">
             {type.fields.length} champs
           </Badge>
@@ -170,7 +200,17 @@ export function ModuleContent() {
         </div>
       </div>
 
-      {missingField ? (
+      {type.comingSoon ? (
+        <Alert className="animate-fade-in">
+          <Clock />
+          <AlertTitle>Bientôt disponible</AlertTitle>
+          <AlertDescription>
+            « {type.label} » affiche une page à héberger (Netlify, FTP…). Les
+            connecteurs de publication arrivent prochainement ; en attendant, ce QR
+            reste vide.
+          </AlertDescription>
+        </Alert>
+      ) : missingField ? (
         <Alert variant="destructive" className="animate-fade-in">
           <AlertCircle />
           <AlertTitle>Champ obligatoire manquant</AlertTitle>
@@ -186,7 +226,7 @@ export function ModuleContent() {
           event.preventDefault();
         }}
       >
-        {type.fields.map((field) => (
+        {fields.map((field) => (
           <FieldInput
             key={field.name}
             field={field}

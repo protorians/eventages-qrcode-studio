@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils";
 
 /** Onglet « Export » : formats, résolution et téléchargement local (spec 005). */
 export function ModuleExport() {
-  const { state, dispatch, type, debouncedPayload, missingField, progress, saveProjectAsQcp } =
+  const { state, dispatch, type, values, debouncedPayload, missingField, progress, saveProjectAsQcp } =
     useBuilder();
   const [busy, setBusy] = useState<ExportFormat | "clipboard" | "share" | "qcp" | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -48,7 +48,21 @@ export function ModuleExport() {
   // Feuille de partage disponible ? (Tauri natif, ou Web Share côté navigateur.)
   const shareSupported = useMemo(() => isShareSupported(), []);
 
+  // Rendu 1D : symbologie + habillage du code-barres, transmis au pipeline
+  // d'export (le rendu QR reste inchangé).
+  const barcode = useMemo(
+    () =>
+      type.id === "barcode"
+        ? { symbology: values.symbology || "CODE128", design: state.barcode }
+        : undefined,
+    [type.id, values.symbology, state.barcode],
+  );
+
   const run = async (format: ExportFormat) => {
+    if (type.comingSoon) {
+      setError("Ce type sera actif dès la prise en charge de la publication de pages.");
+      return;
+    }
     if (missingField) {
       setError(`Contenu incomplet : « ${missingField.label} » est requis.`);
       return;
@@ -63,10 +77,16 @@ export function ModuleExport() {
         qrSize: state.saveSize,
         format,
         fileName: state.projectName,
+        barcode,
       });
-      setDone(filename);
-    } catch {
-      setError("Le téléchargement a échoué. Réessayez ou changez de format.");
+      // Dialogue natif annulé sous Tauri : rien à annoncer.
+      if (filename) setDone(filename);
+    } catch (cause) {
+      setError(
+        cause instanceof Error && cause.message
+          ? cause.message
+          : "Le téléchargement a échoué. Réessayez ou changez de format.",
+      );
     } finally {
       setBusy(null);
     }
@@ -87,6 +107,10 @@ export function ModuleExport() {
 
   /** Partage natif : menu de partage de l'OS sur l'image rendue, sans serveur. */
   const shareNative = async () => {
+    if (type.comingSoon) {
+      setError("Ce type sera actif dès la prise en charge de la publication de pages.");
+      return;
+    }
     if (missingField) {
       setError(`Contenu incomplet : « ${missingField.label} » est requis.`);
       return;
@@ -100,6 +124,7 @@ export function ModuleExport() {
         payload: debouncedPayload,
         qrSize: state.saveSize,
         fileName: state.projectName,
+        barcode,
       });
       if (outcome.kind === "shared") setDone(outcome.message);
     } catch (shareError) {
@@ -157,6 +182,7 @@ export function ModuleExport() {
             <button
               key={format.id}
               type="button"
+              data-slot="export-format-tile"
               disabled={busy !== null}
               onClick={() => run(format.id)}
               className={cn(
@@ -167,7 +193,10 @@ export function ModuleExport() {
               )}
             >
               <span className="flex w-full items-center justify-between">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-transform duration-300 group-hover/tile:scale-110">
+                <span
+                  data-slot="export-format-icon"
+                  className="flex size-8 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground transition-transform duration-300 group-hover/tile:scale-110"
+                >
                   {format.id === "svg" ? (
                     <FileCode2 className="size-4" />
                   ) : (
@@ -179,8 +208,13 @@ export function ModuleExport() {
                 ) : null}
               </span>
               <span className="space-y-0.5">
-                <span className="block text-[0.72rem] font-medium">{format.label}</span>
-                <span className="block text-[0.62rem] text-muted-foreground">
+                <span data-slot="export-format-label" className="block text-[0.72rem] font-medium">
+                  {format.label}
+                </span>
+                <span
+                  data-slot="export-format-detail"
+                  className="block text-[0.62rem] text-muted-foreground"
+                >
                   {format.detail}
                 </span>
               </span>
