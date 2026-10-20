@@ -35,6 +35,10 @@ La direction artistique HUD (coins coupés, typo mono capitales, crans, lueurs) 
 - Le focus clavier est reposé en **intérieur** (`box-shadow: inset`) car le `clip-path` des coins coupés découperait les anneaux (`ring`) externes.
 - Pour habiller un composite maison (ex. `SegmentedControl` dans `controls.tsx`), lui donner un `data-slot` et l'ajouter à la même section CSS.
 
+## Language: English for git artifacts
+
+Commit messages, merge requests (titles, descriptions) and `CHANGELOG.md` entries are written in **English**. Code identifiers and comments keep their existing conventions.
+
 ## Stack
 
 - Tauri 2 + React 19 + TypeScript
