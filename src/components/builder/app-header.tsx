@@ -1,164 +1,102 @@
+import {Library, SlidersHorizontal} from "lucide-react";
+import {Button} from "@/components/ui/button";
 import {
-  CloudOff,
-  Download,
-  FolderOpen,
-  Library,
-  Moon,
-  QrCode,
-  SlidersHorizontal,
-  Sun,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useBuilder } from "@/lib/builder-store";
-import { cn } from "@/lib/utils";
+import {useSettings} from "@/hooks/use-settings";
 
-export function AppHeader({
-  theme,
-  onToggleTheme,
-  onOpenLibrary,
-  onOpenModules,
-  onOpenProjects,
-  onExport,
-  showLibraryButton,
-}: {
-  theme: "light" | "dark";
-  onToggleTheme: () => void;
-  onOpenLibrary: () => void;
-  onOpenModules: () => void;
-  onOpenProjects: () => void;
-  onExport: () => void;
-  showLibraryButton: boolean;
-}) {
-  const { state, type, progress } = useBuilder();
+/**
+ * Barre d'outils de l'atelier, affichée sous la barre de titre sur un onglet
+ * projet : télémétrie du brouillon actif, bibliothèque (mobile) et modules
+ * (mobile). L'enregistrement (⌘S), l'export et les actions globales (thème,
+ * paramètres) vivent désormais dans la barre de titre.
+ */
+export function AppHeader(
+    {
+        onOpenLibrary,
+        onOpenModules,
+        showLibraryButton,
+    }: {
+        onOpenLibrary: () => void;
+        onOpenModules: () => void;
+        showLibraryButton: boolean;
+    }) {
+    const {hud} = useSettings();
 
-  return (
-    <header className="relative z-20 flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/70 px-2.5 py-2 backdrop-blur-xl sm:px-3.5">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="relative flex size-8 items-center justify-center rounded-xl bg-linear-to-br from-primary/30 via-primary/15 to-transparent text-primary ring-1 ring-primary/25">
-          <QrCode className="size-4" />
-          <span className="absolute inset-0 rounded-xl bg-primary/10 blur-md" />
-        </span>
-        <div className="min-w-0">
-          <p className="font-heading truncate text-[0.85rem] leading-tight font-semibold">
-            QR Code Studio
-          </p>
-          <p className="flex items-center gap-1.5 truncate text-[0.65rem] leading-tight text-muted-foreground">
-            <CloudOff className="size-2.5 shrink-0" />
-            <span className="truncate">{state.projectName}</span>
-          </p>
-        </div>
-      </div>
-
-      <div className="mx-1 hidden h-6 items-center gap-1.5 md:flex">
-        <Separator orientation="vertical" className="mr-2 h-5" />
-        <Badge variant="outline" className="text-[0.62rem]">
-          {type.label}
-        </Badge>
-        <span className="hidden font-mono text-[0.62rem] text-muted-foreground lg:inline">
-          {progress}% complété
-        </span>
-      </div>
-
-      <div className="ml-auto flex items-center gap-1">
-        {showLibraryButton ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="hidden gap-1.5 md:inline-flex"
-                  onClick={onOpenLibrary}
+    return (
+        <header
+            className="relative z-20 flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/75 px-2.5 py-2 backdrop-blur-xl sm:px-3.5 md:hidden">
+            {/* Ligne d'énergie sous le bandeau + doublé technique. */}
+            {hud && (
+                <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-linear-to-r from-primary/70 via-primary/20 to-transparent"
                 />
-              }
-            >
-              <Library />
-              <span className="hidden sm:inline">Bibliothèque</span>
-            </TooltipTrigger>
-            <TooltipContent>Types, mockups et modèles</TooltipContent>
-          </Tooltip>
-        ) : null}
+            )}
+            <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 -bottom-[4px] h-px bg-primary/15"
+            />
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={onToggleTheme}
-                aria-label="Changer de thème"
-                className="text-muted-foreground"
-              />
-            }
-          >
-            <span className="relative block size-4">
-              <Sun
-                className={cn(
-                  "absolute inset-0 transition-all duration-500",
-                  theme === "dark" ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100",
-                )}
-              />
-              <Moon
-                className={cn(
-                  "absolute inset-0 transition-all duration-500",
-                  theme === "dark" ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0",
-                )}
-              />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>Thème clair / sombre</TooltipContent>
-        </Tooltip>
+            {/*<div className="flex min-w-0 items-center gap-1.5">*/}
+            {/*    <HudReadout label="MOD" value={type.label} className="min-w-0"/>*/}
+            {/*</div>*/}
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={onOpenModules}
-                aria-label="Options de création"
-                className="text-muted-foreground md:hidden"
-              />
-            }
-          >
-            <SlidersHorizontal />
-          </TooltipTrigger>
-          <TooltipContent>Options de création</TooltipContent>
-        </Tooltip>
+            {/*<div className="mx-1 hidden h-6 items-center gap-1.5 md:flex">*/}
+            {/*    <Separator orientation="vertical" className="mr-2 h-5"/>*/}
+            {/*    <HudReadout label="PRG" value={`${progress}%`} className="hidden lg:inline-flex"/>*/}
+            {/*    <span*/}
+            {/*        aria-hidden="true"*/}
+            {/*        className="hidden h-1 w-14 overflow-hidden bg-muted lg:block"*/}
+            {/*    >*/}
+            {/*        <span*/}
+            {/*          className="progress-ticks block h-full bg-primary transition-[width] duration-500 ease-out"*/}
+            {/*          style={{width: `${progress}%`}}*/}
+            {/*      />*/}
+            {/*    </span>*/}
+            {/*</div>*/}
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={onOpenProjects}
-              />
-            }
-          >
-            <FolderOpen />
-            <span className="hidden sm:inline">Projet</span>
-          </TooltipTrigger>
-          <TooltipContent>Gestionnaire de projets</TooltipContent>
-        </Tooltip>
+            <div className="ml-auto flex items-center gap-1">
+                {showLibraryButton ? (
+                    <Tooltip>
+                        <TooltipTrigger
+                            render={
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="hidden gap-1.5 rounded-sm md:inline-flex"
+                                    onClick={onOpenLibrary}
+                                />
+                            }
+                        >
+                            <Library/>
+                            <span className="hidden sm:inline">Bibliothèque</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Types, mockups et modèles</TooltipContent>
+                    </Tooltip>
+                ) : null}
 
-        <Button type="button" size="sm" className="gap-1.5" onClick={onExport}>
-          <Download />
-          <span className="hidden sm:inline">Exporter</span>
-        </Button>
-      </div>
-    </header>
-  );
+                <Tooltip>
+                    <TooltipTrigger
+                        render={
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={onOpenModules}
+                                aria-label="Options de création"
+                                className="rounded-sm text-muted-foreground md:hidden"
+                            />
+                        }
+                    >
+                        <SlidersHorizontal/>
+                    </TooltipTrigger>
+                    <TooltipContent>Options de création</TooltipContent>
+                </Tooltip>
+            </div>
+        </header>
+    );
 }

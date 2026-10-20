@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { renderExportBlob, sanitizeFileName } from "@/lib/qr-export";
+import { renderExportBlob, type BarcodeExportInput } from "@/lib/qr-export";
+import { sanitizeFileName } from "@/lib/qr-svg";
+import { blobToBase64, isTauriRuntime } from "@/lib/tauri";
 import type { ExportFormat, QrDesign } from "@/lib/qr-design";
 
 /** Résultat d'un partage : fichier transmis, ou fenêtre refermée par l'utilisateur. */
@@ -17,26 +19,6 @@ type NavigatorWithShare = {
   share?: (data: ShareDataWithFiles) => Promise<void>;
   canShare?: (data: ShareDataWithFiles) => boolean;
 };
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result);
-      resolve(result.slice(result.indexOf(",") + 1));
-    };
-    reader.onerror = () => reject(new Error("Lecture du rendu impossible"));
-    reader.readAsDataURL(blob);
-  });
-}
-
-/** Vrai si l'app tourne dans le shell Tauri (desktop) plutôt que dans un simple navigateur. */
-function isTauriRuntime(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)
-  );
-}
 
 /**
  * Indique si le partage système est disponible : toujours sous Tauri (la
@@ -72,14 +54,16 @@ export async function shareQrImage({
   qrSize,
   fileName,
   format = "png",
+  barcode,
 }: {
   design: QrDesign;
   payload: string;
   qrSize: number;
   fileName: string;
   format?: ExportFormat;
+  barcode?: BarcodeExportInput;
 }): Promise<ShareOutcome> {
-  const blob = await renderExportBlob({ design, payload, qrSize, format });
+  const blob = await renderExportBlob({ design, payload, qrSize, format, barcode });
   const name = `${sanitizeFileName(fileName)}.${format}`;
 
   const nav = navigator as unknown as NavigatorWithShare;

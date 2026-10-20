@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCodeStyling from "qr-code-styling";
 import { FRAMES_BY_ID, type QrDesign } from "@/lib/qr-design";
 import { BASE_QR_SIZE, frameMetrics } from "@/lib/qr-frame";
 import { designToOptions } from "@/lib/qr-options";
+import { renderBarcodeSvg, type BarcodeDesign } from "@/lib/barcode";
 import { cn } from "@/lib/utils";
 
 /** Résolution interne du rendu vectoriel de l'aperçu. */
@@ -13,6 +14,9 @@ const SHADOW_CLASS: Record<string, string> = {
   soft: "shadow-lg shadow-black/10 dark:shadow-black/40",
   deep: "shadow-2xl shadow-black/25 dark:shadow-black/60",
 };
+
+/** Rendu 1D : symbologie + habillage du code-barres. */
+export type BarcodeArtboard = { symbology: string; design: BarcodeDesign };
 
 /**
  * Aperçu vivant du QR : monte le moteur de rendu une seule fois puis pousse
@@ -38,21 +42,168 @@ function useQrInstance(design: QrDesign, payload: string) {
   return containerRef;
 }
 
-export function QrArtboard({
+/**
+ * Aperçu vivant du code-barres 1D : SVG régénéré à chaque changement. En cas
+ * de valeur refusée par la symbologie, le dernier rendu valide reste affiché
+ * et un message d'erreur accompagne le code.
+ */
+function useBarcodeInstance(
+  payload: string,
+  symbology: string,
+  design: BarcodeDesign,
+  background: string | null,
+) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const lastSvgRef = useRef<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const { svg, error: renderError } = renderBarcodeSvg({
+      value: payload,
+      symbology,
+      design,
+      background,
+      size: PREVIEW_RENDER_SIZE,
+    });
+    setError(renderError);
+    if (svg) {
+      lastSvgRef.current = svg;
+      container.innerHTML = svg;
+    } else if (lastSvgRef.current) {
+      container.innerHTML = lastSvgRef.current;
+    } else {
+      container.innerHTML = "";
+    }
+  }, [payload, symbology, design, background]);
+
+  return { containerRef, error };
+}
+
+export function CodeArtboard({
   design,
   payload,
+  barcode,
   scale = 1,
   className,
   interactive = false,
 }: {
   design: QrDesign;
   payload: string;
-  /** Facteur d'échelle appliqué à l'ensemble cadre + QR. */
+  /** Présent pour le type code-barres 1D, absent pour un QR. */
+  barcode?: BarcodeArtboard;
+  /** Facteur d'échelle appliqué à l'ensemble cadre + code. */
   scale?: number;
   className?: string;
   interactive?: boolean;
 }) {
+  return barcode ? (
+    <BarcodeInner
+      design={design}
+      payload={payload}
+      barcode={barcode}
+      scale={scale}
+      className={className}
+      interactive={interactive}
+    />
+  ) : (
+    <QrInner
+      design={design}
+      payload={payload}
+      scale={scale}
+      className={className}
+      interactive={interactive}
+    />
+  );
+}
+
+function QrInner({
+  design,
+  payload,
+  scale,
+  className,
+  interactive,
+}: {
+  design: QrDesign;
+  payload: string;
+  scale: number;
+  className?: string;
+  interactive?: boolean;
+}) {
   const containerRef = useQrInstance(design, payload);
+
+  return (
+    <ArtboardShell design={design} scale={scale} className={className} interactive={interactive}>
+      {(qrSize) => (
+        <div
+          ref={containerRef}
+          className="[&>svg]:block [&>svg]:size-full"
+          style={{ width: qrSize, height: qrSize, flex: "none" }}
+        />
+      )}
+    </ArtboardShell>
+  );
+}
+
+function BarcodeInner({
+  design,
+  payload,
+  barcode,
+  scale,
+  className,
+  interactive,
+}: {
+  design: QrDesign;
+  payload: string;
+  barcode: BarcodeArtboard;
+  scale: number;
+  className?: string;
+  interactive?: boolean;
+}) {
+  const { containerRef, error } = useBarcodeInstance(
+    payload,
+    barcode.symbology,
+    barcode.design,
+    design.transparentBackground ? null : design.background,
+  );
+
+  return (
+    <ArtboardShell design={design} scale={scale} className={className} interactive={interactive}>
+      {(qrSize) => (
+        <>
+          <div
+            ref={containerRef}
+            className="[&>svg]:block [&>svg]:size-full"
+            style={{ width: qrSize, height: qrSize, flex: "none" }}
+          />
+          {error ? (
+            <span className="pointer-events-none absolute inset-x-4 top-2 z-10 rounded-md bg-background/90 px-2 py-1 text-center font-mono text-[0.55rem] leading-tight text-destructive ring-1 ring-destructive/30">
+              {error}
+            </span>
+          ) : null}
+        </>
+      )}
+    </ArtboardShell>
+  );
+}
+
+/** Coque commune : cadre, bordure, barre d'accent et libellé (spec 004). */
+function ArtboardShell({
+  design,
+  scale,
+  className,
+  interactive,
+  children,
+}: {
+  design: QrDesign;
+  scale: number;
+  className?: string;
+  interactive?: boolean;
+  /** Reçoit la taille du carré de code pour dimensionner son rendu. */
+  children: (qrSize: number) => React.ReactNode;
+}) {
   const frame = FRAMES_BY_ID[design.frameId] ?? FRAMES_BY_ID.none;
   const metrics = frameMetrics(frame, BASE_QR_SIZE, Boolean(design.frameText));
   const hasFrame = frame.id !== "none";
@@ -84,21 +235,24 @@ export function QrArtboard({
   return (
     <div
       style={{ width: metrics.width * scale, height: metrics.height * scale }}
-      className={cn(
-        "relative transition-[width,height] duration-300 ease-out",
-        className,
-      )}
+      className={cn("relative", className)}
     >
       <div
         className={cn(
-          "absolute top-0 left-0 flex flex-col items-center transition-transform duration-300 ease-out",
+          "absolute top-1/2 left-1/2 flex flex-col items-center",
           interactive && "group-hover/artboard:scale-[1.01]",
         )}
         style={{
           width: metrics.width,
           height: metrics.height,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
+          // Le zoom est animé uniquement via transform (compositor) : la boîte
+          // de layout passe en une seule passe à sa taille finale — animer
+          // width/height relance layout + paint de toute la scène à chaque
+          // frame, d'où une animation saccadée. Le centrage (translate -50 %)
+          // garde le visuel immobile pendant la transition, seul l'échelle varie.
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transition: "transform 300ms ease-out",
+          willChange: "transform",
         }}
       >
         <div
@@ -111,7 +265,11 @@ export function QrArtboard({
             height: metrics.height,
             borderRadius: metrics.radius,
             padding: metrics.pad + metrics.borderWidth,
-            background: hasFrame ? design.frameBackground : design.transparentBackground ? "transparent" : design.background,
+            background: hasFrame
+              ? design.frameBackground
+              : design.transparentBackground
+                ? "transparent"
+                : design.background,
             borderWidth: metrics.borderWidth,
             borderStyle: frame.borderStyle === "none" ? undefined : frame.borderStyle,
             borderColor: design.frameColor,
@@ -132,11 +290,7 @@ export function QrArtboard({
           {frame.labelPosition === "top" && hasFrame ? label : null}
           {frame.labelPosition === "top" && hasFrame ? accent : null}
 
-          <div
-            ref={containerRef}
-            className="[&>svg]:block [&>svg]:size-full"
-            style={{ width: metrics.qrSize, height: metrics.qrSize, flex: "none" }}
-          />
+          {children(metrics.qrSize)}
 
           {frame.labelPosition === "bottom" && hasFrame ? accent : null}
           {frame.labelPosition === "bottom" && hasFrame ? label : null}

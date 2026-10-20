@@ -3,6 +3,30 @@
 version = 4
 
 [[package]]
+name = "Eventages-Lite"
+version = "0.7.0"
+dependencies = [
+ "base64 0.22.1",
+ "image",
+ "lopdf",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "qrcode",
+ "resvg",
+ "rqrr",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tiny-skia",
+ "usvg",
+ "zip",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3214,30 +3238,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d68782463e408eb1e668cf6152704bd856c78c5b6417adaee3203d8f4c1fc9ec"
 dependencies = [
  "image",
-]
-
-[[package]]
-name = "qrcode-studio"
-version = "0.3.0"
-dependencies = [
- "base64 0.22.1",
- "image",
- "lopdf",
- "objc2",
- "objc2-app-kit",
- "objc2-foundation",
- "qrcode",
- "resvg",
- "rqrr",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tiny-skia",
- "usvg",
- "zip",
 ]
 
 [[package]]

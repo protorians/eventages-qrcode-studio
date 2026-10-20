@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AppWindow,
+  Barcode,
   Briefcase,
   CalendarDays,
   Contact,
@@ -16,7 +17,6 @@ import {
   MessageSquare,
   Music,
   Package,
-  QrCode,
   Share2,
   ShieldCheck,
   Star,
@@ -25,6 +25,7 @@ import {
   Video,
   Wifi,
 } from "lucide-react";
+import { BARCODE_FORMATS } from "@/lib/barcode";
 
 /** Comment le contenu est porté par le QR (spec 001, FR-3). */
 export type QrEncoding = "direct" | "page";
@@ -76,6 +77,13 @@ export type QrType = {
   /** Teinte d'accent (degrés oklch) utilisée par la vignette. */
   hue: number;
   fields: QrField[];
+  /**
+   * Type en attente de la publication de pages (spec 009) : il produit une
+   * page à héberger et les connecteurs (Netlify, FTP…) ne sont pas encore
+   * intégrés. Le type reste visible dans la galerie, marqué « Bientôt », et
+   * ne génère pas de QR scannable.
+   */
+  comingSoon?: boolean;
 };
 
 export const QR_FAMILIES: { id: QrFamily; label: string }[] = [
@@ -241,6 +249,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Page contact autonome",
     family: "contact",
     encoding: "page",
+    comingSoon: true,
     icon: ShieldCheck,
     hue: 245,
     fields: [
@@ -260,6 +269,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Regrouper plusieurs liens",
     family: "web",
     encoding: "page",
+    comingSoon: true,
     icon: ListTree,
     hue: 265,
     fields: [
@@ -281,6 +291,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Tous vos profils sur une page",
     family: "web",
     encoding: "page",
+    comingSoon: true,
     icon: Share2,
     hue: 320,
     fields: [
@@ -298,6 +309,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Page d'accueil autonome",
     family: "web",
     encoding: "page",
+    comingSoon: true,
     icon: LayoutTemplate,
     hue: 285,
     fields: [
@@ -314,6 +326,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Carte de restaurant en ligne",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: MenuIcon,
     hue: 30,
     fields: [
@@ -335,6 +348,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Fiche entreprise complète",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: Briefcase,
     hue: 210,
     fields: [
@@ -352,6 +366,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Fiche produit détaillée",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: Package,
     hue: 45,
     fields: [
@@ -369,6 +384,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Code promo à présenter en caisse",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: Ticket,
     hue: 15,
     fields: [
@@ -380,16 +396,29 @@ export const QR_TYPES: QrType[] = [
   {
     id: "event",
     label: "Événement",
-    tagline: "Inviter à un événement",
+    tagline: "Ajouter au calendrier au scan",
     family: "event",
-    encoding: "page",
+    encoding: "direct",
     icon: CalendarDays,
     hue: 340,
     fields: [
       { name: "title", label: "Titre", type: "text", required: true },
       { name: "location", label: "Lieu", type: "text", wide: true },
-      { name: "startDate", label: "Date de début", type: "date" },
+      {
+        name: "startDate",
+        label: "Date de début",
+        type: "date",
+        required: true,
+        help: "Le scan propose l'ajout au calendrier du téléphone (iCalendar).",
+      },
       { name: "startTime", label: "Heure de début", type: "time" },
+      {
+        name: "endDate",
+        label: "Date de fin",
+        type: "date",
+        help: "Prise en compte avec l'heure de fin.",
+      },
+      { name: "endTime", label: "Heure de fin", type: "time" },
       { name: "description", label: "Description", type: "textarea", wide: true },
     ],
   },
@@ -399,6 +428,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Collecter un avis client",
     family: "event",
     encoding: "page",
+    comingSoon: true,
     icon: Star,
     hue: 90,
     fields: [
@@ -422,6 +452,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Diffuser un document",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: FileText,
     hue: 5,
     fields: [
@@ -436,6 +467,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Lire une vidéo",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: Video,
     hue: 355,
     fields: [
@@ -450,6 +482,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Partager une galerie",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: Images,
     hue: 300,
     fields: [
@@ -464,6 +497,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Diffuser un fichier audio",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: Music,
     hue: 170,
     fields: [
@@ -478,6 +512,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Partager une playlist musicale",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: ListMusic,
     hue: 130,
     fields: [
@@ -491,6 +526,7 @@ export const QR_TYPES: QrType[] = [
     tagline: "Installer votre application",
     family: "advanced",
     encoding: "page",
+    comingSoon: true,
     icon: AppWindow,
     hue: 260,
     fields: [
@@ -501,32 +537,32 @@ export const QR_TYPES: QrType[] = [
     ],
   },
   {
-    id: "barcode2d",
-    label: "Code-barres 2D",
-    tagline: "Encoder des données brutes",
+    id: "barcode",
+    label: "Code-barres",
+    tagline: "Code-barres 1D à personnaliser",
     family: "advanced",
     encoding: "direct",
-    icon: QrCode,
+    icon: Barcode,
     hue: 0,
     fields: [
       {
-        name: "format",
-        label: "Format",
+        name: "symbology",
+        label: "Symbologie",
         type: "select",
-        options: [
-          { value: "text", label: "Texte brut" },
-          { value: "json", label: "JSON" },
-          { value: "hex", label: "Hexadécimal" },
-        ],
+        options: BARCODE_FORMATS.map((format) => ({
+          value: format.id,
+          label: format.label,
+        })),
+        help: "Chaque norme impose son jeu de caractères et sa longueur.",
       },
       {
         name: "data",
-        label: "Données",
-        type: "textarea",
-        placeholder: '{"id":"A-1029"}',
+        label: "Valeur",
+        type: "text",
+        placeholder: "400638133393",
         required: true,
         wide: true,
-        help: "Les données sont encodées telles quelles, sans transformation.",
+        help: "La valeur doit être valide pour la symbologie choisie.",
       },
     ],
   },
@@ -536,8 +572,21 @@ export const QR_TYPES_BY_ID: Record<string, QrType> = Object.fromEntries(
   QR_TYPES.map((type) => [type.id, type]),
 );
 
+/** Identifiants d'anciens types, migrés silencieusement au chargement. */
+const LEGACY_TYPE_IDS: Record<string, string> = {
+  // « barcode2d » encodait des données brutes en QR ; remplacé par le
+  // code-barres 1D dédié (les valeurs saisies sont conservées).
+  barcode2d: "barcode",
+};
+
+/** Résout un identifiant de type, alias legacy inclus ; `null` si inconnu. */
+export function resolveTypeId(id: string): string | null {
+  if (QR_TYPES_BY_ID[id]) return id;
+  return LEGACY_TYPE_IDS[id] ?? null;
+}
+
 export function getQrType(id: string): QrType {
-  return QR_TYPES_BY_ID[id] ?? QR_TYPES[0];
+  return QR_TYPES_BY_ID[resolveTypeId(id) ?? ""] ?? QR_TYPES[0];
 }
 
 export type QrValues = Record<string, string>;
@@ -608,6 +657,8 @@ const SAMPLE_BY_NAME: Record<string, string> = {
   location: "Le Lieu Unique, Nantes",
   startDate: "2026-11-14",
   startTime: "19:30",
+  endDate: "2026-11-14",
+  endTime: "22:00",
   question: "Recommanderiez-vous notre atelier ?",
   links: "Boutique | https://studio-qr.local/boutique\nNewsletter | https://studio-qr.local/newsletter",
   instagram: "https://instagram.com/studio",
@@ -620,8 +671,8 @@ const SAMPLE_BY_NAME: Record<string, string> = {
   artist: "Studio Sessions",
   actionLabel: "Télécharger le catalogue",
   scale: "stars",
-  format: "json",
-  data: '{"atelier":"A-1029","lot":"2026-04"}',
+  symbology: "EAN13",
+  data: "400638133393",
   iosUrl: "https://apps.apple.com/app/id123456789",
   androidUrl: "https://play.google.com/store/apps/details?id=local.studio",
   fallbackUrl: "https://studio-qr.local/app",
