@@ -8,6 +8,26 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [0.7.0] — 2026-10-20 · Identité Eventages Lite : nommage technique et icônes
+
+### Modifié
+- **Nommage technique aligné sur « Eventages Lite »** : nom du paquet npm
+  (`eventages-lite`) et du crate Rust (`Eventages-Lite`), champ `app` des
+  projets `.qcp` — créés par l'interface comme par le CLI
+  (`package.json`, `src-tauri/Cargo.toml`, `cli/workspace.ts`,
+  `src-tauri/src/qcp.rs`). L'identifiant de bundle reste
+  `com.protorians.qrcode-studio`.
+- **Nouveau jeu d'icônes d'app** : icônes claire, sombre, noire et blanche
+  servies depuis `public/assets/images/` (favicon et marque), et jeu d'icônes
+  Tauri complet régénéré — desktop (`.icns`, `.ico`, PNG), Android (mipmaps +
+  icône adaptative) et iOS (AppIcon) (`src-tauri/icons/`).
+- **Logo de marque dans la barre de titre** (`title-bar.tsx`) : l'icône
+  s'affiche à côté du nom et suit le thème clair/sombre.
+- Versions alignées sur 0.7.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.6.0] — 2026-10-20 · Espace de travail à onglets, code-barres 1D et barre de titre native
 
 ### Ajouté
@@ -303,6 +323,7 @@ compte ni serveur — desktop Tauri avec partage système natif.
 
 ---
 
+[0.7.0]: https://example.invalid/releases/v0.7.0
 [0.6.0]: https://example.invalid/releases/v0.6.0
 [0.5.0]: https://example.invalid/releases/v0.5.0
 [0.4.0]: https://example.invalid/releases/v0.4.0
