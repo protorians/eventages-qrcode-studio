@@ -23,13 +23,19 @@ import {
   ERROR_CORRECTION_LEVELS,
   GRADIENT_PRESETS,
   QR_BACKGROUNDS,
+  type QrDesign,
 } from "@/lib/qr-design";
+import type { BarcodeDesign } from "@/lib/barcode";
 import { useBuilder } from "@/lib/builder-store";
 
 /** Onglet « Style » : forme des modules, couleurs, fond, robustesse. */
 export function ModuleStyle() {
-  const { state, patchDesign } = useBuilder();
+  const { state, patchDesign, type } = useBuilder();
   const { design } = state;
+
+  if (type.id === "barcode") {
+    return <BarcodeStyle barcode={state.barcode} design={design} />;
+  }
 
   return (
     <div className="space-y-5">
@@ -181,6 +187,145 @@ export function ModuleStyle() {
         <p>
           Les couleurs appliquées ici restent dans la palette du studio ; ajustez-les au
           besoin depuis le sélecteur hexadécimal.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Panneau Style du code-barres 1D : barres, fond, géométrie et texte. */
+function BarcodeStyle({
+  barcode,
+  design,
+}: {
+  barcode: BarcodeDesign;
+  design: QrDesign;
+}) {
+  const { patchBarcode, patchDesign } = useBuilder();
+
+  return (
+    <div className="space-y-5">
+      <ControlStack label="Couleur des barres">
+        <div className="space-y-3">
+          <ColorControl
+            label="Couleur des barres"
+            value={barcode.barColor}
+            onChange={(color) => patchBarcode({ barColor: color })}
+            className="w-full justify-between"
+          />
+          <SwatchRail
+            value={barcode.barColor}
+            onChange={(color) => patchBarcode({ barColor: color })}
+          />
+        </div>
+      </ControlStack>
+
+      <Separator />
+
+      <ControlStack label="Fond">
+        <div className="flex flex-wrap gap-2">
+          {QR_BACKGROUNDS.map((background) => (
+            <button
+              key={background.value}
+              type="button"
+              title={background.name}
+              aria-label={background.name}
+              aria-pressed={
+                !design.transparentBackground && design.background === background.value
+              }
+              onClick={() =>
+                patchDesign({ background: background.value, transparentBackground: false })
+              }
+              style={{ background: background.value }}
+              className="size-8 rounded-lg ring-1 ring-inset ring-black/12 transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-pressed:scale-105 aria-pressed:ring-2 aria-pressed:ring-ring aria-pressed:ring-offset-2 aria-pressed:ring-offset-card"
+            />
+          ))}
+          <ColorControl
+            label="Fond personnalisé"
+            compact
+            value={design.background}
+            onChange={(color) => patchDesign({ background: color, transparentBackground: false })}
+            className="size-8 p-0"
+          />
+        </div>
+        <SwitchControl
+          label="Fond transparent"
+          hint="Sans fond opaque, le contraste dépend du support d'impression."
+          checked={design.transparentBackground}
+          onChange={(checked) => patchDesign({ transparentBackground: checked })}
+        />
+      </ControlStack>
+
+      <Separator />
+
+      <ControlStack
+        label="Géométrie"
+        hint="Des barres larges et hautes se scannent de plus loin, au laser comme à la caméra."
+      >
+        <SliderControl
+          label="Largeur des barres"
+          value={barcode.barWidth}
+          min={1}
+          max={6}
+          suffix=" px"
+          onChange={(barWidth) => patchBarcode({ barWidth })}
+        />
+        <SliderControl
+          label="Hauteur des barres"
+          value={barcode.barHeight}
+          min={60}
+          max={240}
+          step={5}
+          suffix=" px"
+          onChange={(barHeight) => patchBarcode({ barHeight })}
+        />
+        <SliderControl
+          label="Zone de silence"
+          hint="Marge autour des barres : indispensable à la lecture par les lecteurs."
+          value={barcode.margin}
+          min={0}
+          max={40}
+          suffix=" px"
+          onChange={(margin) => patchBarcode({ margin })}
+        />
+      </ControlStack>
+
+      <Separator />
+
+      <ControlStack label="Texte lisible">
+        <SwitchControl
+          label="Afficher la valeur"
+          hint="Chiffres sous les barres — la saisie manuelle de secours en caisse."
+          checked={barcode.showValue}
+          onChange={(showValue) => patchBarcode({ showValue })}
+        />
+        {barcode.showValue ? (
+          <div className="space-y-4 animate-fade-in">
+            <SliderControl
+              label="Taille du texte"
+              value={barcode.fontSize}
+              min={10}
+              max={32}
+              suffix=" px"
+              onChange={(fontSize) => patchBarcode({ fontSize })}
+            />
+            <SliderControl
+              label="Marge du texte"
+              value={barcode.textMargin}
+              min={0}
+              max={20}
+              suffix=" px"
+              onChange={(textMargin) => patchBarcode({ textMargin })}
+            />
+          </div>
+        ) : null}
+      </ControlStack>
+
+      <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-2.5 text-[0.68rem] text-muted-foreground">
+        <Palette className="mt-0.5 size-3.5 shrink-0" />
+        <p>
+          Pour l'impression, gardez des barres sombres sur fond clair : les lecteurs
+          laser ne voient que le contraste.
         </p>
       </div>
     </div>

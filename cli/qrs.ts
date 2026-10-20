@@ -493,7 +493,9 @@ function commandTypes(args: ParsedArgs): void {
   const type = typeById(typeId);
   console.log(`${type.label} (${type.id}) — ${type.tagline}`);
   console.log(
-    `Encodage : ${type.encoding === "direct" ? "direct dans le QR" : "page autonome (local://)"}`,
+    `Encodage : ${
+      type.encoding === "direct" ? "direct dans le QR" : "page autonome (publication à venir)"
+    }`,
   );
   console.log("\nChamps :");
   for (const field of type.fields) {

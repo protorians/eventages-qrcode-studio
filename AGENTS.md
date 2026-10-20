@@ -46,7 +46,8 @@ La direction artistique HUD (coins coupés, typo mono capitales, crans, lueurs) 
 
 - Principal font: **Manrope Variable** (`--font-sans`)
 - Mono font: **JetBrains Mono Variable** (`--font-mono`) — use `font-mono` for technical values (URLs, payloads, IDs, code)
-- Both loaded as inline latin-subset `@font-face` in `src/index.css` to keep the Tauri binary small. Do not import full Fontsource CSS files.
+- HUD headings: **Anton** (poids unique 400), appliqué uniquement sous `html:not([data-hud="off"])` via `[data-slot="…-title"]` et la classe `.hud-heading`
+- All loaded as inline latin-subset `@font-face` in `src/index.css` to keep the Tauri binary small. Do not import full Fontsource CSS files.
 
 ## Commands
 

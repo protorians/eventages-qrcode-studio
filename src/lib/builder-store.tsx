@@ -23,6 +23,11 @@ import {
   type QrValues,
 } from "@/lib/qr-catalog";
 import { DEFAULT_DESIGN, type QrDesign } from "@/lib/qr-design";
+import {
+  DEFAULT_BARCODE_DESIGN,
+  normalizeBarcodeDesign,
+  type BarcodeDesign,
+} from "@/lib/barcode";
 import { buildPayload } from "@/lib/qr-payload";
 import { sanitizeFileName } from "@/lib/qr-svg";
 import { contentFromPayload } from "@/lib/qr-import";
@@ -46,12 +51,24 @@ export const BUILDER_MODULES: { id: BuilderModule; label: string }[] = [
   { id: "export", label: "Export" },
 ];
 
+/**
+ * Modules applicables au type courant : le code-barres 1D n'a ni coins ni
+ * logo (les deux casseraient la lecture au scan).
+ */
+export function modulesForType(typeId: string): { id: BuilderModule; label: string }[] {
+  return typeId === "barcode"
+    ? BUILDER_MODULES.filter((module) => module.id !== "corners" && module.id !== "logo")
+    : BUILDER_MODULES;
+}
+
 export type BuilderState = {
   projectId: string;
   projectName: string;
   typeId: string;
   valuesByType: Record<string, QrValues>;
   design: QrDesign;
+  /** Habillage du code-barres 1D (type « barcode » uniquement). */
+  barcode: BarcodeDesign;
   activeModule: BuilderModule;
   mockupId: string;
   saveSize: number;
@@ -70,6 +87,7 @@ export type BuilderAction =
   | { type: "setType"; typeId: string }
   | { type: "setValue"; field: string; value: string }
   | { type: "patchDesign"; patch: Partial<QrDesign> }
+  | { type: "patchBarcode"; patch: Partial<BarcodeDesign> }
   | { type: "resetDesign" }
   | { type: "setModule"; module: BuilderModule }
   | { type: "setMockup"; mockupId: string }
@@ -111,6 +129,12 @@ type ProjectsAction =
 const PROJECTS_STORAGE_KEY = "qrcode-studio:projects:v1";
 /** Ancien format (brouillon unique) migré automatiquement au premier lancement. */
 const LEGACY_STORAGE_KEY = "qrcode-studio:builder:v1";
+/**
+ * Persistance des onglets de l'espace de travail (tenus par WorkspaceProvider).
+ * Lue aussi au démarrage pour réhydrater d'office le projet de l'onglet actif
+ * de la session précédente — et éviter tout flash de mauvais contenu.
+ */
+export const WORKSPACE_TABS_STORAGE_KEY = "qrcode-studio:tabs:v1";
 
 function createProjectId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -135,6 +159,7 @@ function createInitialState(projectId = createProjectId()): BuilderState {
     typeId: type.id,
     valuesByType: { [type.id]: defaultValuesFor(type) },
     design: { ...DEFAULT_DESIGN },
+    barcode: { ...DEFAULT_BARCODE_DESIGN },
     activeModule: "content",
     mockupId: "plain",
     saveSize: 1024,
@@ -160,10 +185,31 @@ function normalizeStoredProject(raw: unknown): StoredProject | null {
   // Les anciens enregistrements contenaient un statut de publication, retiré.
   const legacyState = { ...candidate.state } as Record<string, unknown>;
   delete legacyState.status;
+
+  // Ancien type « barcode2d » (QR de données brutes) : devenu code-barres 1D,
+  // la valeur saisie est conservée, l'ancien champ « format » est abandonné.
+  let typeId = candidate.state.typeId;
+  const valuesByType: Record<string, QrValues> = {
+    ...(candidate.state.valuesByType ?? {}),
+  };
+  if (typeId === "barcode2d") {
+    const legacy = valuesByType["barcode2d"] ?? {};
+    delete valuesByType["barcode2d"];
+    const barcodeType = getQrType("barcode");
+    valuesByType["barcode"] = {
+      ...defaultValuesFor(barcodeType),
+      data: legacy.data ?? "",
+    };
+    typeId = "barcode";
+  }
+
   const state: BuilderState = {
     ...createInitialState(candidate.id),
     ...(legacyState as BuilderState),
+    typeId,
+    valuesByType,
     design: { ...DEFAULT_DESIGN, ...(candidate.state.design ?? {}) },
+    barcode: normalizeBarcodeDesign(candidate.state.barcode),
     projectId: candidate.id,
   };
   return {
@@ -171,6 +217,24 @@ function normalizeStoredProject(raw: unknown): StoredProject | null {
     createdAt: typeof candidate.createdAt === "number" ? candidate.createdAt : now,
     updatedAt: typeof candidate.updatedAt === "number" ? candidate.updatedAt : now,
     state,
+  };
+}
+
+/**
+ * État éditeur complet pour un projet du registre : rétablit le module actif
+ * tel qu'à la dernière édition (un onglet rouvre là où l'utilisateur s'était
+ * arrêté) en garantissant sa validité vis-à-vis du type de code.
+ */
+function stateFromProject(project: StoredProject): BuilderState {
+  const stored = project.state;
+  const validModule = modulesForType(stored.typeId).some(
+    (module) => module.id === stored.activeModule,
+  );
+  return {
+    ...stored,
+    projectId: project.id,
+    activeModule: validModule ? stored.activeModule : "content",
+    design: { ...DEFAULT_DESIGN, ...stored.design },
   };
 }
 
@@ -219,6 +283,10 @@ function reducer(state: BuilderState, action: BuilderAction): BuilderState {
       return {
         ...state,
         typeId: type.id,
+        // Le code-barres n'a pas de modules coins/logo : repli sur « Contenu ».
+        activeModule: modulesForType(type.id).some((module) => module.id === state.activeModule)
+          ? state.activeModule
+          : "content",
         valuesByType: {
           ...state.valuesByType,
           [type.id]: state.valuesByType[type.id] ?? defaultValuesFor(type),
@@ -239,6 +307,9 @@ function reducer(state: BuilderState, action: BuilderAction): BuilderState {
 
     case "patchDesign":
       return { ...state, design: { ...state.design, ...action.patch } };
+
+    case "patchBarcode":
+      return { ...state, barcode: { ...state.barcode, ...action.patch } };
 
     case "resetDesign":
       return { ...state, design: { ...DEFAULT_DESIGN } };
@@ -281,14 +352,22 @@ export type BuilderContextValue = {
   progress: number;
   setValue: (field: string, value: string) => void;
   patchDesign: (patch: Partial<QrDesign>) => void;
+  patchBarcode: (patch: Partial<BarcodeDesign>) => void;
   /** Date du dernier enregistrement local, en heure courte. */
   savedLabel: string | null;
   /** Projets du registre local, triés du plus récent au plus ancien. */
   projects: ProjectSummary[];
-  newProject: () => void;
+  /** Vrai une fois le registre local restauré (démarrage terminé). */
+  ready: boolean;
+  newProject: () => string;
   openProject: (id: string) => void;
   duplicateProject: (id: string) => void;
   deleteProject: (id: string) => void;
+  /**
+   * Écrit immédiatement le brouillon actif dans le registre local, sans
+   * attendre le debounce — changement d'onglet, fermeture, suppression.
+   */
+  flushActiveProject: () => void;
   /** Écrit le projet actif dans un fichier .qcp ; renvoie le chemin. */
   saveProjectAsQcp: () => Promise<string>;
   /**
@@ -301,10 +380,10 @@ export type BuilderContextValue = {
   filePath: string | null;
   /** Vrai si des modifications ne sont pas encore écrites dans le fichier lié. */
   dirty: boolean;
-  /** Ouvre un fichier .qcp et l'ajoute au registre comme nouveau projet. */
-  openProjectFromQcp: (path: string) => Promise<void>;
-  /** Crée un projet depuis un QR existant (image, SVG ou PDF). */
-  newProjectFromQr: (path: string) => Promise<void>;
+  /** Ouvre un fichier .qcp et l'ajoute au registre ; renvoie l'ID du projet. */
+  openProjectFromQcp: (path: string) => Promise<string>;
+  /** Crée un projet depuis un QR existant ; renvoie l'ID du projet. */
+  newProjectFromQr: (path: string) => Promise<string>;
 };
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -381,8 +460,22 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     }
     activeId = activeId || loaded[0].id;
     projectsDispatch({ type: "hydrate", data: { activeId, items: loaded } });
-    const active = loaded.find((project) => project.id === activeId);
-    if (active) dispatch({ type: "hydrate", state: active.state });
+    // Onglets de l'espace de travail : la session précédente peut désigner le
+    // projet à rouvrir d'office (onglet actif restauré au démarrage).
+    let bootId = activeId;
+    try {
+      const rawTabs = window.localStorage.getItem(WORKSPACE_TABS_STORAGE_KEY);
+      if (rawTabs) {
+        const tabs = JSON.parse(rawTabs) as { active?: unknown };
+        if (typeof tabs.active === "string" && loaded.some((p) => p.id === tabs.active)) {
+          bootId = tabs.active;
+        }
+      }
+    } catch {
+      // Clé illisible : repli sur le projet actif du registre.
+    }
+    const active = loaded.find((project) => project.id === bootId);
+    if (active) dispatch({ type: "hydrate", state: stateFromProject(active) });
     setReady(true);
   }, []);
 
@@ -433,10 +526,19 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         typeId: state.typeId,
         valuesByType: state.valuesByType,
         design: state.design,
+        barcode: state.barcode,
         mockupId: state.mockupId,
         saveSize: state.saveSize,
       }),
-    [state.projectName, state.typeId, state.valuesByType, state.design, state.mockupId, state.saveSize],
+    [
+      state.projectName,
+      state.typeId,
+      state.valuesByType,
+      state.design,
+      state.barcode,
+      state.mockupId,
+      state.saveSize,
+    ],
   );
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const dirty = savedSignature !== null && savedSignature !== stateSignature;
@@ -477,20 +579,13 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const project = projectsData.items.find((item) => item.id === id);
       if (!project) return;
-      dispatch({
-        type: "hydrate",
-        state: {
-          ...project.state,
-          projectId: project.id,
-          activeModule: "content",
-          design: { ...DEFAULT_DESIGN, ...project.state.design },
-        },
-      });
+      // L'onglet rouvre le projet là où l'utilisateur s'était arrêté.
+      dispatch({ type: "hydrate", state: stateFromProject(project) });
     },
     [projectsData.items],
   );
 
-  const newProject = useCallback(() => {
+  const newProject = useCallback((): string => {
     const id = createProjectId();
     const initialState = createInitialState(id);
     initialState.projectName = uniqueProjectName(
@@ -502,6 +597,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       project: { id, createdAt: now, updatedAt: now, state: initialState },
     });
     dispatch({ type: "hydrate", state: initialState });
+    return id;
   }, [projectsData.items]);
 
   const duplicateProject = useCallback(
@@ -541,15 +637,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       if (state.projectId !== id) return;
       const next = remaining[0];
       if (next) {
-        dispatch({
-          type: "hydrate",
-          state: {
-            ...next.state,
-            projectId: next.id,
-            activeModule: "content",
-            design: { ...DEFAULT_DESIGN, ...next.state.design },
-          },
-        });
+        dispatch({ type: "hydrate", state: stateFromProject(next) });
         return;
       }
       // Plus aucun projet : on repart d'une toile vierge.
@@ -565,13 +653,27 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
   );
 
   /** Enregistre le projet dans le registre et en fait le projet actif. */
-  const registerAndActivate = useCallback((imported: BuilderState) => {
+  const registerAndActivate = useCallback((imported: BuilderState): string => {
     const now = Date.now();
     projectsDispatch({
       type: "add",
       project: { id: imported.projectId, createdAt: now, updatedAt: now, state: imported },
     });
     dispatch({ type: "hydrate", state: imported });
+    return imported.projectId;
+  }, []);
+
+  /**
+   * Écrit immédiatement le brouillon actif dans le registre, sans attendre le
+   * debounce : appelé avant tout changement d'onglet ou fermeture, afin qu'
+   * aucun dernier frappe ne puisse être perdu au passage.
+   */
+  const flushActiveProject = useCallback(() => {
+    const current = stateRef.current;
+    projectsDispatch({
+      type: "upsert",
+      project: { id: current.projectId, createdAt: Date.now(), updatedAt: Date.now(), state: current },
+    });
   }, []);
 
   /** Écrit l'archive .qcp du projet courant à un chemin donné, sans dialogue. */
@@ -582,6 +684,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       typeId: current.typeId,
       valuesByType: current.valuesByType,
       design: current.design,
+      barcode: current.barcode,
       mockupId: current.mockupId,
       saveSize: current.saveSize,
     });
@@ -595,7 +698,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     const target = await save({
       title: "Enregistrer le projet",
       defaultPath: `${sanitizeFileName(stateRef.current.projectName)}.qcp`,
-      filters: [{ name: "Projet QR Code Studio", extensions: ["qcp"] }],
+      filters: [{ name: "Projet Eventages Lite", extensions: ["qcp"] }],
     });
     if (!target) return "";
     const path = await writeProjectQcp(target);
@@ -617,15 +720,16 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
   }, [saveProjectAsQcp, writeProjectQcp]);
 
   const openProjectFromQcp = useCallback(
-    async (path: string): Promise<void> => {
+    async (path: string): Promise<string> => {
       const file = await invoke<QcpFilePayload>("open_project_qcp", { path });
       const data = applyQcpManifest({ manifest: file.manifest, assets: file.assets ?? [] });
-      registerAndActivate({
+      return registerAndActivate({
         projectId: createProjectId(),
         projectName: data.name,
         typeId: data.typeId,
         valuesByType: data.valuesByType,
         design: data.design,
+        barcode: data.barcode,
         activeModule: "content",
         mockupId: data.mockupId,
         saveSize: data.saveSize,
@@ -638,7 +742,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
   );
 
   const newProjectFromQr = useCallback(
-    async (path: string): Promise<void> => {
+    async (path: string): Promise<string> => {
       const result = await invoke<{ payload: string; errorCorrection: string | null }>(
         "import_qr_from_file",
         { path },
@@ -648,7 +752,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       const errorCorrection = ["L", "M", "Q", "H"].includes(result.errorCorrection ?? "")
         ? (result.errorCorrection as QrDesign["errorCorrection"])
         : DEFAULT_DESIGN.errorCorrection;
-      registerAndActivate({
+      return registerAndActivate({
         projectId: createProjectId(),
         projectName: uniqueProjectName(
           projectsData.items.map((item) => item.state.projectName),
@@ -657,6 +761,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         typeId: type.id,
         valuesByType: { [type.id]: { ...defaultValuesFor(type), ...content.values } },
         design: { ...DEFAULT_DESIGN, errorCorrection },
+        barcode: { ...DEFAULT_BARCODE_DESIGN },
         activeModule: "content",
         mockupId: "plain",
         saveSize: 1024,
@@ -703,6 +808,11 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const patchBarcode = useCallback(
+    (patch: Partial<BarcodeDesign>) => dispatch({ type: "patchBarcode", patch }),
+    [],
+  );
+
   const savedLabel = useMemo(() => {
     if (!state.savedAt) return null;
     return new Date(state.savedAt).toLocaleTimeString("fr-FR", {
@@ -723,12 +833,15 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       progress,
       setValue,
       patchDesign,
+      patchBarcode,
       savedLabel,
       projects,
+      ready,
       newProject,
       openProject,
       duplicateProject,
       deleteProject,
+      flushActiveProject,
       saveProjectAsQcp,
       saveProject,
       dirty,
@@ -746,12 +859,15 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       progress,
       setValue,
       patchDesign,
+      patchBarcode,
       savedLabel,
       projects,
+      ready,
       newProject,
       openProject,
       duplicateProject,
       deleteProject,
+      flushActiveProject,
       saveProjectAsQcp,
       saveProject,
       dirty,

@@ -30,6 +30,9 @@ export function contentFromPayload(payload: string): ImportedContent {
     if (number) return { typeId: "sms", values: { number } };
     return textFallback(value);
   }
+  if (/^BEGIN:(VCALENDAR|VEVENT)\b/i.test(value)) {
+    return parseVEvent(value) ?? textFallback(value);
+  }
   return textFallback(value);
 }
 
@@ -117,4 +120,44 @@ function parseSms(value: string): ImportedContent | null {
   const values: QrValues = { number: number.trim() };
   if (message) values.message = message;
   return { typeId: "sms", values };
+}
+
+/** Dé-échappe une valeur TEXT iCalendar (RFC 5545). */
+function icalUnescape(value: string): string {
+  return value.replace(/\\n/gi, "\n").replace(/\\([,;\\])/g, "$1");
+}
+
+/** « 20261114T193000 » → [« 2026-11-14 », « 19:30 »]. */
+function splitIcalDateTime(raw: string): [string, string] {
+  const match = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?/i.exec(raw.trim());
+  if (!match) return ["", ""];
+  const date = `${match[1]}-${match[2]}-${match[3]}`;
+  const time = match[4] ? `${match[4]}:${match[5]}` : "";
+  return [date, time];
+}
+
+/** Événement iCalendar (VCALENDAR ou VEVENT seul) → type Événement. */
+function parseVEvent(payload: string): ImportedContent | null {
+  const values: QrValues = {};
+  let inside = false;
+  for (const rawLine of payload.split(/\r?\n/)) {
+    const row = rawLine.trim();
+    if (/^BEGIN:VEVENT$/i.test(row)) {
+      inside = true;
+      continue;
+    }
+    if (/^END:VEVENT$/i.test(row)) break;
+    if (!inside) continue;
+    const separator = row.indexOf(":");
+    if (separator < 1) continue;
+    const key = row.slice(0, separator).split(";")[0].toUpperCase();
+    const raw = row.slice(separator + 1);
+    if (key === "SUMMARY") values.title = icalUnescape(raw);
+    else if (key === "LOCATION") values.location = icalUnescape(raw);
+    else if (key === "DESCRIPTION") values.description = icalUnescape(raw);
+    else if (key === "DTSTART") [values.startDate, values.startTime] = splitIcalDateTime(raw);
+    else if (key === "DTEND") [values.endDate, values.endTime] = splitIcalDateTime(raw);
+  }
+  if (!inside || !values.startDate) return null;
+  return { typeId: "event", values };
 }

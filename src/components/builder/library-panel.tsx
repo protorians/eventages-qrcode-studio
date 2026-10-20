@@ -51,7 +51,7 @@ export function LibraryPanel({ className }: { className?: string }) {
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return QR_TYPES.filter((candidate) => {
+    const matched = QR_TYPES.filter((candidate) => {
       if (family && candidate.family !== family) return false;
       if (!term) return true;
       return (
@@ -59,6 +59,8 @@ export function LibraryPanel({ className }: { className?: string }) {
         candidate.tagline.toLowerCase().includes(term)
       );
     });
+    // Types actifs d'abord, désactivés (« bientôt ») regroupés à la fin.
+    return matched.sort((a, b) => Number(Boolean(a.comingSoon)) - Number(Boolean(b.comingSoon)));
   }, [query, family]);
 
   const completion = formProgress(type, values);
@@ -188,18 +190,22 @@ export function LibraryPanel({ className }: { className?: string }) {
                   <li key={candidate.id} style={{ animationDelay: `${Math.min(index, 12) * 18}ms` }}>
                     <button
                       type="button"
+                      disabled={candidate.comingSoon}
                       onClick={() => {
                         dispatch({ type: "setType", typeId: candidate.id });
                         dispatch({ type: "setModule", module: "content" });
                       }}
                       aria-current={active}
+                      aria-disabled={candidate.comingSoon || undefined}
                       className={cn(
                         "animate-rise group/row flex w-full items-center gap-2.5 rounded-sm border border-transparent p-2 text-left transition-all duration-300 ease-out",
                         "hover:-translate-y-px hover:border-border/70 hover:bg-accent/50",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
+                        "disabled:pointer-events-none",
                         active
                           ? "border-primary/40 bg-primary/10 shadow-[inset_2px_0_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)]"
                           : "bg-card/40",
+                        candidate.comingSoon && "opacity-[0.43] grayscale",
                       )}
                     >
                       <span
@@ -228,6 +234,10 @@ export function LibraryPanel({ className }: { className?: string }) {
                       </span>
                       {active ? (
                         <Check className="size-3.5 shrink-0 text-primary" />
+                      ) : candidate.comingSoon ? (
+                        <span className="shrink-0 font-mono text-[0.58rem] text-muted-foreground/70">
+                          bientôt
+                        </span>
                       ) : (
                         <span className="shrink-0 font-mono text-[0.58rem] text-muted-foreground/70">
                           {candidate.encoding === "direct" ? "direct" : "page"}
@@ -362,7 +372,9 @@ export function LibraryPanel({ className }: { className?: string }) {
               <span>Hors ligne</span>
             )}
           </span>
-          <span>{QR_TYPES.length} types</span>
+          <span>
+            {QR_TYPES.filter((candidate) => !candidate.comingSoon).length} types actifs
+          </span>
         </div>
       </footer>
     </aside>

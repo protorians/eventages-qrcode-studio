@@ -17,10 +17,13 @@ const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
 export function ModuleDock({
   activeModule,
   onSelect,
+  modules = BUILDER_MODULES,
   className,
 }: {
   activeModule: BuilderModule;
   onSelect: (module: BuilderModule) => void;
+  /** Sous-ensemble de modules affichés (selon le type de code). */
+  modules?: { id: BuilderModule; label: string }[];
   className?: string;
 }) {
   return (
@@ -36,7 +39,7 @@ export function ModuleDock({
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-2 top-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent"
       />
-      {BUILDER_MODULES.map((module) => {
+      {modules.map((module) => {
         const Icon = MODULE_ICONS[module.id];
         const active = module.id === activeModule;
         return (

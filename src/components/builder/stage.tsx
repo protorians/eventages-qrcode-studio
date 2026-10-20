@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import { HudCross, HudCorners, HudLabel, HudReadout } from "@/components/builder/hud";
 import { MockupScene } from "@/components/builder/mockup-scene";
-import { QrArtboard } from "@/components/builder/qr-artboard";
+import { CodeArtboard } from "@/components/builder/qr-artboard";
 import { BASE_QR_SIZE, frameMetrics } from "@/lib/qr-frame";
 import { FRAMES_BY_ID, MOCKUPS_BY_ID } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
@@ -31,7 +31,7 @@ const ZOOM_MAX = 220;
 
 /** Scène centrale : aperçu du code sous caméra de visée HUD. */
 export function Stage({ dock }: { dock?: ReactNode }) {
-  const { state, payload, debouncedPayload } = useBuilder();
+  const { state, type, values, payload, debouncedPayload } = useBuilder();
   const { ref, size } = useElementSize<HTMLDivElement>();
   const { hud } = useSettings();
   const [zoom, setZoom] = useState(100);
@@ -69,7 +69,7 @@ export function Stage({ dock }: { dock?: ReactNode }) {
             <ScanLine className="size-4" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[0.8rem] leading-tight font-medium">
+            <p className="hud-heading truncate text-[0.8rem] leading-tight font-medium">
               {mockup.name}
             </p>
             <p className="truncate text-[0.68rem] leading-tight text-muted-foreground">
@@ -169,9 +169,17 @@ export function Stage({ dock }: { dock?: ReactNode }) {
             className="animate-fade-in duration-500 ease-out"
           >
             <div className="group/artboard relative">
-              <QrArtboard
+              <CodeArtboard
                 design={state.design}
                 payload={debouncedPayload}
+                barcode={
+                  type.id === "barcode"
+                    ? {
+                        symbology: values.symbology || "CODE128",
+                        design: state.barcode,
+                      }
+                    : undefined
+                }
                 scale={scale}
                 interactive
               />

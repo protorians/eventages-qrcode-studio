@@ -8,6 +8,109 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [0.6.0] — 2026-10-20 · Espace de travail à onglets, code-barres 1D et barre de titre native
+
+### Ajouté
+
+#### Espace de travail à onglets (façon Figma)
+- **Onglet « Accueil » permanent** : l'ancienne modale « Projet » devient un
+  gestionnaire de projets à part entière, toujours ouvert
+  (`src/components/shell/home-view.tsx`) — recherche, cartes par projet
+  (vignette, dates), création, duplication, suppression, ouverture d'un
+  `.qcp` et import d'un QR depuis une image, un SVG ou un PDF ;
+  `project-dialog.tsx` disparaît.
+- **Un onglet par projet ouvert** au-dessus de l'atelier
+  (`src/lib/workspace-store.tsx`) : l'éditeur ne porte qu'un brouillon à la
+  fois — changer d'onglet écrit le brouillon dans le registre puis recharge
+  celui du projet visé, qui conserve ainsi son état d'édition.
+- **Onglets persistés** (`qrcode-studio:tabs:v1`) : l'onglet actif de la
+  session précédente est réhydraté au démarrage, sans flash de mauvais
+  contenu (`builder-store.tsx`).
+- **Actions projet dans la barre de titre** (`project-actions.tsx`) :
+  enregistrement (⌘S), « Enregistrer sous… » (⌘⇧S) et export, avec voyant,
+  flash et erreur — elles ne concernent que l'onglet actif, jamais les autres.
+
+#### Barre de titre native
+- **Barre façon Figma** (`src/components/shell/title-bar.tsx`) : marque,
+  ruban d'onglets, thème, paramètres, enregistrement/export et contrôles de
+  fenêtre ; la barre est une zone de déplacement native
+  (`data-tauri-drag-region`), seuls les éléments interactifs en sortent. Hors
+  shell Tauri (dev navigateur), les contrôles disparaissent.
+- **Fenêtre élargie** à 1280 × 768 (min. 720 × 500) ; sur macOS, barre
+  overlay avec titre masqué (`src-tauri/tauri.macos.conf.json`) ;
+  permissions natives ajoutées (déplacement, minimiser, maximiser, fermer).
+- **Intégrations** : détection de l'OS hôte et flag `data-os` sur `<html>`
+  (`src/lib/tauri.ts`), état maximisé/plein écran synchronisé sur les
+  événements natifs (`src/hooks/use-window-state.ts`).
+
+#### Code-barres 1D
+- **Nouveau type « Code-barres »** (`src/lib/barcode.ts`, jsbarcode) :
+  symbologies de la grande distribution à la logistique (Code 128, Code 39,
+  EAN, UPC, ITF-14…) avec aide et exemple par norme. Il remplace « Code-barres
+  2D », dont les projets existants sont migrés silencieusement
+  (`builder-store.tsx`).
+- **Rendu vectoriel SVG** normalisé dans la toile carrée : cadre, maquettes et
+  pipeline d'export du QR sont réutilisés à l'identique, sans duplications.
+- **Panneau Style dédié** : couleur des barres, fond, géométrie et texte ;
+  modules « coins » et « logo » désactivés (ils casseraient la lecture au
+  scan) ; aperçu vivant qui conserve le dernier rendu valide en cas de valeur
+  refusée, avec message d'erreur (`qr-artboard.tsx`, `module-style.tsx`).
+- **Archive .qcp** : le manifest embarque l'habillage code-barres (`barcode`)
+  ; absent des archives antérieures, le défaut est appliqué à l'import
+  (`src/lib/qcp.ts`).
+
+#### QR Événement natif (iCalendar)
+- **Encodage VEVENT** : au scan, le téléphone propose l'ajout au calendrier —
+  plus de page à héberger. Date de début requise, date et heure de fin
+  ajoutées (`src/lib/qr-payload.ts`, échappements RFC 5545).
+- **Import** : un payload VCALENDAR ou VEVENT pré-remplit le formulaire
+  Événement (`src/lib/qr-import.ts`).
+
+#### Export natif sous Tauri
+- **Dialogue de sauvegarde système puis écriture disque** pour PNG, JPEG, WebP
+  et SVG (nouvelle commande Rust `save_export_file`,
+  `src-tauri/src/export.rs`) : le webview ignore le téléchargement par ancre
+  `blob:`. Le comportement navigateur est inchangé (`src/lib/qr-export.ts`).
+
+#### Mode HUD approfondi
+- **Typographie display « Anton »** pour les titres sous le HUD (`src/index.css`,
+  fonte inline latin-subset `@fontsource/anton`) : titres de dialogues, feuilles,
+  popovers et cartes (`[data-slot="…-title"]`) ainsi que les titres composites
+  marqués `.hud-heading` (marque du bandeau, nom du mockup de la scène).
+- **Trame tactique dans la zone d'aperçu** : sous le HUD, le damier de
+  transparence (`surface-checker`) laisse place à une texture de grille avec
+  nœuds et balises lumineux, cellules saturées, anneaux et croix de repérage —
+  recréée en dégradés CSS 100 % jetons (`background`, `foreground`, `primary`),
+  donc les couleurs suivent automatiquement le thème sélectionné, et le damier
+  revient dès que le HUD est coupé.
+- **Détails futuristes additionnels** (toujours scopés `html:not([data-hud="off"])`)
+  : brackets d'angle fixes aux quatre coins de la fenêtre (`body::after`),
+  sélection de texte teintée par l'accent, infobulles « terminal » carrées en
+  mono, liseré des champs qui se réchauffe au survol, hairline d'accent en tête
+  de chaque carte.
+
+### Modifié
+- **Application renommée « Eventages Lite »** : nom du produit, titres de la
+  fenêtre et de l'onglet, filtres de fichiers et messages — l'identifiant de
+  bundle reste `com.protorians.qrcode-studio`.
+- **Types « page autonome » en attente** : vCard Plus, Contact, Linktree,
+  Social, Menu, etc. sont marqués « Bientôt » — désactivés dans la galerie
+  (regroupés en fin de liste, badge dédié) avec encart explicatif dans le
+  formulaire ; plus aucun payload factice `local://` n'est simulé
+  (`src/lib/qr-catalog.ts`, `src/lib/qr-payload.ts`).
+- **Paramètres réorganisés** : fenêtre élargie, rail de sections à gauche
+  (apparence, interface, projet, données) et contenu à droite
+  (`settings-dialog.tsx`).
+- **Barre d'outils de l'atelier allégée** : télémétrie du brouillon et accès
+  mobiles uniquement — enregistrement, export, thème et paramètres vivent
+  désormais dans la barre de titre (`app-header.tsx`).
+- **CLI `qrs`** : libellé d'encodage des types page mis à jour (« publication
+  à venir », plus de `local://`).
+- Versions alignées sur 0.6.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.5.0] — 2026-10-19 · Paramètres, D.A. HUD et fichier lié
 
 ### Ajouté
@@ -200,6 +303,7 @@ compte ni serveur — desktop Tauri avec partage système natif.
 
 ---
 
+[0.6.0]: https://example.invalid/releases/v0.6.0
 [0.5.0]: https://example.invalid/releases/v0.5.0
 [0.4.0]: https://example.invalid/releases/v0.4.0
 [0.3.0]: https://example.invalid/releases/v0.3.0

@@ -81,7 +81,7 @@ export function HudLabel({
   return (
     <span
       aria-hidden="true"
-      className={cn("text-hud inline-flex items-center gap-1.5 text-muted-foreground", className)}
+      className={cn("text-hud hud-heading inline-flex items-center gap-1.5 text-muted-foreground", className)}
     >
       <span className="h-2.5 w-[3px] bg-primary/80" />
       {children}
