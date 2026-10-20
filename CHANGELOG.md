@@ -1,325 +1,346 @@
 # Changelog
 
-Toutes les évolutions notables de **QR Code Studio** sont documentées ici.
+All notable changes to **QR Code Studio** are documented here.
 
-Le format s'inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et suit
-le [versionnage sémantique](https://semver.org/lang/fr/) : à ce stade, l'application est
-en `0.x` et le produit n'est pas encore promis stable.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and follows
+[semantic versioning](https://semver.org/): at this stage, the app is in
+`0.x` and the product is not yet promised stable.
 
 ---
 
-## [0.7.0] — 2026-10-20 · Identité Eventages Lite : nommage technique et icônes
+## [0.7.1] — 2026-10-20 · English-language project artifacts
 
-### Modifié
-- **Nommage technique aligné sur « Eventages Lite »** : nom du paquet npm
-  (`eventages-lite`) et du crate Rust (`Eventages-Lite`), champ `app` des
-  projets `.qcp` — créés par l'interface comme par le CLI
-  (`package.json`, `src-tauri/Cargo.toml`, `cli/workspace.ts`,
-  `src-tauri/src/qcp.rs`). L'identifiant de bundle reste
-  `com.protorians.qrcode-studio`.
-- **Nouveau jeu d'icônes d'app** : icônes claire, sombre, noire et blanche
-  servies depuis `public/assets/images/` (favicon et marque), et jeu d'icônes
-  Tauri complet régénéré — desktop (`.icns`, `.ico`, PNG), Android (mipmaps +
-  icône adaptative) et iOS (AppIcon) (`src-tauri/icons/`).
-- **Logo de marque dans la barre de titre** (`title-bar.tsx`) : l'icône
-  s'affiche à côté du nom et suit le thème clair/sombre.
-- Versions alignées sur 0.7.0 (`package.json`, `tauri.conf.json`,
+### Changed
+
+- **CHANGELOG translated to English**: all entries are now written in
+  English, following the new documentation convention
+  (`CHANGELOG.md`).
+- `AGENTS.md`: new convention "Language: English for git artifacts" —
+  commit messages, merge request titles/descriptions and `CHANGELOG.md`
+  entries are written in English; code identifiers and comments keep
+  their existing conventions.
+- Versions aligned to 0.7.1 (`package.json`, `tauri.conf.json`,
   `Cargo.toml`).
 
 ---
 
-## [0.6.0] — 2026-10-20 · Espace de travail à onglets, code-barres 1D et barre de titre native
+## [0.7.0] — 2026-10-20 · Eventages Lite identity: technical naming and icons
 
-### Ajouté
+### Changed
+- **Technical naming aligned with "Eventages Lite"**: npm package name
+  (`eventages-lite`) and Rust crate name (`Eventages-Lite`), `app` field of
+  `.qcp` projects — created by both the UI and the CLI
+  (`package.json`, `src-tauri/Cargo.toml`, `cli/workspace.ts`,
+  `src-tauri/src/qcp.rs`). The bundle identifier remains
+  `com.protorians.qrcode-studio`.
+- **New app icon set**: light, dark, black and white icons served from
+  `public/assets/images/` (favicon and brand mark), plus a fully regenerated
+  Tauri icon set — desktop (`.icns`, `.ico`, PNG), Android (mipmaps +
+  adaptive icon) and iOS (AppIcon) (`src-tauri/icons/`).
+- **Brand logo in the title bar** (`title-bar.tsx`): the icon shows next to
+  the name and follows the light/dark theme.
+- Versions aligned to 0.7.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
 
-#### Espace de travail à onglets (façon Figma)
-- **Onglet « Accueil » permanent** : l'ancienne modale « Projet » devient un
-  gestionnaire de projets à part entière, toujours ouvert
-  (`src/components/shell/home-view.tsx`) — recherche, cartes par projet
-  (vignette, dates), création, duplication, suppression, ouverture d'un
-  `.qcp` et import d'un QR depuis une image, un SVG ou un PDF ;
-  `project-dialog.tsx` disparaît.
-- **Un onglet par projet ouvert** au-dessus de l'atelier
-  (`src/lib/workspace-store.tsx`) : l'éditeur ne porte qu'un brouillon à la
-  fois — changer d'onglet écrit le brouillon dans le registre puis recharge
-  celui du projet visé, qui conserve ainsi son état d'édition.
-- **Onglets persistés** (`qrcode-studio:tabs:v1`) : l'onglet actif de la
-  session précédente est réhydraté au démarrage, sans flash de mauvais
-  contenu (`builder-store.tsx`).
-- **Actions projet dans la barre de titre** (`project-actions.tsx`) :
-  enregistrement (⌘S), « Enregistrer sous… » (⌘⇧S) et export, avec voyant,
-  flash et erreur — elles ne concernent que l'onglet actif, jamais les autres.
+---
 
-#### Barre de titre native
-- **Barre façon Figma** (`src/components/shell/title-bar.tsx`) : marque,
-  ruban d'onglets, thème, paramètres, enregistrement/export et contrôles de
-  fenêtre ; la barre est une zone de déplacement native
-  (`data-tauri-drag-region`), seuls les éléments interactifs en sortent. Hors
-  shell Tauri (dev navigateur), les contrôles disparaissent.
-- **Fenêtre élargie** à 1280 × 768 (min. 720 × 500) ; sur macOS, barre
-  overlay avec titre masqué (`src-tauri/tauri.macos.conf.json`) ;
-  permissions natives ajoutées (déplacement, minimiser, maximiser, fermer).
-- **Intégrations** : détection de l'OS hôte et flag `data-os` sur `<html>`
-  (`src/lib/tauri.ts`), état maximisé/plein écran synchronisé sur les
-  événements natifs (`src/hooks/use-window-state.ts`).
+## [0.6.0] — 2026-10-20 · Tabbed workspace, 1D barcodes and native title bar
 
-#### Code-barres 1D
-- **Nouveau type « Code-barres »** (`src/lib/barcode.ts`, jsbarcode) :
-  symbologies de la grande distribution à la logistique (Code 128, Code 39,
-  EAN, UPC, ITF-14…) avec aide et exemple par norme. Il remplace « Code-barres
-  2D », dont les projets existants sont migrés silencieusement
+### Added
+
+#### Figma-style tabbed workspace
+- **Permanent "Home" tab**: the former "Project" modal becomes a
+  full-fledged project manager, always open
+  (`src/components/shell/home-view.tsx`) — search, per-project cards
+  (thumbnail, dates), creation, duplication, deletion, opening a
+  `.qcp` and importing a QR from an image, an SVG or a PDF;
+  `project-dialog.tsx` is gone.
+- **One tab per open project** above the workshop
+  (`src/lib/workspace-store.tsx`): the editor holds a single draft at a
+  time — switching tabs writes the draft to the registry then reloads
+  the target project's, which keeps its editing state.
+- **Persisted tabs** (`qrcode-studio:tabs:v1`): the active tab from the
+  previous session is rehydrated at startup, without flashing the wrong
+  content (`builder-store.tsx`).
+- **Project actions in the title bar** (`project-actions.tsx`):
+  save (⌘S), "Save As…" (⌘⇧S) and export, with status light,
+  flash and error — they only apply to the active tab, never to others.
+
+#### Native title bar
+- **Figma-style bar** (`src/components/shell/title-bar.tsx`): brand,
+  tab ribbon, theme, settings, save/export and window controls; the bar
+  is a native drag region (`data-tauri-drag-region`), only interactive
+  elements opt out. Outside the Tauri shell (browser dev), the controls
+  are hidden.
+- **Wider window** at 1280 × 768 (min. 720 × 500); on macOS, overlay
+  title bar with hidden title (`src-tauri/tauri.macos.conf.json`);
+  native permissions added (drag, minimize, maximize, close).
+- **Integrations**: host OS detection and `data-os` flag on `<html>`
+  (`src/lib/tauri.ts`), maximized/fullscreen state synced on native
+  events (`src/hooks/use-window-state.ts`).
+
+#### 1D barcodes
+- **New "Barcode" type** (`src/lib/barcode.ts`, jsbarcode):
+  symbologies from retail to logistics (Code 128, Code 39,
+  EAN, UPC, ITF-14…) with helper and example per standard. It replaces
+  "2D Barcode", whose existing projects are silently migrated
   (`builder-store.tsx`).
-- **Rendu vectoriel SVG** normalisé dans la toile carrée : cadre, maquettes et
-  pipeline d'export du QR sont réutilisés à l'identique, sans duplications.
-- **Panneau Style dédié** : couleur des barres, fond, géométrie et texte ;
-  modules « coins » et « logo » désactivés (ils casseraient la lecture au
-  scan) ; aperçu vivant qui conserve le dernier rendu valide en cas de valeur
-  refusée, avec message d'erreur (`qr-artboard.tsx`, `module-style.tsx`).
-- **Archive .qcp** : le manifest embarque l'habillage code-barres (`barcode`)
-  ; absent des archives antérieures, le défaut est appliqué à l'import
+- **Normalized SVG vector rendering** in the square canvas: frame, mockups
+  and the QR export pipeline are reused as-is, without duplication.
+- **Dedicated Style panel**: bar color, background, geometry and text;
+  "corners" and "logo" modules disabled (they would break scan reading);
+  live preview that keeps the last valid render when a value is rejected,
+  with an error message (`qr-artboard.tsx`, `module-style.tsx`).
+- **.qcp archive**: the manifest embeds barcode styling (`barcode`);
+  missing from earlier archives, the default is applied on import
   (`src/lib/qcp.ts`).
 
-#### QR Événement natif (iCalendar)
-- **Encodage VEVENT** : au scan, le téléphone propose l'ajout au calendrier —
-  plus de page à héberger. Date de début requise, date et heure de fin
-  ajoutées (`src/lib/qr-payload.ts`, échappements RFC 5545).
-- **Import** : un payload VCALENDAR ou VEVENT pré-remplit le formulaire
-  Événement (`src/lib/qr-import.ts`).
+#### Native Event QR (iCalendar)
+- **VEVENT encoding**: on scan, the phone offers to add to calendar —
+  no more hosted page. Required start date, end date and time added
+  (`src/lib/qr-payload.ts`, RFC 5545 escapes).
+- **Import**: a VCALENDAR or VEVENT payload pre-fills the Event form
+  (`src/lib/qr-import.ts`).
 
-#### Export natif sous Tauri
-- **Dialogue de sauvegarde système puis écriture disque** pour PNG, JPEG, WebP
-  et SVG (nouvelle commande Rust `save_export_file`,
-  `src-tauri/src/export.rs`) : le webview ignore le téléchargement par ancre
-  `blob:`. Le comportement navigateur est inchangé (`src/lib/qr-export.ts`).
+#### Native export under Tauri
+- **System save dialog then disk write** for PNG, JPEG, WebP and SVG
+  (new Rust command `save_export_file`, `src-tauri/src/export.rs`): the
+  webview ignores `blob:` anchor downloads. Browser behavior is unchanged
+  (`src/lib/qr-export.ts`).
 
-#### Mode HUD approfondi
-- **Typographie display « Anton »** pour les titres sous le HUD (`src/index.css`,
-  fonte inline latin-subset `@fontsource/anton`) : titres de dialogues, feuilles,
-  popovers et cartes (`[data-slot="…-title"]`) ainsi que les titres composites
-  marqués `.hud-heading` (marque du bandeau, nom du mockup de la scène).
-- **Trame tactique dans la zone d'aperçu** : sous le HUD, le damier de
-  transparence (`surface-checker`) laisse place à une texture de grille avec
-  nœuds et balises lumineux, cellules saturées, anneaux et croix de repérage —
-  recréée en dégradés CSS 100 % jetons (`background`, `foreground`, `primary`),
-  donc les couleurs suivent automatiquement le thème sélectionné, et le damier
-  revient dès que le HUD est coupé.
-- **Détails futuristes additionnels** (toujours scopés `html:not([data-hud="off"])`)
-  : brackets d'angle fixes aux quatre coins de la fenêtre (`body::after`),
-  sélection de texte teintée par l'accent, infobulles « terminal » carrées en
-  mono, liseré des champs qui se réchauffe au survol, hairline d'accent en tête
-  de chaque carte.
+#### Deepened HUD mode
+- **"Anton" display typography** for titles under the HUD (`src/index.css`,
+  inline latin-subset font `@fontsource/anton`): dialog, sheet, popover and
+  card titles (`[data-slot="…-title"]`) as well as composite titles marked
+  `.hud-heading` (header brand, scene mockup name).
+- **Tactical texture in the preview area**: under the HUD, the transparency
+  checkerboard (`surface-checker`) gives way to a grid texture with nodes
+  and bright tags, saturated cells, rings and crosshairs — recreated with
+  100% token CSS gradients (`background`, `foreground`, `primary`), so
+  colors automatically follow the selected theme, and the checkerboard
+  returns as soon as the HUD is off.
+- **Additional futuristic details** (still scoped `html:not([data-hud="off"])`):
+  fixed corner brackets at the four window corners (`body::after`),
+  text selection tinted with the accent, square "terminal" tooltips in
+  mono, field outline warming up on hover, accent hairline at the top of
+  each card.
 
-### Modifié
-- **Application renommée « Eventages Lite »** : nom du produit, titres de la
-  fenêtre et de l'onglet, filtres de fichiers et messages — l'identifiant de
-  bundle reste `com.protorians.qrcode-studio`.
-- **Types « page autonome » en attente** : vCard Plus, Contact, Linktree,
-  Social, Menu, etc. sont marqués « Bientôt » — désactivés dans la galerie
-  (regroupés en fin de liste, badge dédié) avec encart explicatif dans le
-  formulaire ; plus aucun payload factice `local://` n'est simulé
+### Changed
+- **App renamed "Eventages Lite"**: product name, window and tab titles,
+  file filters and messages — the bundle identifier remains
+  `com.protorians.qrcode-studio`.
+- **"Standalone page" types on hold**: vCard Plus, Contact, Linktree,
+  Social, Menu, etc. are marked "Soon" — disabled in the gallery
+  (grouped at the end of the list, dedicated badge) with an explanatory
+  callout in the form; no more fake `local://` payload is simulated
   (`src/lib/qr-catalog.ts`, `src/lib/qr-payload.ts`).
-- **Paramètres réorganisés** : fenêtre élargie, rail de sections à gauche
-  (apparence, interface, projet, données) et contenu à droite
+- **Reorganized settings**: wider window, section rail on the left
+  (appearance, interface, project, data) and content on the right
   (`settings-dialog.tsx`).
-- **Barre d'outils de l'atelier allégée** : télémétrie du brouillon et accès
-  mobiles uniquement — enregistrement, export, thème et paramètres vivent
-  désormais dans la barre de titre (`app-header.tsx`).
-- **CLI `qrs`** : libellé d'encodage des types page mis à jour (« publication
-  à venir », plus de `local://`).
-- Versions alignées sur 0.6.0 (`package.json`, `tauri.conf.json`,
+- **Streamlined workshop toolbar**: draft telemetry and mobile access
+  only — save, export, theme and settings now live in the title bar
+  (`app-header.tsx`).
+- **CLI `qrs`**: page type encoding label updated ("publication
+  upcoming", no more `local://`).
+- Versions aligned to 0.6.0 (`package.json`, `tauri.conf.json`,
   `Cargo.toml`).
 
 ---
 
-## [0.5.0] — 2026-10-19 · Paramètres, D.A. HUD et fichier lié
+## [0.5.0] — 2026-10-19 · Settings, HUD art direction and linked file
 
-### Ajouté
+### Added
 
-#### Panneau de paramètres de l'application
-- **Nouvelle boîte de dialogue « Paramètres »** (bouton dans le bandeau
-  supérieur et la navigation mobile, `settings-dialog.tsx`) : apparence, effets
-  d'interface et enregistrement, avec rappel du fonctionnement 100 % local.
-- **Thèmes de couleurs** : en plus du défaut « Or Studio », quatre thèmes
-  nommés — Crimson, Cramoisy, Shalk, Violate — posés par l'attribut
-  `data-theme` (`src/themes.css`), avec aperçu clair/sombre et sélection
-  persistée.
-- **Mode HUD désactivable** : les ornements (coins coupés, brackets,
-  scanlines, readouts) se coupent d'un seul réglage — `data-hud="off"` rend la
-  priorité aux utilitaires Tailwind d'origine, sans neutralisations manuelles.
-- **Animations désactivables** : `data-anim="off"` fige transitions et
-  keyframes côté CSS.
-- **Préférences persistées localement** (`qrcode-studio:settings:v1`) ;
-  l'ancienne clé de thème est migrée au premier lancement et `use-theme.ts`
-  disparaît au profit du provider `use-settings.tsx` (mode clair/sombre,
-  thème, HUD, animations, enregistrement auto).
+#### App settings panel
+- **New "Settings" dialog** (button in the top bar and mobile navigation,
+  `settings-dialog.tsx`): appearance, interface effects and saving, with a
+  reminder of the 100% local behavior.
+- **Color themes**: on top of the default "Studio Gold", four named themes
+  — Crimson, Cramoisy, Shalk, Violate — set via the `data-theme` attribute
+  (`src/themes.css`), with light/dark preview and persisted selection.
+- **Dismissible HUD mode**: ornaments (cut corners, brackets, scanlines,
+  readouts) turn off with a single setting — `data-hud="off"` gives
+  priority back to the original Tailwind utilities, without manual
+  neutralizations.
+- **Dismissible animations**: `data-anim="off"` freezes transitions and
+  keyframes on the CSS side.
+- **Preferences persisted locally** (`qrcode-studio:settings:v1`); the old
+  theme key is migrated on first launch and `use-theme.ts` is removed in
+  favor of the `use-settings.tsx` provider (light/dark mode, theme, HUD,
+  animations, auto-save).
 
-#### D.A. HUD appliquée à toute l'interface
-- **Habillage des contrôles shadcn** dans `src/index.css` (scopé sous
-  `html:not([data-hud="off"])`, ciblé par `[data-slot="…"]`) : boutons,
-  inputs, textarea, switch, tabs, select, slider, badge, toggle et composites
-  maison (`SegmentedControl`) adoptent coins coupés, typo mono capitales et
-  focus clavier reposé en intérieur — `src/components/ui/*` reste inchangé.
-- **Primitives HUD réutilisables** (`hud.tsx`) : `HudCorners`, `HudLabel`,
+#### HUD art direction applied to the whole UI
+- **shadcn control skinning** in `src/index.css` (scoped under
+  `html:not([data-hud="off"])`, targeted by `[data-slot="…"]`): buttons,
+  inputs, textarea, switch, tabs, select, slider, badge, toggle and
+  home-made composites (`SegmentedControl`) adopt cut corners, mono
+  uppercase type and inset keyboard focus — `src/components/ui/*` stays
+  unchanged.
+- **Reusable HUD primitives** (`hud.tsx`): `HudCorners`, `HudLabel`,
   `HudReadout`, `HudCross`, `HudStatusDot`.
-- **Bandeau supérieur façon console de contrôle** : ligne d'énergie, télémétrie
-  (`SYS:LOCAL`, jauge `PRG` à crans) et export en surbrillance ; bibliothèque,
-  projets, scène et dock reprennent labels, numérotations et marques
-  d'activité.
+- **Top bar styled like a control console**: energy line, telemetry
+  (`SYS:LOCAL`, notched `PRG` gauge) and export highlighted; library,
+  projects, scene and dock take on labels, numbering and activity marks.
 
-#### Enregistrement lié et automatique du fichier .qcp
-- **Fichier lié** : après un « Enregistrer sous… », le projet retient son
-  chemin — « Enregistrer » (⌘S) réécrit directement le `.qcp`, sans boîte de
-  dialogue (`builder-store.tsx` : `filePath`, `dirty`, `saveProject`).
-- **Enregistrement automatique** : une fois le fichier lié, chaque
-  modification stabilisée (1,6 s) réécrit le `.qcp` ; désactivable dans les
-  paramètres. Les projets non liés restent des brouillons locaux.
-- **Raccourcis clavier** : ⌘S enregistre, ⌘⇧S ouvre « Enregistrer sous… », avec
-  retour visuel (voyant d'état, flash, erreur) dans le bandeau.
-- **Bibliothèque** : le panneau affiche le fichier lié et son état
-  (auto-enregistré, en attente, non lié).
-- Backend : `save_project` renvoie désormais le chemin réel écrit (extension
-  `.qcp` imposée), utilisé pour lier le fichier au projet.
+#### Linked and automatic .qcp file saving
+- **Linked file**: after a "Save As…", the project remembers its path —
+  "Save" (⌘S) rewrites the `.qcp` directly, without a dialog
+  (`builder-store.tsx`: `filePath`, `dirty`, `saveProject`).
+- **Auto-save**: once the file is linked, every settled change (1.6 s)
+  rewrites the `.qcp`; can be disabled in settings. Unlinked projects
+  remain local drafts.
+- **Keyboard shortcuts**: ⌘S saves, ⌘⇧S opens "Save As…", with visual
+  feedback (status light, flash, error) in the top bar.
+- **Library**: the panel shows the linked file and its state (auto-saved,
+  pending, unlinked).
+- Backend: `save_project` now returns the actual written path (`.qcp`
+  extension enforced), used to link the file to the project.
 
-### Modifié
-- `AGENTS.md` : nouvelle convention « D.A. HUD : habillage des contrôles dans
-  index.css ».
-- Versions alignées sur 0.5.0 (`package.json`, `tauri.conf.json`,
-  `Cargo.toml`) — `tauri.conf.json` et `Cargo.toml` étaient restés à 0.3.0.
-
----
-
-## [0.4.0] — 2026-10-19 · CLI headless (`qrs`)
-
-### Ajouté
-
-#### Créer, gérer et composer des projets en ligne de commande
-- **Nouveau CLI headless `qrs`** (`bun run cli <commande>`) : un parcours sans
-  interface, sans ouvrir l'app desktop — utile pour les scripts, l'automatisation
-  et les traitements en masse (`cli/qrs.ts`).
-- **Commandes de projet** : `init`, `create`, `list`, `show`, `set`, `rename`
-  (via `--rename`), `duplicate`, `delete`, `payload` — projets stockés comme
-  fichiers JSON dans un espace de travail (`./studio` par défaut, substituable
-  par `QRS_STUDIO_DIR` ou `--dir`), même modèle et mêmes défauts que le store de
-  l'interface (`cli/workspace.ts`, `builder-store.tsx`).
-- **Catalogue partagé** : les types, formulaires et validation viennent des
-  mêmes modules que l'app (`src/lib/qr-catalog.ts`, `qr-payload.ts`,
-  `qr-design.ts`) — `qrs types [type]` documente champs, options et encodage.
-- **Composition headless** : `qrs render <projet>` écrit le QR en **SVG**
-  (toujours sans DOM) ou **PNG** (rasterisation via `@resvg/resvg-js`), avec le
-  même tracé que l'application — styles de modules, marqueurs de coin,
-  dégradés, logo et cadre composés à l'identique (`cli/render.ts`).
-- **Interchange avec l'app desktop** : `qrs pack <projet>` produit une archive
-  `.qcp` (même structure que le backend Rust) et `qrs import <fichier.qcp>`
-  reconstruit un projet complet, médias inclus, dans l'espace de travail.
-
-#### Utilitaires d'export partagés
-- **`src/lib/qr-svg.ts`** : `wrapSvg`, `escapeXml` et `sanitizeFileName`
-  quittent `qr-export.ts` pour un module 100 % DOM-free, réutilisé par le CLI
-  (composition de cadre et noms de fichiers identiques partout).
-
-### Modifié
-- `package.json` : script `cli`, dépendances CLI (`qrcode`, `fflate`,
-  `image-size`, `@resvg/resvg-js`, `@types/qrcode`) ; `tsconfig.json` inclut
-  désormais `cli/` au typecheck.
-- `.gitignore` : l'espace de travail CLI par défaut (`studio/`) est ignoré.
+### Changed
+- `AGENTS.md`: new convention "HUD art direction: control skinning in
+  index.css".
+- Versions aligned to 0.5.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`) — `tauri.conf.json` and `Cargo.toml` were still at 0.3.0.
 
 ---
 
-## [0.3.0] — 2026-10-19 · Export .qcp et partage web
+## [0.4.0] — 2026-10-19 · Headless CLI (`qrs`)
 
-### Ajouté
+### Added
 
-#### Exporter le projet en .qcp depuis l'onglet Export
-- **Nouvelle option d'export** : le bouton « Exporter le projet (.qcp) » dans la
-  section « Exports rapides » écrit l'archive projet complète — contenu, design,
-  mockup, résolution et fichiers média — via le même flux que le gestionnaire de
-  projets, avec boîte de dialogue native et extension imposée
+#### Create, manage and compose projects from the command line
+- **New headless CLI `qrs`** (`bun run cli <command>`): a path without UI,
+  without opening the desktop app — useful for scripts, automation and
+  batch processing (`cli/qrs.ts`).
+- **Project commands**: `init`, `create`, `list`, `show`, `set`, `rename`
+  (via `--rename`), `duplicate`, `delete`, `payload` — projects stored as
+  JSON files in a workspace (`./studio` by default, overridable with
+  `QRS_STUDIO_DIR` or `--dir`), same model and same defaults as the UI
+  store (`cli/workspace.ts`, `builder-store.tsx`).
+- **Shared catalog**: types, forms and validation come from the same
+  modules as the app (`src/lib/qr-catalog.ts`, `qr-payload.ts`,
+  `qr-design.ts`) — `qrs types [type]` documents fields, options and
+  encoding.
+- **Headless composition**: `qrs render <project>` writes the QR as
+  **SVG** (still DOM-free) or **PNG** (rasterized via `@resvg/resvg-js`),
+  with the same drawing as the app — module styles, corner markers,
+  gradients, logo and frame composed identically (`cli/render.ts`).
+- **Interoperability with the desktop app**: `qrs pack <project>` produces
+  a `.qcp` archive (same structure as the Rust backend) and
+  `qrs import <file.qcp>` rebuilds a complete project, media included,
+  into the workspace.
+
+#### Shared export utilities
+- **`src/lib/qr-svg.ts`**: `wrapSvg`, `escapeXml` and `sanitizeFileName`
+  move out of `qr-export.ts` into a 100% DOM-free module, reused by the
+  CLI (identical frame composition and file names everywhere).
+
+### Changed
+- `package.json`: `cli` script, CLI dependencies (`qrcode`, `fflate`,
+  `image-size`, `@resvg/resvg-js`, `@types/qrcode`); `tsconfig.json` now
+  includes `cli/` in the typecheck.
+- `.gitignore`: the default CLI workspace (`studio/`) is ignored.
+
+---
+
+## [0.3.0] — 2026-10-19 · .qcp export and web sharing
+
+### Added
+
+#### Export the project as .qcp from the Export tab
+- **New export option**: the "Export project (.qcp)" button in the
+  "Quick exports" section writes the full project archive — content,
+  design, mockup, resolution and media files — through the same flow as
+  the project manager, with a native dialog and enforced extension
   (`src/components/builder/module-export.tsx`).
 
-### Modifié
+### Changed
 
-#### Partage : Navigator.share sur le web, option désactivée sinon
-- **Web Share API** : sur le web, le bouton « Partager » passe par le menu de
-  partage du navigateur (`navigator.share`), après sondage de la compatibilité
-  pour le partage de fichiers (`navigator.canShare`) (`src/lib/qr-share.ts`).
-- **Bouton grisé si non compatible** : dans un navigateur sans Web Share
-  exploitable pour les fichiers, l'option « Partager » est désactivée avec un
-  message explicatif ; sous Tauri (desktop), le partage natif du système reste
-  inchangé et la commande `share_image` n'est plus invoquée hors du shell.
+#### Sharing: Navigator.share on the web, option disabled otherwise
+- **Web Share API**: on the web, the "Share" button goes through the
+  browser share menu (`navigator.share`), after probing compatibility for
+  file sharing (`navigator.canShare`) (`src/lib/qr-share.ts`).
+- **Greyed-out button when unsupported**: in a browser without usable Web
+  Share for files, the "Share" option is disabled with an explanatory
+  message; under Tauri (desktop), the system native share remains
+  unchanged and the `share_image` command is no longer invoked outside
+  the shell.
 
 ---
 
-## [0.2.0] — 2026-10-19 · Fichiers projet et import
+## [0.2.0] — 2026-10-19 · Project files and import
 
-### Ajouté
+### Added
 
-#### Format de fichier projet .qcp
-- **Nouveau format de projet** : une archive zip générée par le backend Rust, contenant
-  un `manifest.json` (tous les paramètres : contenu par type, design, mockup,
-  résolution) et un dossier `assets/` avec les fichiers média du projet (logo,
-  visuels, PDF, audio…) (`src-tauri/src/qcp.rs`, `src/lib/qcp.ts`).
-- **Enregistrement** du projet actif en `.qcp` depuis le gestionnaire de projets
-  (boîte de dialogue native, extension imposée).
-- **Ouverture** d'un fichier `.qcp` : le projet est reconstruit et ajouté au registre
-  local, médias rechargés sous forme de data URLs — aucun changement de modèle.
-- Boîtes de dialogue fichiers natives via `tauri-plugin-dialog` (permission
-  `dialog:default`), boutons dédiés dans le gestionnaire de projets
-  (rail latéral + raccourcis mobiles).
+#### .qcp project file format
+- **New project format**: a zip archive generated by the Rust backend,
+  containing a `manifest.json` (all settings: content per type, design,
+  mockup, resolution) and an `assets/` folder with the project's media
+  files (logo, visuals, PDF, audio…) (`src-tauri/src/qcp.rs`,
+  `src/lib/qcp.ts`).
+- **Saving** the active project as `.qcp` from the project manager
+  (native dialog, enforced extension).
+- **Opening** a `.qcp` file: the project is rebuilt and added to the
+  local registry, media reloaded as data URLs — no model change.
+- Native file dialogs via `tauri-plugin-dialog` (`dialog:default`
+  permission), dedicated buttons in the project manager (side rail +
+  mobile shortcuts).
 
-#### Importer un QR existant
-- **Import d'un QR existant** : décodage natif hors ligne d'un QR depuis une image
-  (PNG, JPEG, WebP, GIF, BMP, TIFF), un fichier vectoriel SVG (rasterisé par
-  usvg/resvg) ou un PDF (extraction des images embarquées via lopdf, JPEG ou
-  échantillons bruts, avec gestion DeviceGray/RGB/CMYK, Indexed, ICCBased et
-  masques 1 bit) ; détection du payload et du niveau de correction d'erreur,
-  avec réessai en négatif pour les QR clairs sur fond sombre
+#### Import an existing QR
+- **Import of an existing QR**: offline native decoding of a QR from an
+  image (PNG, JPEG, WebP, GIF, BMP, TIFF), an SVG vector file (rasterized
+  by usvg/resvg) or a PDF (extraction of embedded images via lopdf, JPEG
+  or raw samples, with DeviceGray/RGB/CMYK, Indexed, ICCBased handling and
+  1-bit masks); payload and error correction level detection, with a
+  negative retry for light QR codes on dark backgrounds
   (`src-tauri/src/import.rs`, `src/lib/qr-import.ts`).
-- Le contenu importé pré-remplit le bon type de projet : URL, Wi-Fi (avec
-  échappements), e-mail (mailto), SMS (SMSTO/sms/tel), sinon texte brut ;
-  le niveau de correction détecté est repris dans le design du nouveau projet.
+- The imported content pre-fills the right project type: URL, Wi-Fi (with
+  escapes), email (mailto), SMS (SMSTO/sms/tel), otherwise plain text;
+  the detected correction level is carried over into the new project's
+  design.
 
 ---
 
-## [0.1.0] — 2026-10-19 · Première version
+## [0.1.0] — 2026-10-19 · First release
 
-Tranche initiale de l'application : création de QR personnalisés **100 % locale**, sans
-compte ni serveur — desktop Tauri avec partage système natif.
+Initial slice of the app: **100% local** custom QR creation, no account,
+no server — Tauri desktop with native system sharing.
 
-### Ajouté
+### Added
 
-#### Atelier QR
-- **Catalogue des types de QR** : URL, Wi-Fi, vCard, SMS, e-mail… avec formulaires de
-  contenu validés champ par champ (`qr-catalog.ts`, spec 001).
-- **Contenu** : encodage direct des QR statiques — le généré encode exactement le
-  formulaire, rien d'autre (`qr-payload.ts`, spec 002).
-- **Personnalisation visuelle** : couleurs, styles de modules, marqueurs de coin,
-  motifs, calques logo/cadre — aperçu non destructif (`qr-design.ts`, `logo-presets.ts`,
-  spec 004).
-- **Aperçu & export** : rendu continu (PNG/SVG via `qr-code-styling`), export
-  SVG / PNG / WebP avec marges, contrôle de marge de qualité / lisibilité
-  (`qr-analysis.ts`, `qr-export.ts`, spec 005).
-- **Interface du studio** : dock de modules (contenu · style · logo · cadre · export),
-  panneau d'options, scène d'aperçu, bibliothèque « Mes QR codes », entrées clavier,
-  thèmes clair/sombre (`src/components/builder/`, spec 007).
+#### QR workshop
+- **QR type catalog**: URL, Wi-Fi, vCard, SMS, email… with content forms
+  validated field by field (`qr-catalog.ts`, spec 001).
+- **Content**: direct encoding of static QR codes — the generated code
+  encodes exactly the form, nothing else (`qr-payload.ts`, spec 002).
+- **Visual customization**: colors, module styles, corner markers,
+  patterns, logo/frame layers — non-destructive preview (`qr-design.ts`,
+  `logo-presets.ts`, spec 004).
+- **Preview & export**: continuous rendering (PNG/SVG via
+  `qr-code-styling`), SVG / PNG / WebP export with margins, quality /
+  readability margin control (`qr-analysis.ts`, `qr-export.ts`, spec 005).
+- **Studio UI**: module dock (content · style · logo · frame · export),
+  options panel, preview scene, "My QR codes" library, keyboard input,
+  light/dark themes (`src/components/builder/`, spec 007).
 
-#### Projets & bibliothèque
-- **Modèle de projets locales** avec cycle brouillon → publié, duplication et
-  persistance localStorage (`builder-store.tsx`, spec 003).
+#### Projects & library
+- **Local project model** with a draft → published cycle, duplication and
+  localStorage persistence (`builder-store.tsx`, spec 003).
 
-#### Plateforme (Tauri)
-- **Partage natif** : menu de partage système ou révélation du fichier exporté dans
-  le dossier, selon la plateforme (`share.rs` + `qr-share.ts`).
-- Scaffold Tauri 2 + React 19 + Vite + TypeScript strict.
+#### Platform (Tauri)
+- **Native sharing**: system share menu or revealing the exported file in
+  the folder, depending on the platform (`share.rs` + `qr-share.ts`).
+- Tauri 2 + React 19 + Vite + strict TypeScript scaffold.
 
 ### Documentation
-- 10 specs produit au format SpecKit (`docs/001-catalogue-types` →
-  `docs/010-feedback-menu-rating`) + checklists de validation.
-- `AGENTS.md` : conventions de code (icônes lucide-react uniquement, shadcn first,
-  commands de build).
+- 10 product specs in SpecKit format (`docs/001-catalogue-types` →
+  `docs/010-feedback-menu-rating`) + validation checklists.
+- `AGENTS.md`: code conventions (lucide-react icons only, shadcn first,
+  build commands).
 
-### Prévu (tranches suivantes)
-- Génération en masse (spec 006), statistiques locales (spec 008), pages de contenu
-  HTML autonomes (spec 009), feedback & menu rating (spec 010).
+### Planned (next slices)
+- Bulk generation (spec 006), local statistics (spec 008), standalone HTML
+  content pages (spec 009), feedback & menu rating (spec 010).
 
 ---
 
