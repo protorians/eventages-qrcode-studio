@@ -1,8 +1,8 @@
-# Eventages Lite
+# Eventages QrCode Studio
 
 **English** · [Français](./README.fr.md)
 
-Eventages Lite is a desktop app (Tauri 2) for creating QR codes — 100% local, no account required.
+Eventages QrCode Studio is a desktop app (Tauri 2) for creating QR codes — 100% local, no account required.
 
 ## Stack
 
@@ -20,40 +20,41 @@ bun run tauri dev    # run the desktop app in development
 bun run build        # typecheck + production build (must pass before finishing any UI change)
 ```
 
-## Headless CLI (`eventages-lite`)
+## Headless CLI (`eventages-qr`)
 
 Create, manage and compose QR projects without any UI, from a terminal or a
 script — same modules as the app (`qr-catalog`, `qr-payload`, `qr-design`,
 `qr-frame`, `qcp`), same rendering path as the preview. The command ships under
-two names, `eventages-lite` and its short alias `evenlite`.
+two names, `eventages-qr` and its short alias `eqr`.
 
 ```sh
-eventages-lite help                # full help (or `evenlite`)
-bun run cli types                  # equivalent while developing
+eventages-qr help                # full help (or `eqr`)
+bun run cli types                # equivalent while developing
 
-eventages-lite init                # prepare ./studio (or EVENTAGES_LITE_DIR, or --dir …)
-eventages-lite create "Guest Wi-Fi" --type wifi \
+eventages-qr init                # prepare ./studio (or EVENTAGES_QR_DIR, or --dir …)
+eventages-qr create "Guest Wi-Fi" --type wifi \
   --set ssid=Guests --set password=welcome --template mint
-eventages-lite list
-eventages-lite payload "Guest Wi-Fi"
+eventages-qr list
+eventages-qr payload "Guest Wi-Fi"
 
-eventages-lite set "Guest Wi-Fi" --set password=newcode --design dotsColor=#10b981
-eventages-lite render "Guest Wi-Fi" -o poster.png --size 2048   # SVG with --format svg
-eventages-lite pack "Guest Wi-Fi"    # → .qcp archive, openable in the desktop app
-eventages-lite import project.qcp    # and the other way around
+eventages-qr set "Guest Wi-Fi" --set password=newcode --design dotsColor=#10b981
+eventages-qr render "Guest Wi-Fi" -o poster.png --size 2048   # SVG with --format svg
+eventages-qr pack "Guest Wi-Fi"    # → .qrd archive (Quick Response Document), openable in the desktop app
+eventages-qr import project.qrd    # and the other way around (legacy .qcp archives also accepted)
 
-eventages-lite duplicate "Guest Wi-Fi"
-eventages-lite delete "Guest Wi-Fi"
+eventages-qr duplicate "Guest Wi-Fi"
+eventages-qr delete "Guest Wi-Fi"
 ```
 
 Workspace: one JSON file per project (`./studio`, overridable with the `--dir`
-option or `EVENTAGES_LITE_DIR` — the legacy `QRS_STUDIO_DIR` is still honoured).
-SVG composition without a DOM, PNG via `@resvg/resvg-js`; `--no-frame`,
-`--size` and `--design key=value` let you compose a variant without modifying
-the project (`eventages-lite help <command>` for details on each command).
+option or `EVENTAGES_QR_DIR` — the legacy `EVENTAGES_LITE_DIR` and
+`QRS_STUDIO_DIR` are still honoured). SVG composition without a DOM, PNG via
+`@resvg/resvg-js`; `--no-frame`, `--size` and `--design key=value` let you
+compose a variant without modifying the project (`eventages-qr help <command>`
+for details on each command).
 
 To make the commands available system-wide, open the app settings (CLI
-section): the switch creates `eventages-lite` and `evenlite` symlinks in the
+section): the switch creates `eventages-qr` and `eqr` symlinks in the
 PATH (macOS: `/usr/local/bin`), and turning it off removes them. Without
 installation, `bun run cli <command>` works from the repository.
 

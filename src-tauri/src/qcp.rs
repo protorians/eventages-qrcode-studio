@@ -1,7 +1,8 @@
-//! Format de fichier projet « .qcp » : une archive zip contenant un
-//! `manifest.json` (tous les paramètres permettant de reconstruire le projet)
-//! et un dossier `assets/` avec les fichiers média associés (logo, visuels,
-//! documents…). Tout est traité localement, aucun réseau.
+//! Format de fichier projet « .qrd » — Quick Response Document : une archive
+//! zip contenant un `manifest.json` (tous les paramètres permettant de
+//! reconstruire le projet) et un dossier `assets/` avec les fichiers média
+//! associés (logo, visuels, documents…). Les archives `.qcp` antérieures
+//! restent lisibles. Tout est traité localement, aucun réseau.
 
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
@@ -31,7 +32,7 @@ pub struct AssetOutput {
     pub data_base64: String,
 }
 
-/// Contenu complet d'une archive `.qcp`.
+/// Contenu complet d'une archive `.qrd`.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QcpContents {
@@ -60,8 +61,8 @@ fn sanitize_asset_path(raw: &str) -> Result<String, String> {
     Ok(path.to_string())
 }
 
-/// Écrit l'archive `.qcp` : `manifest.json` puis les actifs sous `assets/`.
-/// Renvoie le chemin réel cible (extension `.qcp` imposée).
+/// Écrit l'archive `.qrd` : `manifest.json` puis les actifs sous `assets/`.
+/// Renvoie le chemin réel cible (extension `.qrd` imposée).
 pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result<String, String> {
     if assets.len() > MAX_ASSETS {
         return Err(format!(
@@ -76,9 +77,9 @@ pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result
 
     // Extension imposée, même si la boîte de dialogue a été contournée.
     let mut target = std::path::PathBuf::from(path);
-    if !target.to_string_lossy().to_lowercase().ends_with(".qcp") {
+    if !target.to_string_lossy().to_lowercase().ends_with(".qrd") {
         let mut name = target.as_os_str().to_owned();
-        name.push(".qcp");
+        name.push(".qrd");
         target = std::path::PathBuf::from(name);
     }
 
@@ -121,9 +122,9 @@ mod tests {
     use super::*;
 
     const SAMPLE_MANIFEST: &str = r#"{
-        "format": "qcp",
+        "format": "qrd",
         "version": 1,
-        "app": "eventages-lite",
+        "app": "qrd",
         "savedAt": 1760000000000,
         "project": {
             "name": "Menu du soir",
@@ -145,14 +146,14 @@ mod tests {
 
     #[test]
     fn archive_round_trip() {
-        let path = temp_path("round-trip.qcp");
+        let path = temp_path("round-trip.qrd");
         let assets = vec![AssetInput {
             path: "assets/logo.png".to_string(),
             data_base64: base64::engine::general_purpose::STANDARD.encode(b"logo-bytes"),
         }];
 
         let returned = save_project(&path, SAMPLE_MANIFEST, &assets).expect("écriture réussie");
-        assert!(returned.ends_with("round-trip.qcp"));
+        assert!(returned.ends_with("round-trip.qrd"));
 
         let contents = open_project(&path).expect("lecture réussie");
         assert_eq!(contents.manifest, SAMPLE_MANIFEST);
@@ -181,7 +182,7 @@ mod tests {
 
     #[test]
     fn archive_sans_manifeste_rejetée() {
-        let path = temp_path("sans-manifeste.qcp");
+        let path = temp_path("sans-manifeste.qrd");
         let file = std::fs::File::create(&path).unwrap();
         let mut zip = zip::ZipWriter::new(file);
         zip.start_file("autre.txt", zip::write::SimpleFileOptions::default())
@@ -195,12 +196,12 @@ mod tests {
     }
 }
 
-/// Lit une archive `.qcp` et renvoie le manifeste plus les fichiers média.
+/// Lit une archive `.qrd` (ou `.qcp` historique) et renvoie le manifeste plus les fichiers média.
 pub fn open_project(path: &str) -> Result<QcpContents, String> {
     let file = std::fs::File::open(path)
         .map_err(|error| format!("Ouverture du fichier impossible : {error}"))?;
     let mut archive = zip::ZipArchive::new(std::io::BufReader::new(file))
-        .map_err(|_| "Ce fichier n'est pas une archive projet (.qcp) lisible.".to_string())?;
+        .map_err(|_| "Ce fichier n'est pas une archive projet (.qrd) lisible.".to_string())?;
 
     let mut manifest: Option<String> = None;
     let mut assets: BTreeMap<String, Vec<u8>> = BTreeMap::new();

@@ -55,7 +55,7 @@ export type WorkspaceContextValue = {
    * Ouvre (ou réactive) l'onglet d'un projet : le brouillon à l'écran est
    * d'abord écrit dans le registre, puis le projet cible est hydraté.
    * Fonctionne aussi pour un projet enregistré dans le même cycle
-   * (ouverture d'un .qcp, import d'un QR).
+   * (ouverture d'un .qrd, import d'un QR).
    */
   openProjectTab: (projectId: string) => void;
   /** Ferme l'onglet d'un projet et active l'onglet voisin (ou l'accueil). */
@@ -133,7 +133,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     // Activation immédiate de l'onglet ; l'écriture du brouillon quitté et le
     // chargement du projet visé sont délégués à l'effet de synchronisation
     // ci-dessous. Indispensable pour les projets enregistrés dans le même
-    // cycle (ouverture d'un .qcp, import d'un QR) : le snapshot `projects`
+    // cycle (ouverture d'un .qrd, import d'un QR) : le snapshot `projects`
     // de ce rendu ne contient pas encore leur ID et rejetterait l'ouverture.
     setTabOrder((prev) => (prev.includes(projectId) ? prev : [...prev, projectId]));
     setActiveTabId(projectId);

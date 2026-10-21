@@ -84,9 +84,9 @@ type ItemSpec = NonNullable<SubmenuOptions["items"]>[number];
  * sans rendu : seuls les dialogs « À propos » et de confirmation de sortie
  * apparaissent. Hors shell Tauri (dev navigateur), rien n'est construit.
  *
- * - « Eventages Lite » (menu applicatif macOS) : à propos, masquage, quitter
+ * - « Eventages QrCode Studio » (menu applicatif macOS) : à propos, masquage, quitter
  *   (⌘Q, confirmation de sortie) ;
- * - « Fichier » : cycle de vie du projet (création ⌘N, ouverture .qcp ⌘O,
+ * - « Fichier » : cycle de vie du projet (création ⌘N, ouverture .qrd ⌘O,
  *   import d'un QR existant ⌘I, fermeture de l'onglet ⌘W — sur l'onglet
  *   Accueil, sortie de l'application, toujours confirmée et avec
  *   enregistrement proposé si le projet est modifié —, enregistrement
@@ -157,7 +157,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
     const itemsRef = useRef<MenuItems | null>(null);
     const actionsRef = useRef<MenuActions | null>(null);
 
-    /** Ouvre un fichier .qcp : réactive le projet s'il est déjà connu. */
+    /** Ouvre un fichier .qrd : réactive le projet s'il est déjà connu. */
     const openQcpFile = async () => {
         try {
             const selection = await openFileDialog({
@@ -271,7 +271,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
         for (const item of items.draft) void item.setEnabled(hasDraft);
         void items.undo.setEnabled(hasDraft && canUndo);
         void items.redo.setEnabled(hasDraft && canRedo);
-        void items.close.setText(isHome ? "Fermer Eventages Lite" : "Fermer l'onglet");
+        void items.close.setText(isHome ? "Fermer Eventages QrCode Studio" : "Fermer l'onglet");
     }, []);
 
     // Construction unique de la menubar native (shell Tauri uniquement).
@@ -315,7 +315,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
             <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>À propos d'Eventages Lite</DialogTitle>
+                        <DialogTitle>À propos d'Eventages QrCode Studio</DialogTitle>
                         <DialogDescription>
                             Studio de création de codes QR : URL, Wi-Fi, contact,
                             code-barres et plus.
@@ -323,7 +323,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
                     </DialogHeader>
                     <div className="space-y-3 text-sm">
                         <p className="leading-relaxed text-muted-foreground">
-                            Eventages Lite conçoit, habille et exporte des codes
+                            Eventages QrCode Studio conçoit, habille et exporte des codes
                             QR, en entier hors ligne — aucun compte, aucun
                             serveur : vos projets restent sur votre machine.
                         </p>
@@ -376,7 +376,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
                     ) : (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Quitter Eventages Lite ?</DialogTitle>
+                                <DialogTitle>Quitter Eventages QrCode Studio ?</DialogTitle>
                                 <DialogDescription>
                                     L'application va être fermée. Voulez-vous
                                     continuer ?
@@ -449,7 +449,7 @@ async function buildAppMenu(
     // CloseWindow fermerait la fenêtre sans confirmation.
     const closeItem = await MenuItem.new({
         id: "file:close",
-        text: state.isHome ? "Fermer Eventages Lite" : "Fermer l'onglet",
+        text: state.isHome ? "Fermer Eventages QrCode Studio" : "Fermer l'onglet",
         accelerator: "CmdOrCtrl+W",
         action: () => getActions().closeTab(),
     });
@@ -468,7 +468,7 @@ async function buildAppMenu(
         action: () => getActions().saveAs(),
     });
     // Export ouvre le module dédié (formats, résolution, presse-papiers,
-    // partage, projet .qcp) : libellé neutre + accélération d'usage ⇧⌘E.
+    // partage, projet .qrd) : libellé neutre + accélération d'usage ⇧⌘E.
     const exportItem = await MenuItem.new({
         id: "file:export",
         text: "Exporter…",
@@ -494,7 +494,7 @@ async function buildAppMenu(
             {item: "Separator"},
             await MenuItem.new({
                 id: "file:quit",
-                text: "Quitter Eventages Lite",
+                text: "Quitter Eventages QrCode Studio",
                 accelerator: "CmdOrCtrl+Q",
                 action: () => getActions().quit(),
             }),
@@ -613,7 +613,7 @@ async function buildAppMenu(
     // — Aide : à propos (ouvre le dialog de l'application).
     const aboutHelpItem = await MenuItem.new({
         id: "help:about",
-        text: "À propos d'Eventages Lite",
+        text: "À propos d'Eventages QrCode Studio",
         action: () => getActions().about(),
     });
     const helpSubmenu = await Submenu.new({text: "Aide", items: [aboutHelpItem]});
@@ -624,15 +624,15 @@ async function buildAppMenu(
     if (isMac) {
         const aboutAppItem = await MenuItem.new({
             id: "app:about",
-            text: "À propos d'Eventages Lite",
+            text: "À propos d'Eventages QrCode Studio",
             action: () => getActions().about(),
         });
         submenus.push(await Submenu.new({
-            text: "Eventages Lite",
+            text: "Eventages QrCode Studio",
             items: [
                 aboutAppItem,
                 {item: "Separator"},
-                {item: "Hide", text: "Masquer Eventages Lite"},
+                {item: "Hide", text: "Masquer Eventages QrCode Studio"},
                 {item: "HideOthers", text: "Masquer les autres"},
                 {item: "ShowAll", text: "Tout afficher"},
                 {item: "Separator"},
@@ -641,7 +641,7 @@ async function buildAppMenu(
                 // n'est pas enregistré).
                 await MenuItem.new({
                     id: "app:quit",
-                    text: "Quitter Eventages Lite",
+                    text: "Quitter Eventages QrCode Studio",
                     accelerator: "CmdOrCtrl+Q",
                     action: () => getActions().quit(),
                 }),

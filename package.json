@@ -1,20 +1,20 @@
 {
-  "name": "eventages-lite",
+  "name": "eventages-qr",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "bin": {
-    "eventages-lite": "cli/eventages-lite.ts",
-    "evenlite": "cli/eventages-lite.ts"
+    "eventages-qr": "cli/eventages-qr.ts",
+    "eqr": "cli/eventages-qr.ts"
   },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "cli": "bun cli/eventages-lite.ts",
-    "eventages-lite": "bun cli/eventages-lite.ts",
-    "evenlite": "bun cli/eventages-lite.ts",
+    "cli": "bun cli/eventages-qr.ts",
+    "eventages-qr": "bun cli/eventages-qr.ts",
+    "eqr": "bun cli/eventages-qr.ts",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "ios:init": "tauri ios init",

@@ -138,7 +138,7 @@ function buildVEvent(v: QrValues): string {
   const rows = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Eventages Lite//FR",
+    "PRODID:-//Eventages QrCode Studio//FR",
     "BEGIN:VEVENT",
     `SUMMARY:${icalEscape(title)}`,
     line(v.location) ? `LOCATION:${icalEscape(v.location)}` : null,

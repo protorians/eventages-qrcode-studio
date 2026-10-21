@@ -86,13 +86,13 @@ export type BuilderState = {
   /** Enregistrement local du brouillon (spec 001, FR-8). */
   savedAt: number | null;
   /**
-   * Chemin du fichier .qcp lié au projet. Un projet lié s'écrit sur le disque
+   * Chemin du fichier .qrd lié au projet. Un projet lié s'écrit sur le disque
    * sans repasser par la boîte de dialogue : enregistrement manuel (⌘S) et
    * enregistrement automatique écrivent directement à cet emplacement.
    */
   filePath: string | null;
   /**
-   * Chemin du fichier d'origine du projet (archive .qcp ouverte ou image
+   * Chemin du fichier d'origine du projet (archive .qrd ouverte ou image
    * importée), uniquement à des fins de dédoublonnage : rouvrir le même
    * fichier réactive le projet existant au lieu d'en créer une copie.
    * Non modifiable ensuite (la duplication l'efface).
@@ -520,19 +520,19 @@ export type BuilderContextValue = {
    * attendre le debounce — changement d'onglet, fermeture, suppression.
    */
   flushActiveProject: () => void;
-  /** Écrit le projet actif dans un fichier .qcp ; renvoie le chemin. */
+  /** Écrit le projet actif dans un fichier .qrd ; renvoie le chemin. */
   saveProjectAsQcp: () => Promise<string>;
   /**
-   * Enregistre le projet actif : écrit directement dans le fichier .qcp lié
+   * Enregistre le projet actif : écrit directement dans le fichier .qrd lié
    * s'il existe, sinon ouvre la boîte de dialogue « Enregistrer sous… »
    * (et lie le nouveau chemin). Renvoie le chemin écrit, ou "" si annulé.
    */
   saveProject: () => Promise<string>;
-  /** Chemin du fichier .qcp lié au projet actif (null = non lié). */
+  /** Chemin du fichier .qrd lié au projet actif (null = non lié). */
   filePath: string | null;
   /** Vrai si des modifications ne sont pas encore écrites dans le fichier lié. */
   dirty: boolean;
-  /** Ouvre un fichier .qcp et l'ajoute au registre ; renvoie l'ID du projet. */
+  /** Ouvre un fichier .qrd et l'ajoute au registre ; renvoie l'ID du projet. */
   openProjectFromQcp: (path: string) => Promise<OpenedQcpProject>;
   /**
    * Convertit un fichier image/SVG/PDF (QR ou code-barres) en projet : appelle
@@ -546,7 +546,7 @@ export type BuilderContextValue = {
   ) => Promise<string>;
 };
 
-/** Résultat d'une ouverture de .qcp : projet réactivé (doublon) ou créé. */
+/** Résultat d'une ouverture de .qrd : projet réactivé (doublon) ou créé. */
 export type OpenedQcpProject = {
   id: string;
   /** Vrai si le projet existait déjà : son onglet a simplement été réactivé. */
@@ -569,7 +569,7 @@ const PREVIEW_DEBOUNCE_MS = 180;
 /** Délai de debounce avant enregistrement local du projet actif. */
 const SAVE_DEBOUNCE_MS = 400;
 
-/** Délai de stabilisation avant l'enregistrement auto du fichier .qcp lié. */
+/** Délai de stabilisation avant l'enregistrement auto du fichier .qrd lié. */
 const FILE_SAVE_DEBOUNCE_MS = 1600;
 
 function useDebounced<T>(value: T, delay: number): T {
@@ -739,7 +739,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
 
   // Traitements de fichiers en cours, par chemin : un second déclenchement
   // du même fichier (double clic, accueil + menu) attend le premier résultat
-  // au lieu d'enregistrer un doublon. Réservé à l'ouverture .qcp — sans
+  // au lieu d'enregistrer un doublon. Réservé à l'ouverture .qrd — sans
   // annulation possible, la promesse partagée ne peut pas être empoisonnée.
   const pendingPathsRef = useRef(new Map<string, Promise<OpenedQcpProject>>());
 
@@ -876,7 +876,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [flushActiveProject],
   );
 
-  /** Écrit l'archive .qcp du projet courant à un chemin donné, sans dialogue. */
+  /** Écrit l'archive .qrd du projet courant à un chemin donné, sans dialogue. */
   const writeProjectQcp = useCallback(async (target: string): Promise<string> => {
     const current = stateRef.current;
     const { manifest, assets } = buildQcpManifest({
@@ -900,8 +900,8 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     const writtenSignature = signatureRef.current;
     const target = await save({
       title: "Enregistrer le projet",
-      defaultPath: `${sanitizeFileName(stateRef.current.projectName)}.qcp`,
-      filters: [{ name: "Projet Eventages Lite", extensions: ["qcp"] }],
+      defaultPath: `${sanitizeFileName(stateRef.current.projectName)}.qrd`,
+      filters: [{ name: "Projet Eventages QrCode Studio", extensions: ["qrd"] }],
     });
     if (!target) return "";
     const path = await writeProjectQcp(target);
@@ -1043,7 +1043,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [projectsData.items, registerAndActivate],
   );
 
-  // Enregistrement automatique du fichier .qcp lié : après stabilisation des
+  // Enregistrement automatique du fichier .qrd lié : après stabilisation des
   // modifications (debounce), le projet déjà enregistré sur disque est réécrit
   // sans aucune action. Désactivable dans les paramètres ; les projets non
   // liés restent des brouillons locaux.

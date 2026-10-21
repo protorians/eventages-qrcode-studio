@@ -1,6 +1,6 @@
 /**
- * Intégration Tauri du CLI `eventages-lite` : état de disponibilité,
- * installation et retrait des commandes `eventages-lite` / `evenlite` dans le
+ * Intégration Tauri du CLI `eventages-qr` : état de disponibilité,
+ * installation et retrait des commandes `eventages-qr` / `eqr` dans le
  * PATH depuis les paramètres de l'application. Hors shell Tauri, l'état est
  * simplement indisponible (l'interface n'affiche alors pas de contrôle).
  */
@@ -11,9 +11,9 @@ import { isTauriRuntime } from "./tauri";
 export type CliStatus = {
   /** Le script CLI du dépôt est présent (app lancée depuis le dépôt). */
   available: boolean;
-  /** Les commandes `eventages-lite` et `evenlite` sont posées dans le PATH. */
+  /** Les commandes `eventages-qr` et `eqr` sont posées dans le PATH. */
   installed: boolean;
-  /** Chemin du script source `cli/eventages-lite.ts`, si disponible. */
+  /** Chemin du script source `cli/eventages-qr.ts`, si disponible. */
   scriptPath: string | null;
   /** Dossier du PATH où les commandes sont (ou seraient) posées. */
   binDir: string | null;

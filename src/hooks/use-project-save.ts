@@ -4,7 +4,7 @@ import { describeError } from "@/lib/qcp";
 import { isTauriRuntime } from "@/lib/tauri";
 
 /**
- * Enregistrement du brouillon actif (fichier .qcp lié, sinon boîte de
+ * Enregistrement du brouillon actif (fichier .qrd lié, sinon boîte de
  * dialogue « Enregistrer sous… »), partagé par le bouton de la barre de
  * titre (project-actions.tsx) et le menu Fichier de la menubar native
  * (native-menu.tsx). Le store d'éditeur ne porte qu'un brouillon à la fois

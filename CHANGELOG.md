@@ -1,10 +1,53 @@
 # Changelog
 
-All notable changes to **Eventages Lite** are documented here.
+All notable changes to **Eventages QrCode Studio** are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and follows
 [semantic versioning](https://semver.org/): at this stage, the app is in
 `0.x` and the product is not yet promised stable.
+
+---
+
+## [0.10.0] — 2026-10-21 · Product rename to "Eventages QrCode Studio" and `.qrd` archives
+
+### Added
+
+- **Desktop release pipeline**: a new GitHub Actions workflow builds the
+  Tauri 2 app on Windows (`.msi` + `.exe` setup), macOS (universal `.dmg`)
+  and Linux (`.deb`, `.rpm`, `.AppImage`) and uploads the installers as
+  assets of the matching GitHub release — published on a `v*` tag push,
+  or created as a draft on manual dispatch (`.github/workflows/release.yml`).
+
+### Changed
+
+- **Product renamed to "Eventages QrCode Studio"** (formerly "Eventages
+  Lite"): displayed name (title bar, tab titles, native menus, About
+  dialog, window title, mockup watermark), iCalendar `PRODID`,
+  `package.json`, release naming and documentation
+  (`tauri.conf.json`, `title-bar.tsx`, `native-menu.tsx`,
+  `mockup-scene.tsx`, `qr-payload.ts`).
+- **Technical naming aligned with the new product name**: npm package name
+  (`eventages-qr`), Rust crate name (`Eventages-Qr`), bundle identifier
+  (`com.protorians.eventages-qr`), headless CLI entry script
+  (`cli/eventages-lite.ts` → `cli/eventages-qr.ts`), CLI command names
+  (`eventages-lite` / `evenlite` → `eventages-qr` / `eqr`) and workspace
+  directory override (`EVENTAGES_LITE_DIR` → `EVENTAGES_QR_DIR` — the
+  legacy `EVENTAGES_LITE_DIR` and `QRS_STUDIO_DIR` remain honoured for
+  compatibility) (`package.json`, `src-tauri/Cargo.toml`,
+  `tauri.conf.json`, `cli/`, `src-tauri/src/cli.rs`, `cli/workspace.ts`).
+- **Project archive format renamed to `.qrd`** (Quick Response Document):
+  the `manifest.json` now carries `format: "qrd"` and `app: "qrd"`, new
+  saves default to the `.qrd` extension (desktop dialogs and CLI `pack`),
+  and the backend enforces it — while existing `.qcp` archives stay fully
+  readable and re-editable (both in the app and via CLI `import`) (`src/lib/qcp.ts`,
+  `src-tauri/src/qcp.rs`, `cli/workspace.ts`).
+- **Documentation and user-facing strings updated for the new name and
+  commands**: both READMEs, the CLI settings section, dialog file filters
+  (`QCP_FILTERS`, `.qrd` for writes, `.qcp` kept for reads) and the headless
+  CLI docs (`README.md`, `README.fr.md`, `settings-dialog.tsx`,
+  `use-project-save.ts`).
+- Versions aligned to 0.10.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
 
 ---
 
@@ -456,6 +499,7 @@ no server — Tauri desktop with native system sharing.
 
 ---
 
+[0.10.0]: https://example.invalid/releases/v0.10.0
 [0.9.0]: https://example.invalid/releases/v0.9.0
 [0.8.0]: https://example.invalid/releases/v0.8.0
 [0.7.0]: https://example.invalid/releases/v0.7.0
