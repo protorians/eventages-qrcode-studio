@@ -113,7 +113,7 @@ export function HomeView() {
     const handleOpen = (id: string) => openProjectTab(id);
 
     /**
-     * Ouvre un fichier .qcp : un projet déjà connu (UUID inscrit dans l'archive
+     * Ouvre un fichier .qrd : un projet déjà connu (UUID inscrit dans l'archive
      * ou même chemin) voit simplement son onglet réactivé — jamais de doublon.
      */
     const handleOpenQcp = async () => {
@@ -157,7 +157,7 @@ export function HomeView() {
         })();
     };
 
-    /** Écrit le brouillon actif dans une archive .qcp via le backend Rust. */
+    /** Écrit le brouillon actif dans une archive .qrd via le backend Rust. */
     const handleSaveQcp = async () => {
         setError(null);
         setNotice(null);
@@ -218,7 +218,7 @@ export function HomeView() {
                         </Button>
                         <div className="flex items-center gap-1">
                             <IconAction
-                                label="Ouvrir un fichier projet (.qcp)"
+                                label="Ouvrir un fichier projet (.qrd)"
                                 disabled={busy !== null}
                                 onClick={() => void handleOpenQcp()}
                             >

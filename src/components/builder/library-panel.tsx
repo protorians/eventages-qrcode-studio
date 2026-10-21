@@ -100,17 +100,17 @@ export function LibraryPanel({ className }: { className?: string }) {
                 <span className="truncate">
                   {dirty
                     ? autoSaveFile
-                      ? `Fichier .qcp : enregistrement auto… (${fileName(state.filePath)})`
-                      : `Fichier .qcp : non enregistré (${fileName(state.filePath)})`
+                      ? `Fichier .qrd : enregistrement auto… (${fileName(state.filePath)})`
+                      : `Fichier .qrd : non enregistré (${fileName(state.filePath)})`
                     : autoSaveFile
-                      ? `Fichier .qcp lié · auto-enregistré (${fileName(state.filePath)})`
-                      : `Fichier .qcp lié (${fileName(state.filePath)})`}
+                      ? `Fichier .qrd lié · auto-enregistré (${fileName(state.filePath)})`
+                      : `Fichier .qrd lié (${fileName(state.filePath)})`}
                 </span>
               </p>
             ) : (
               <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground/70">
                 <Save className="size-3 shrink-0 opacity-60" />
-                <span className="truncate">Aucun fichier lié · « Enregistrer » lie un .qcp</span>
+                <span className="truncate">Aucun fichier lié · « Enregistrer » lie un .qrd</span>
               </p>
             )}
           </div>

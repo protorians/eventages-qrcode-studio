@@ -1,4 +1,4 @@
-# Eventages Lite
+# Eventages QrCode Studio
 
 [English](./README.md) · **Français**
 
@@ -20,42 +20,42 @@ bun run tauri dev    # lancer l'app desktop en développement
 bun run build        # typecheck + build production (à valider avant toute fin de modification UI)
 ```
 
-## CLI headless (`eventages-lite`)
+## CLI headless (`eventages-qr`)
 
 Créer, gérer et composer des projets QR sans interface, depuis un terminal ou un
 script — mêmes modules que l'app (`qr-catalog`, `qr-payload`, `qr-design`,
 `qr-frame`, `qcp`), même tracé de rendu que l'aperçu. La commande existe sous
-deux noms : `eventages-lite` et son alias court `evenlite`.
+deux noms : `eventages-qr` et son alias court `eqr`.
 
 ```sh
-eventages-lite help               # aide complète (ou `evenlite`)
-bun run cli types                 # équivalent en développement
+eventages-qr help               # aide complète (ou `eqr`)
+bun run cli types               # équivalent en développement
 
-eventages-lite init               # préparer ./studio (ou EVENTAGES_LITE_DIR, ou --dir …)
-eventages-lite create "Wi-Fi invité" --type wifi \
+eventages-qr init               # préparer ./studio (ou EVENTAGES_QR_DIR, ou --dir …)
+eventages-qr create "Wi-Fi invité" --type wifi \
   --set ssid=Invités --set password=bienvenue --template mint
-eventages-lite list
-eventages-lite payload "Wi-Fi invité"
+eventages-qr list
+eventages-qr payload "Wi-Fi invité"
 
-eventages-lite set "Wi-Fi invité" --set password=nouvelcode --design dotsColor=#10b981
-eventages-lite render "Wi-Fi invité" -o affiche.png --size 2048   # SVG avec --format svg
-eventages-lite pack "Wi-Fi invité"   # → archive .qcp ouvrable dans l'app desktop
-eventages-lite import projet.qcp     # et l'inverse
+eventages-qr set "Wi-Fi invité" --set password=nouvelcode --design dotsColor=#10b981
+eventages-qr render "Wi-Fi invité" -o affiche.png --size 2048   # SVG avec --format svg
+eventages-qr pack "Wi-Fi invité"   # → archive .qrd (Quick Response Document) ouvrable dans l'app desktop
+eventages-qr import projet.qrd     # et l'inverse (les archives .qcp historiques restent acceptées)
 
-eventages-lite duplicate "Wi-Fi invité"
-eventages-lite delete "Wi-Fi invité"
+eventages-qr duplicate "Wi-Fi invité"
+eventages-qr delete "Wi-Fi invité"
 ```
 
 Espace de travail : un fichier JSON par projet (`./studio`, substituable par
-l'option `--dir` ou `EVENTAGES_LITE_DIR` — l'ancien `QRS_STUDIO_DIR` reste
-accepté). Composition SVG sans DOM, PNG via `@resvg/resvg-js` ; `--no-frame`,
-`--size` et `--design clé=valeur` permettent de composer une variante sans
-modifier le projet (`eventages-lite help <commande>` pour le détail de chaque
-commande).
+l'option `--dir` ou `EVENTAGES_QR_DIR` — les anciens `EVENTAGES_LITE_DIR` et
+`QRS_STUDIO_DIR` restent acceptés). Composition SVG sans DOM, PNG via
+`@resvg/resvg-js` ; `--no-frame`, `--size` et `--design clé=valeur` permettent de
+composer une variante sans modifier le projet (`eventages-qr help <commande>`
+pour le détail de chaque commande).
 
 Pour rendre les commandes disponibles partout, ouvrez les paramètres de l'app
-(section CLI) : l'interrupteur pose les liens symboliques `eventages-lite` et
-`evenlite` dans le PATH (macOS : `/usr/local/bin`), et le retirer les supprime.
+(section CLI) : l'interrupteur pose les liens symboliques `eventages-qr` et
+`eqr` dans le PATH (macOS : `/usr/local/bin`), et le retirer les supprime.
 Sans installation, `bun run cli <commande>` fonctionne depuis le dépôt.
 
 ## Documentation

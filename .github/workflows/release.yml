@@ -9,9 +9,6 @@
 # Triggers:
 #   - Push a `v*` tag (e.g. `git tag v0.9.0 && git push origin v0.9.0`)
 #     -> the release is published directly and assets are downloadable.
-#   - Push to `main`, `beta` or `alpha`
-#     -> a DRAFT release named after the branch (e.g. `build-beta`) is
-#        created/updated with the installers, for testing only.
 #   - Run manually from the Actions tab (`workflow_dispatch`)
 #     -> a DRAFT release is created so the pipeline can be tested without
 #        publishing; publish the draft from the Releases page when happy.
@@ -23,10 +20,6 @@ name: Release desktop builds
 
 on:
   push:
-    branches:
-      - main
-      - beta
-      - alpha
     tags:
       - 'v*'
   workflow_dispatch:
@@ -68,11 +61,11 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Install Linux dependencies (Tauri v2 + RPM build tools)
+      - name: Install Linux dependencies (Tauri v2)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils rpm
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
 
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
@@ -85,15 +78,9 @@ jobs:
             refs/tags/*)
               tag="${GITHUB_REF#refs/tags/}"
               ;;
-            refs/heads/*)
-              # Branch pushes (main/beta/alpha) produce a rolling draft
-              # release named after the branch so published releases stay
-              # tag-only.
-              tag="build-${GITHUB_REF#refs/heads/}"
-              ;;
             *)
-              # Extraction native en Bash de la version dans tauri.conf.json (évite d'avoir besoin de Node.js)
-              version=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | awk -F '"' '{print $4}')
+              # Manual run: fall back to the version in tauri.conf.json.
+              version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
               tag="v${version}"
               ;;
           esac
@@ -108,9 +95,8 @@ jobs:
           tagName: ${{ steps.release.outputs.tag }}
           releaseName: 'Eventages QrCode Studio ${{ steps.release.outputs.tag }}'
           releaseBody: 'Installers for Windows (MSI/NSIS), macOS (universal DMG, Intel + Apple Silicon) and Linux (deb, rpm, AppImage).'
-          # Tag pushes publish directly; branch pushes and manual runs
-          # create a draft release.
-          releaseDraft: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          # Manual runs create a draft release; tag pushes publish directly.
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' }}
           prerelease: false
           generateReleaseNotes: true
           args: ${{ matrix.args }}

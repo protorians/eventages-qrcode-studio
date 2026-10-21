@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 /**
- * `eventages-lite` (alias `evenlite`) — CLI headless d'Eventages Lite.
+ * `eventages-qr` (alias `eqr`) — CLI headless d'Eventages QrCode Studio.
  *
  * Créer, gérer et composer des projets QR sans interface : projets stockés
  * comme fichiers JSON dans un espace de travail (défaut `./studio`), payloads
  * calculés par les mêmes modules que l'app desktop, composition SVG/PNG
- * headless (`render.ts`) et interchange `.qcp` avec l'app desktop.
+ * headless (`render.ts`) et interchange `.qrd` avec l'app desktop.
  *
- * Usage : `eventages-lite <commande> [args] [--options]` — `eventages-lite help`.
- * En développement, `bun run cli` est équivalent ; les deux noms (`eventages-lite`
- * et `evenlite`) sont installables dans le PATH depuis les paramètres de l'app.
+ * Usage : `eventages-qr <commande> [args] [--options]` — `eventages-qr help`.
+ * En développement, `bun run cli` est équivalent ; les deux noms (`eventages-qr`
+ * et `eqr`) sont installables dans le PATH depuis les paramètres de l'app.
  */
 
 import { existsSync, writeFileSync } from "node:fs";
@@ -299,7 +299,7 @@ function requireProjectRef(args: ParsedArgs, operation: string): string {
   const ref = args.positionals[0];
   if (!ref) {
     throw new CliError(
-      `Usage : eventages-lite ${operation} <projet> [options] — voir « eventages-lite help ${operation} ».`,
+      `Usage : eventages-qr ${operation} <projet> [options] — voir « eventages-qr help ${operation} ».`,
     );
   }
   return ref;
@@ -319,7 +319,7 @@ function commandCreate(args: ParsedArgs): void {
   const name = args.positionals[0];
   if (!name) {
     throw new CliError(
-      "Usage : eventages-lite create <nom> [--type wifi] [--set ssid=… --set password=…] — voir « eventages-lite help create ».",
+      "Usage : eventages-qr create <nom> [--type wifi] [--set ssid=… --set password=…] — voir « eventages-qr help create ».",
     );
   }
   const dir = workspaceDir(flagString(args, "dir"));
@@ -343,7 +343,7 @@ function commandCreate(args: ParsedArgs): void {
   console.log(`Projet créé : ${name}`);
   console.log(`  type : ${projectType.label} (${projectType.id}) · complétion ${progress} %`);
   console.log(`  fichier : ${path}`);
-  console.log(`  composition : eventages-lite render "${name}"`);
+  console.log(`  composition : eventages-qr render "${name}"`);
 }
 
 function commandList(args: ParsedArgs): void {
@@ -351,7 +351,7 @@ function commandList(args: ParsedArgs): void {
   const projects = listProjects(dir);
   if (projects.length === 0) {
     console.log(
-      'Aucun projet. Créez-en un avec : eventages-lite create "Mon projet" --type url --set url=https://exemple.com',
+      'Aucun projet. Créez-en un avec : eventages-qr create "Mon projet" --type url --set url=https://exemple.com',
     );
     return;
   }
@@ -487,8 +487,8 @@ function commandTypes(args: ParsedArgs): void {
     for (const type of QR_TYPES) {
       console.log(`${type.id.padEnd(14)}${type.label.padEnd(16)}${type.encoding.padEnd(9)}${type.tagline}`);
     }
-    console.log("\nDétail des champs     : eventages-lite types <type>");
-    console.log("Clés de design        : eventages-lite help design");
+    console.log("\nDétail des champs     : eventages-qr types <type>");
+    console.log("Clés de design        : eventages-qr help design");
     return;
   }
 
@@ -573,8 +573,8 @@ function commandPack(args: ParsedArgs): void {
     throw new CliError(`Trop de fichiers média (${assets.length}) : la limite est de 64.`);
   }
 
-  let target = flagString(args, "output") ?? `${sanitizeFileName(project.name)}.qcp`;
-  if (!target.toLowerCase().endsWith(".qcp")) target += ".qcp";
+  let target = flagString(args, "output") ?? `${sanitizeFileName(project.name)}.qrd`;
+  if (!target.toLowerCase().endsWith(".qrd")) target += ".qrd";
 
   const archive = zipSync({
     "manifest.json": Buffer.from(manifest, "utf8"),
@@ -588,7 +588,7 @@ function commandImport(args: ParsedArgs): void {
   const source = args.positionals[0];
   if (!source) {
     throw new CliError(
-      "Usage : eventages-lite import <fichier.qcp> [--as <nom>] — voir « eventages-lite help import ».",
+      "Usage : eventages-qr import <fichier.qrd|.qcp> [--as <nom>] — voir « eventages-qr help import ».",
     );
   }
   const dir = workspaceDir(flagString(args, "dir"));
@@ -618,30 +618,30 @@ function commandImport(args: ParsedArgs): void {
 /* ------------------------------------------------------------------ */
 
 const COMMAND_HELP: Record<string, string> = {
-  init: "Prépare le dossier d'espace de travail (défaut : ./studio, ou EVENTAGES_LITE_DIR / --dir).\n\n  eventages-lite init [--dir <chemin>]",
+  init: "Prépare le dossier d'espace de travail (défaut : ./studio, ou EVENTAGES_QR_DIR / --dir).\n\n  eventages-qr init [--dir <chemin>]",
   create:
     "Crée un projet dans l'espace de travail.\n\n" +
-    "  eventages-lite create <nom> [--type <id>] [--set champ=valeur]… [--file champ=fichier]…\n" +
+    "  eventages-qr create <nom> [--type <id>] [--set champ=valeur]… [--file champ=fichier]…\n" +
     "              [--values '{json}'] [--template <id>] [--design clé=valeur]…\n" +
     "              [--mockup <id>] [--size <px>]\n\n" +
-    'Exemples :\n  eventages-lite create "Wi-Fi invité" --type wifi --set ssid=Invité --set password=bienvenue --template mint\n  eventages-lite create "Mon site" --set url=https://exemple.com',
-  list: "Liste les projets du dossier, du plus récent au plus ancien.\n\n  eventages-lite list [--dir <chemin>]",
-  show: "Affiche le JSON complet d'un projet (nom exact, slug ou préfixe d'id).\n\n  eventages-lite show <projet>",
-  payload: "Affiche la chaîne encodée dans le QR (utile pour vérifier le contenu).\n\n  eventages-lite payload <projet>",
+    'Exemples :\n  eventages-qr create "Wi-Fi invité" --type wifi --set ssid=Invité --set password=bienvenue --template mint\n  eventages-qr create "Mon site" --set url=https://exemple.com',
+  list: "Liste les projets du dossier, du plus récent au plus ancien.\n\n  eventages-qr list [--dir <chemin>]",
+  show: "Affiche le JSON complet d'un projet (nom exact, slug ou préfixe d'id).\n\n  eventages-qr show <projet>",
+  payload: "Affiche la chaîne encodée dans le QR (utile pour vérifier le contenu).\n\n  eventages-qr payload <projet>",
   set:
     "Modifie un projet : contenu, design, type, mockup, taille, nom.\n\n" +
-    "  eventages-lite set <projet> [--type <id>] [--set champ=valeur]… [--unset champ]…\n" +
+    "  eventages-qr set <projet> [--type <id>] [--set champ=valeur]… [--unset champ]…\n" +
     "             [--file champ=fichier]… [--values '{json}'] [--template <id>]\n" +
     "             [--design clé=valeur]… [--rename <nom>]",
-  duplicate: "Duplique un projet (nom automatique « X (copie) » si non précisé).\n\n  eventages-lite duplicate <projet> [nouveau-nom]",
-  delete: "Supprime un projet de l'espace de travail (définitif).\n\n  eventages-lite delete <projet>",
+  duplicate: "Duplique un projet (nom automatique « X (copie) » si non précisé).\n\n  eventages-qr duplicate <projet> [nouveau-nom]",
+  delete: "Supprime un projet de l'espace de travail (définitif).\n\n  eventages-qr delete <projet>",
   render:
     "Compose le QR final : SVG toujours, PNG via @resvg/resvg-js.\n\n" +
-    "  eventages-lite render <projet> [-o <fichier>] [--format svg|png] [--size <px>] [--no-frame]\n\n" +
-    'Exemples :\n  eventages-lite render "Wi-Fi invité" -o affiche.png --size 2048\n  eventages-lite render "Menu" --no-frame --format svg',
-  pack: "Exporte le projet en archive .qcp, lisible par l'app desktop.\n\n  eventages-lite pack <projet> [-o <fichier.qcp>]",
-  import: "Importe une archive .qcp dans l'espace de travail.\n\n  eventages-lite import <fichier.qcp> [--as <nom>]",
-  types: "Liste les types de QR, ou détaille les champs d'un type.\n\n  eventages-lite types [type]",
+    "  eventages-qr render <projet> [-o <fichier>] [--format svg|png] [--size <px>] [--no-frame]\n\n" +
+    'Exemples :\n  eventages-qr render "Wi-Fi invité" -o affiche.png --size 2048\n  eventages-qr render "Menu" --no-frame --format svg',
+  pack: "Exporte le projet en archive .qrd (Quick Response Document), lisible par l'app desktop.\n\n  eventages-qr pack <projet> [-o <fichier.qrd>]",
+  import: "Importe une archive .qrd (ou .qcp historique) dans l'espace de travail.\n\n  eventages-qr import <fichier.qrd> [--as <nom>]",
+  types: "Liste les types de QR, ou détaille les champs d'un type.\n\n  eventages-qr types [type]",
   design:
     "Clés acceptées par --design (et leur forme de valeur) :\n\n" +
     "  dotsType              sq | rounded | extra-rounded | dots | classy | classy-rounded\n" +
@@ -671,11 +671,11 @@ const COMMAND_HELP: Record<string, string> = {
     DESIGN_TEMPLATES.map((template) => template.id).join(", "),
 };
 
-const HELP_TEXT = `eventages-lite — Eventages Lite en ligne de commande (headless)
-Alias : evenlite (les deux noms sont interchangeables).
+const HELP_TEXT = `eventages-qr — Eventages QrCode Studio en ligne de commande (headless)
+Alias : eqr (les deux noms sont interchangeables).
 
 Espace de travail : un dossier contenant un fichier .json par projet.
-Défaut : ./studio — substituable par EVENTAGES_LITE_DIR ou l'option --dir <chemin>.
+Défaut : ./studio — substituable par EVENTAGES_QR_DIR ou l'option --dir <chemin>.
 
 Commandes :
   init                 Préparer l'espace de travail
@@ -688,13 +688,13 @@ Commandes :
   duplicate <projet>   Dupliquer un projet
   delete <projet>      Supprimer un projet
   render <projet>      Composer le QR en SVG ou PNG (cadre et logo inclus)
-  pack <projet>        Exporter vers l'archive .qcp de l'app desktop
-  import <fichier.qcp> Importer une archive .qcp
+  pack <projet>        Exporter vers l'archive .qrd de l'app desktop
+  import <fichier.qrd> Importer une archive .qrd (ou .qcp historique)
 
 Options globales :
-  --dir <chemin>       Espace de travail cible (sinon EVENTAGES_LITE_DIR, sinon ./studio)
+  --dir <chemin>       Espace de travail cible (sinon EVENTAGES_QR_DIR, sinon ./studio)
 
-Détail d'une commande : eventages-lite help <commande>
+Détail d'une commande : eventages-qr help <commande>
 Version : ${pkgJson.version}`;
 
 function printMainHelp(): void {
@@ -707,7 +707,7 @@ function printCommandHelp(operation: string): void {
     printMainHelp();
     return;
   }
-  console.log(`eventages-lite ${operation}\n\n${usage}`);
+  console.log(`eventages-qr ${operation}\n\n${usage}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -722,7 +722,7 @@ async function main(): Promise<void> {
   }
 
   if (argv[0] === "--version" || argv[0] === "-v") {
-    console.log(`eventages-lite ${pkgJson.version}`);
+    console.log(`eventages-qr ${pkgJson.version}`);
     return;
   }
 

@@ -1,7 +1,9 @@
 /**
- * Format de fichier projet « .qcp » : une archive zip créée par le backend
- * Rust contenant un `manifest.json` (tous les paramètres du projet) et un
- * dossier `assets/` avec les fichiers média associés (logo, visuels…).
+ * Format de fichier projet « .qrd » — Quick Response Document : une archive zip
+ * créée par le backend Rust contenant un `manifest.json` (tous les paramètres du
+ * projet) et un dossier `assets/` avec les fichiers média associés (logo,
+ * visuels…). Les archives `.qcp` antérieures restent lisibles et acceptées à
+ * l'ouverture ; toute nouvelle écriture produit un `.qrd`.
  *
  * Côté interface, le manifeste est construit depuis l'état du builder : les
  * valeurs média (data URLs) sont extraites dans l'archive et remplacées par
@@ -16,8 +18,13 @@ import { normalizeBarcodeDesign, type BarcodeDesign } from "@/lib/barcode";
 /** Échec de lecture d'une archive projet, avec un message prêt à afficher. */
 export class QcpError extends Error {}
 
-/** Filtre de boîte de dialogue natif pour les fichiers projet .qcp. */
-export const QCP_FILTERS = [{ name: "Projet Eventages Lite", extensions: ["qcp"] }];
+/**
+ * Filtres de boîte de dialogue native pour les fichiers projet : écriture en
+ * `.qrd`, lecture des `.qcp` historiques aussi.
+ */
+export const QCP_FILTERS = [
+  { name: "Projet Eventages QrCode Studio (.qrd, .qcp)", extensions: ["qrd", "qcp"] },
+];
 
 /** Référence d'un fichier média embarqué dans l'archive. */
 export type QcpAssetRef =
@@ -26,9 +33,11 @@ export type QcpAssetRef =
 
 /** Manifeste stocké dans `manifest.json`. */
 export type QcpManifest = {
-  format: "qcp";
+  /** « qrd » depuis le renommage ; « qcp » reste accepté en lecture. */
+  format: "qrd" | "qcp";
   version: 1;
-  app: "qrcode-studio";
+  /** « qrd » (Quick Response Document) ; valeurs historiques acceptées. */
+  app: "qrd" | "qrcode-studio" | "eventages-lite";
   savedAt: number;
   /**
    * Identifiant stable du projet (UUID), inscrit à l'enregistrement. Rouvrir
@@ -193,9 +202,9 @@ export function buildQcpManifest(input: QcpBuildInput): {
   }
 
   const manifest: QcpManifest = {
-    format: "qcp",
+    format: "qrd",
     version: 1,
-    app: "qrcode-studio",
+    app: "qrd",
     savedAt: Date.now(),
     projectId: input.projectId,
     project: {
@@ -223,8 +232,8 @@ export function applyQcpManifest({ manifest, assets }: QcpFilePayload): QcpProje
   } catch {
     throw new QcpError("Fichier projet illisible : manifest.json est corrompu.");
   }
-  if (!parsed || parsed.format !== "qcp" || !parsed.project) {
-    throw new QcpError("Ce fichier n'est pas un projet Eventages Lite (.qcp).");
+  if (!parsed || (parsed.format !== "qrd" && parsed.format !== "qcp") || !parsed.project) {
+    throw new QcpError("Ce fichier n'est pas un projet Eventages QrCode Studio (.qrd).");
   }
 
   const mediaByPath = new Map(assets.map((asset) => [asset.path, asset.dataBase64]));

@@ -79,11 +79,11 @@ export function TitleBar(
                 <div className="w-8 h-8">
                     <img
                         src={`./assets/images/${theme === 'light' ? 'app-icon' : 'app-icon-white'}.png`}
-                        alt="Eventages Lite"
+                        alt="Eventages QrCode Studio"
                     />
                 </div>
                 <p className="hud-heading hidden truncate text-[0.78rem] leading-tight font-bold sm:block">
-                    Eventages Lite
+                    Eventages QrCode Studio
                 </p>
                 <HudStatusDot tone="ok" className="hidden sm:flex"/>
                 {hud ? (

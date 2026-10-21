@@ -35,7 +35,7 @@ fn share_image(
     share::share_image(&window, &name, &data_base64)
 }
 
-/// Écrit le projet actif dans un fichier `.qcp` (archive zip : manifest.json
+/// Écrit le projet actif dans un fichier `.qrd` (archive zip : manifest.json
 /// + dossier assets/). Renvoie le chemin réel utilisé. Traitement hors thread
 /// principal : les médias volumineux ne doivent pas geler la fenêtre.
 #[tauri::command]
@@ -49,7 +49,7 @@ async fn save_project_qcp(
         .map_err(|error| format!("Enregistrement interrompu : {error}"))?
 }
 
-/// Lit un fichier `.qcp` et renvoie le manifeste plus les fichiers média.
+/// Lit un fichier `.qrd` et renvoie le manifeste plus les fichiers média.
 /// Traitement hors thread principal (déchiffrement zip + base64 lourds).
 #[tauri::command]
 async fn open_project_qcp(path: String) -> Result<qcp::QcpContents, String> {
@@ -90,19 +90,19 @@ async fn save_export_file(path: String, data_base64: String) -> Result<String, S
         .map_err(|error| format!("Export interrompu : {error}"))?
 }
 
-/// État de disponibilité du CLI `eventages-lite` (script source, liens posés).
+/// État de disponibilité du CLI `eventages-qr` (script source, liens posés).
 #[tauri::command]
 fn cli_status() -> cli::CliStatus {
     cli::status()
 }
 
-/// Installe les commandes `eventages-lite` et `evenlite` dans le PATH.
+/// Installe les commandes `eventages-qr` et `eqr` dans le PATH.
 #[tauri::command]
 fn cli_install() -> Result<cli::CliStatus, String> {
     cli::install()
 }
 
-/// Retire les commandes `eventages-lite` et `evenlite` du PATH.
+/// Retire les commandes `eventages-qr` et `eqr` du PATH.
 #[tauri::command]
 fn cli_uninstall() -> Result<cli::CliStatus, String> {
     cli::uninstall()

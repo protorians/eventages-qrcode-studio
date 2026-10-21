@@ -76,7 +76,7 @@ const SETTINGS_SECTIONS: {
   {
     id: "cli",
     label: "CLI",
-    detail: "Commandes eventages-lite du terminal",
+    detail: "Commandes eventages-qr du terminal",
     code: "MOD.05",
     icon: Terminal,
   },
@@ -324,7 +324,7 @@ function InterfaceSection() {
   );
 }
 
-/** Projet : enregistrement automatique du fichier .qcp lié. */
+/** Projet : enregistrement automatique du fichier .qrd lié. */
 function ProjectSection() {
   const { autoSaveFile, setAutoSaveFile } = useSettings();
 
@@ -335,7 +335,7 @@ function ProjectSection() {
         <SettingRow
           icon={RefreshCw}
           title="Enregistrement automatique"
-          description="Réécrit le fichier .qcp lié après chaque modification stabilisée. Désactivé, seul « Enregistrer » (⌘S) écrit le fichier."
+          description="Réécrit le fichier .qrd lié après chaque modification stabilisée. Désactivé, seul « Enregistrer » (⌘S) écrit le fichier."
         >
           <Switch
             checked={autoSaveFile}
@@ -350,7 +350,7 @@ function ProjectSection() {
       <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
         <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
           Sans fichier lié, le projet reste un brouillon local : « Enregistrer »
-          (⌘S) propose alors un emplacement et lie l'archive .qcp au projet.
+          (⌘S) propose alors un emplacement et lie l'archive .qrd au projet.
         </p>
       </div>
     </div>
@@ -380,7 +380,7 @@ function DataSection({ entries }: { entries: number }) {
 }
 
 /**
- * CLI : mise à disposition des commandes `eventages-lite` et `evenlite` dans le
+ * CLI : mise à disposition des commandes `eventages-qr` et `eqr` dans le
  * terminal (liens symboliques posés dans le PATH par le backend natif). L'état
  * est relu à l'ouverture de la section ; le retrait reste possible même si le
  * script source a depuis disparu, pour nettoyer la machine.
@@ -426,8 +426,8 @@ function CliSection() {
       <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
         <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
           La section CLI n'est disponible que dans l'application desktop : elle pose
-          les commandes <span className="font-mono">eventages-lite</span> et{" "}
-          <span className="font-mono">evenlite</span> dans le terminal.
+          les commandes <span className="font-mono">eventages-qr</span> et{" "}
+          <span className="font-mono">eqr</span> dans le terminal.
         </p>
       </div>
     );
@@ -442,7 +442,7 @@ function CliSection() {
         <SettingRow
           icon={Terminal}
           title="Disponible dans le terminal"
-          description="Pose les commandes eventages-lite et evenlite dans le PATH — liens symboliques vers le script du dépôt, exécuté avec bun. Rien d'autre n'est modifié."
+          description="Pose les commandes eventages-qr et eqr dans le PATH — liens symboliques vers le script du dépôt, exécuté avec bun. Rien d'autre n'est modifié."
         >
           <Switch
             checked={status.installed}
@@ -475,9 +475,9 @@ function CliSection() {
             Deux noms, un seul script
           </p>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-            <span className="font-mono">eventages-lite</span> est le nom complet,{" "}
-            <span className="font-mono">evenlite</span> l'alias court. Les deux pilotent
-            les mêmes projets que l'app : création, rendu SVG/PNG et échange .qcp,
+            <span className="font-mono">eventages-qr</span> est le nom complet,{" "}
+            <span className="font-mono">eqr</span> l'alias court. Les deux pilotent
+            les mêmes projets que l'app : création, rendu SVG/PNG et échange .qrd,
             sans interface ni réseau.
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -493,14 +493,14 @@ function CliSection() {
           L'espace de travail du CLI (un dossier, un fichier JSON par projet) se
           règle par commande avec <span className="font-mono">--dir</span>, ou une
           fois pour toutes avec la variable{" "}
-          <span className="font-mono">EVENTAGES_LITE_DIR</span>.
+          <span className="font-mono">EVENTAGES_QR_DIR</span>.
         </p>
       </div>
     </div>
   );
 }
 
-/** Chemin du script résumé à ses deux derniers segments (cli/eventages-lite.ts). */
+/** Chemin du script résumé à ses deux derniers segments (cli/eventages-qr.ts). */
 function scriptTail(path: string | null): string {
   if (!path) return "—";
   const parts = path.split(/[\\/]/);

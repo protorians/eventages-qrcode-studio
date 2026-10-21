@@ -138,7 +138,7 @@ export function ModuleExport() {
     }
   };
 
-  /** Export du projet complet (contenu, design, médias) en archive .qcp. */
+  /** Export du projet complet (contenu, design, médias) en archive .qrd. */
   const exportProjectQcp = async () => {
     setBusy("qcp");
     setError(null);
@@ -306,7 +306,7 @@ export function ModuleExport() {
           onClick={exportProjectQcp}
         >
           {busy === "qcp" ? <Loader2 className="animate-spin" /> : <FileArchive />}
-          Exporter le projet (.qcp)
+          Exporter le projet (.qrd)
         </Button>
         <Button
           type="button"

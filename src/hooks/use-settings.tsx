@@ -303,7 +303,7 @@ type SettingsState = {
   hud: boolean;
   /** Animations de l'interface (transitions et keyframes). */
   animations: boolean;
-  /** Enregistrement auto du fichier .qcp lié après stabilisation des modifications. */
+  /** Enregistrement auto du fichier .qrd lié après stabilisation des modifications. */
   autoSaveFile: boolean;
 };
 

@@ -1,6 +1,6 @@
-//! Mise à disposition du CLI `eventages-lite` : crée (ou retire) dans un dossier
-//! du PATH les liens symboliques `eventages-lite` et `evenlite`, pointant vers
-//! le script du dépôt (`cli/eventages-lite.ts`, shebang `bun`). Aucun réseau,
+//! Mise à disposition du CLI `eventages-qr` : crée (ou retire) dans un dossier
+//! du PATH les liens symboliques `eventages-qr` et `eqr`, pointant vers
+//! le script du dépôt (`cli/eventages-qr.ts`, shebang `bun`). Aucun réseau,
 //! aucune copie de binaire : désinstaller revient à supprimer les liens. Le
 //! reste de la machine est inchangé — un fichier réel déjà en place est refusé,
 //! jamais écrasé.
@@ -9,7 +9,7 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 
 /// Commandes exposées : le nom complet et son alias court, même script.
-const COMMANDS: [&str; 2] = ["eventages-lite", "evenlite"];
+const COMMANDS: [&str; 2] = ["eventages-qr", "eqr"];
 
 /// État de disponibilité du CLI, consommé par la section « CLI » des paramètres.
 #[derive(Serialize)]
@@ -91,7 +91,7 @@ fn script_path() -> Option<PathBuf> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()?
         .join("cli")
-        .join("eventages-lite.ts");
+        .join("eventages-qr.ts");
     path.is_file().then_some(path)
 }
 
@@ -113,12 +113,12 @@ fn bin_dir() -> Option<PathBuf> {
     None
 }
 
-/// Vrai si le chemin est un lien symbolique vers un `eventages-lite.ts`
+/// Vrai si le chemin est un lien symbolique vers un `eventages-qr.ts`
 /// (cible par nom de fichier : le dépôt peut avoir été déplacé).
 #[cfg(unix)]
 fn is_linked(link: &Path) -> bool {
     std::fs::read_link(link)
-        .map(|target| target.file_name().is_some_and(|name| name == "eventages-lite.ts"))
+        .map(|target| target.file_name().is_some_and(|name| name == "eventages-qr.ts"))
         .unwrap_or(false)
 }
 
@@ -200,24 +200,24 @@ mod tests {
     #[test]
     fn links_roundtrip() {
         let script = script_path().expect("script CLI du dépôt présent en test");
-        let dir = std::env::temp_dir().join("eventages-lite-cli-links-test");
+        let dir = std::env::temp_dir().join("eventages-qr-cli-links-test");
         // Repart d'un dossier vide, puis le garde pour toute la durée du test.
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).expect("dossier temporaire");
 
         // Rien de posé avant installation.
-        assert!(!is_linked(&dir.join("eventages-lite")));
-        assert!(!is_linked(&dir.join("evenlite")));
+        assert!(!is_linked(&dir.join("eventages-qr")));
+        assert!(!is_linked(&dir.join("eqr")));
 
         place_links(&dir, &script).expect("pose des liens");
-        assert!(is_linked(&dir.join("eventages-lite")));
-        assert!(is_linked(&dir.join("evenlite")));
+        assert!(is_linked(&dir.join("eventages-qr")));
+        assert!(is_linked(&dir.join("eqr")));
 
         // Re-pose : remplace les liens existants sans erreur.
         place_links(&dir, &script).expect("re-pose idempotente");
 
         // Un fichier réel bloque plutôt que d'être écrasé.
-        let busy = dir.join("eventages-lite");
+        let busy = dir.join("eventages-qr");
         std::fs::remove_file(&busy).expect("retrait du lien");
         std::fs::write(&busy, b"not a link").expect("fichier réel");
         assert!(place_links(&dir, &script).is_err());
@@ -225,8 +225,8 @@ mod tests {
 
         // Désinstallation : plus rien.
         remove_links(&dir).expect("retrait des liens");
-        assert!(!is_linked(&dir.join("eventages-lite")));
-        assert!(!is_linked(&dir.join("evenlite")));
+        assert!(!is_linked(&dir.join("eventages-qr")));
+        assert!(!is_linked(&dir.join("eqr")));
         std::fs::remove_dir_all(&dir).expect("nettoyage");
     }
 }

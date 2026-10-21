@@ -2,7 +2,7 @@
  * Espace de travail headless : un dossier avec un fichier JSON par projet
  * (`<slug>.json`), même modèle que le store de l'application
  * (`builder-store.tsx`). Les fichiers média restent en data URLs, comme dans
- * le registre localStorage ; l'export/import `.qcp` passe par `src/lib/qcp.ts`
+ * le registre localStorage ; l'export/import `.qrd` passe par `src/lib/qcp.ts`
  * pour rester compatible avec l'app desktop.
  */
 
@@ -32,7 +32,8 @@ const MAX_ASSETS = 64;
 export type ProjectFile = {
   format: typeof PROJECT_FORMAT;
   version: 1;
-  app: "Eventages Lite";
+  /* « Eventages Lite » : valeur historique toujours acceptée à la lecture. */
+  app: "Eventages QrCode Studio" | "Eventages Lite";
   id: string;
   name: string;
   typeId: string;
@@ -56,7 +57,7 @@ export function createProjectFile(input: {
   return {
     format: PROJECT_FORMAT,
     version: 1,
-    app: "Eventages Lite",
+    app: "Eventages QrCode Studio",
     id: randomUUID(),
     createdAt: now,
     updatedAt: now,
@@ -65,12 +66,16 @@ export function createProjectFile(input: {
 }
 
 /**
- * Dossier d'espace de travail : `--dir` > `EVENTAGES_LITE_DIR` (alias historique
- * `QRS_STUDIO_DIR` encore accepté) > `./studio`.
+ * Dossier d'espace de travail : `--dir` > `EVENTAGES_QR_DIR` (`EVENTAGES_LITE_DIR`
+ * reste accepté, comme l'alias historique `QRS_STUDIO_DIR`) > `./studio`.
  */
 export function workspaceDir(explicit?: string | null): string {
   const dir =
-    explicit ?? process.env.EVENTAGES_LITE_DIR ?? process.env.QRS_STUDIO_DIR ?? "./studio";
+    explicit ??
+    process.env.EVENTAGES_QR_DIR ??
+    process.env.EVENTAGES_LITE_DIR ??
+    process.env.QRS_STUDIO_DIR ??
+    "./studio";
   return resolve(dir);
 }
 
@@ -180,7 +185,7 @@ export function fileToDataUrl(path: string): string {
 }
 
 /**
- * Exporte un projet vers l'archive `.qcp` de l'application desktop
+ * Exporte un projet vers l'archive `.qrd` de l'application desktop
  * (`manifest.json` + actifs, même structure que le backend Rust).
  */
 export function readProjectAsQcp(project: ProjectFile): {
@@ -210,13 +215,13 @@ function isSafeAssetPath(path: string): boolean {
   );
 }
 
-/** Lit une archive `.qcp` et reconstruit un projet complet avec ses médias. */
+/** Lit une archive `.qrd` (ou `.qcp` historique) et reconstruit un projet complet avec ses médias. */
 export function writeQcpAsProject(path: string, nameOverride?: string): ProjectFile {
   let files: Record<string, Uint8Array>;
   try {
     files = unzipSync(new Uint8Array(readFileSync(path)));
   } catch {
-    throw new CliError("Ce fichier n'est pas une archive projet (.qcp) lisible.");
+    throw new CliError("Ce fichier n'est pas une archive projet (.qrd) lisible.");
   }
 
   const manifestBytes = files["manifest.json"];
@@ -248,7 +253,7 @@ export function assignFileValue(values: QrValues, field: string, path: string): 
   return { ...values, [field]: fileToDataUrl(path) };
 }
 
-/** Actifs `.qcp` décodés en bytes, prêts à être écrits dans une archive zip. */
+/** Actifs `.qrd` décodés en bytes, prêts à être écrits dans une archive zip. */
 export function qcpAssetBytes(
   assets: { path: string; dataBase64: string }[],
 ): Record<string, Uint8Array> {

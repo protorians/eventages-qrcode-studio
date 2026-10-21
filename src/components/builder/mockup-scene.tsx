@@ -20,7 +20,7 @@ export function MockupScene({
       className="pointer-events-none absolute bottom-3 left-4 text-[0.6rem] font-medium tracking-[0.28em] uppercase opacity-50"
       style={{ color: mockup.dark ? "#e2e8f0" : "#0f172a" }}
     >
-      Eventages Lite
+      Eventages QrCode Studio
     </span>
   );
 

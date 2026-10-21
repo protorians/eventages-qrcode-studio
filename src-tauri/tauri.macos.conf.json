@@ -3,7 +3,7 @@
   "app": {
     "windows": [
       {
-        "title": "QrCode Studio",
+        "title": "Eventages QrCode Studio",
         "width": 1280,
         "height": 768,
         "minWidth": 720,
