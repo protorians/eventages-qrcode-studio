@@ -609,6 +609,7 @@
 
   /* Géométrie : arêtes vives, coin supérieur droit coupé (échelle contrôle). */
   html:not([data-hud="off"]) [data-slot="button"],
+  html:not([data-hud="off"]) .hud-button,
   html:not([data-hud="off"]) [data-slot="input"],
   html:not([data-hud="off"]) [data-slot="textarea"],
   html:not([data-hud="off"]) [data-slot="select-trigger"],
@@ -620,6 +621,7 @@
 
   /* Étiquetage technique : mono, capitales, interlettrage large. */
   html:not([data-hud="off"]) [data-slot="button"],
+  html:not([data-hud="off"]) .hud-button,
   html:not([data-hud="off"]) [data-slot="select-trigger"],
   html:not([data-hud="off"]) [data-slot="tabs-trigger"],
   html:not([data-hud="off"]) [data-slot="toggle"] {
@@ -759,6 +761,7 @@
   }
 
   html:not([data-hud="off"]) [data-slot="button"]:focus-visible,
+  html:not([data-hud="off"]) .hud-button:focus-visible,
   html:not([data-hud="off"]) [data-slot="input"]:focus-visible,
   html:not([data-hud="off"]) [data-slot="textarea"]:focus-visible,
   html:not([data-hud="off"]) [data-slot="select-trigger"]:focus-visible,
@@ -777,6 +780,7 @@
   html:not([data-hud="off"]) [data-slot="textarea"][aria-invalid="true"],
   html:not([data-hud="off"]) [data-slot="select-trigger"][aria-invalid="true"],
   html:not([data-hud="off"]) [data-slot="button"][aria-invalid="true"],
+  html:not([data-hud="off"]) .hud-button[aria-invalid="true"],
   html:not([data-hud="off"]) [data-slot="toggle"][aria-invalid="true"] {
     --ring: var(--destructive);
   }
@@ -909,7 +913,9 @@
   /* Listes maison (data-slot="list") : rangées carrées à cran court.
      Leur anneau de focus externe serait découpé par le clip — remplacé
      par le cerclage intérieur des contrôles. */
-  html:not([data-hud="off"]) [data-slot="list"] button {
+  html:not([data-hud="off"]) [data-slot="list"] button,
+  html:not([data-hud="off"]) [data-slot="list"] .hud-button
+  {
     border-radius: 0;
     clip-path: polygon(
       0 0,
@@ -920,7 +926,9 @@
     );
   }
 
-  html:not([data-hud="off"]) [data-slot="list"] button:focus-visible {
+  html:not([data-hud="off"]) [data-slot="list"] button:focus-visible,
+  html:not([data-hud="off"]) [data-slot="list"] .hud-button:focus-visible
+  {
     box-shadow:
       inset 0 0 0 1px var(--ring),
       inset 0 0 12px color-mix(in oklch, var(--ring) 22%, transparent);

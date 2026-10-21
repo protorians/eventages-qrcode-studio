@@ -8,6 +8,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ---
 
+## [0.12.1] — 2026-10-21 · HUD skin for dialog close buttons
+
+### Fixed
+
+- **HUD skin applied to dialog close buttons**: `DialogClose` now carries
+  a `hud-button` class on the rendered element, so every dialog's
+  cancel/close action — quit confirmation, file filters, etc. — receives
+  the HUD art direction like regular buttons: cut corners, mono uppercase
+  labelling, inset keyboard focus ring and destructive `aria-invalid`
+  state. The class is also honoured inside `[data-slot="list"]` rows
+  (square clip and inner focus ring)
+  (`src/components/ui/dialog.tsx`, `src/index.css`).
+
+### Changed
+
+- Versions aligned to 0.12.1 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.12.0] — 2026-10-21 · Multilingual interface (11 languages, RTL)
 
 ### Added
