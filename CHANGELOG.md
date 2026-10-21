@@ -8,6 +8,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ---
 
+## [0.9.0] — 2026-10-21 · Home registry redesign and title-bar polish
+
+### Changed
+
+- **Home registry redesign**: project cards now grow in a `max-w-7xl` grid
+  with 16 rem minimum columns, a full-bleed QR preview and floating panels —
+  type, progress and status on top, name, last modification and progress bar
+  at the bottom, duplicate/delete actions in the top-right corner. Hover
+  elevation is deeper, cards use rounded corners and the header gradient line
+  only renders when the HUD is enabled (`home-view.tsx`).
+- **HUD skin extended to floating layers**: a new `.hud-layer` selector joins
+  the card rule in `index.css`, so cut corners also apply to the card overlays
+  and the "new project" tile.
+- **Home footer credit**: a vertical separator closes the offline status line
+  and adds a "Powered by Yannick GOBOU" credit (`home-view.tsx`).
+- **Fullscreen title bar** (macOS): the reserved traffic-light padding is
+  removed in fullscreen, letting the tab ribbon use the full width
+  (`title-bar.tsx`).
+- **Theme toggle icons**: the button now shows the theme it switches to — sun
+  in dark mode, moon in light mode (`title-bar.tsx`).
+- **Default color theme renamed** from "Or Studio" to "Lior" in the settings
+  catalogue, with the CSS comments updated (`use-settings.tsx`,
+  `index.css`).
+- Versions aligned to 0.9.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.8.0] — 2026-10-21 · CLI `eventages-lite`, image import and native menu
 
 ### Added
@@ -428,6 +456,8 @@ no server — Tauri desktop with native system sharing.
 
 ---
 
+[0.9.0]: https://example.invalid/releases/v0.9.0
+[0.8.0]: https://example.invalid/releases/v0.8.0
 [0.7.0]: https://example.invalid/releases/v0.7.0
 [0.6.0]: https://example.invalid/releases/v0.6.0
 [0.5.0]: https://example.invalid/releases/v0.5.0
