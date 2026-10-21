@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   Moon,
@@ -8,9 +8,12 @@ import {
   Settings2,
   ShieldCheck,
   Sun,
+  Terminal,
+  TriangleAlert,
   Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,17 +25,18 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { HudLabel, HudReadout, HudStatusDot } from "@/components/builder/hud";
+import { HudLabel, HudReadout, HudStatusDot } from "@/components/shell/hud";
 import {
   COLOR_THEMES,
   useSettings,
   type ColorThemePalette,
 } from "@/hooks/use-settings";
 import { useBuilder } from "@/lib/builder-store";
+import { fetchCliStatus, installCli, uninstallCli, type CliStatus } from "@/lib/cli-desktop";
 import { cn } from "@/lib/utils";
 
 /** Sections de la fenêtre de paramètres (rail à gauche, contenu à droite). */
-type SettingsSectionId = "appearance" | "interface" | "project" | "data";
+type SettingsSectionId = "appearance" | "interface" | "project" | "data" | "cli";
 
 const SETTINGS_SECTIONS: {
   id: SettingsSectionId;
@@ -68,6 +72,13 @@ const SETTINGS_SECTIONS: {
     detail: "Registre local et confidentialité",
     code: "MOD.04",
     icon: ShieldCheck,
+  },
+  {
+    id: "cli",
+    label: "CLI",
+    detail: "Commandes eventages-lite du terminal",
+    code: "MOD.05",
+    icon: Terminal,
   },
 ];
 
@@ -163,6 +174,7 @@ export function SettingsDialog({
             {section === "interface" ? <InterfaceSection /> : null}
             {section === "project" ? <ProjectSection /> : null}
             {section === "data" ? <DataSection entries={projects.length} /> : null}
+            {section === "cli" ? <CliSection /> : null}
           </div>
         </div>
 
@@ -365,6 +377,134 @@ function DataSection({ entries }: { entries: number }) {
       </section>
     </div>
   );
+}
+
+/**
+ * CLI : mise à disposition des commandes `eventages-lite` et `evenlite` dans le
+ * terminal (liens symboliques posés dans le PATH par le backend natif). L'état
+ * est relu à l'ouverture de la section ; le retrait reste possible même si le
+ * script source a depuis disparu, pour nettoyer la machine.
+ */
+function CliSection() {
+  const [status, setStatus] = useState<CliStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchCliStatus()
+      .then((next) => {
+        if (!cancelled) setStatus(next);
+      })
+      .catch(() => {
+        if (!cancelled) setStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggle = async (checked: boolean): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      setStatus(checked ? await installCli() : await uninstallCli());
+    } catch (failure) {
+      setError(
+        failure instanceof Error && failure.message
+          ? failure.message
+          : "La mise à disposition du CLI a échoué.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Hors shell Tauri (simple navigateur) ou backend indisponible : pas de contrôle.
+  if (!status) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+        <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+          La section CLI n'est disponible que dans l'application desktop : elle pose
+          les commandes <span className="font-mono">eventages-lite</span> et{" "}
+          <span className="font-mono">evenlite</span> dans le terminal.
+        </p>
+      </div>
+    );
+  }
+
+  const disabled = busy || status.binDir === null || (!status.available && !status.installed);
+
+  return (
+    <div className="space-y-5">
+      <section className="space-y-3">
+        <HudLabel className="block">CLI — TERMINAL</HudLabel>
+        <SettingRow
+          icon={Terminal}
+          title="Disponible dans le terminal"
+          description="Pose les commandes eventages-lite et evenlite dans le PATH — liens symboliques vers le script du dépôt, exécuté avec bun. Rien d'autre n'est modifié."
+        >
+          <Switch
+            checked={status.installed}
+            disabled={disabled}
+            onCheckedChange={toggle}
+            aria-label="Commandes du CLI dans le terminal"
+          />
+        </SettingRow>
+      </section>
+
+      {error ? (
+        <Alert variant="destructive" className="border-destructive/40">
+          <TriangleAlert className="size-4" />
+          <AlertDescription className="text-[0.7rem] leading-snug">{error}</AlertDescription>
+        </Alert>
+      ) : (
+        <p className="flex items-center gap-2 text-[0.68rem] leading-snug text-muted-foreground">
+          <HudStatusDot tone={status.installed ? "ok" : "primary"} />
+          {status.message}
+        </p>
+      )}
+
+      <Separator />
+
+      <section className="space-y-3">
+        <HudLabel className="block">CLI — DÉTAIL</HudLabel>
+        <div className="hud-clip-tr space-y-2 bg-muted/40 p-3 ring-1 ring-border/60">
+          <p className="flex items-center gap-1.5 text-[0.72rem] font-medium">
+            <Terminal className="size-3.5 shrink-0 text-primary" />
+            Deux noms, un seul script
+          </p>
+          <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+            <span className="font-mono">eventages-lite</span> est le nom complet,{" "}
+            <span className="font-mono">evenlite</span> l'alias court. Les deux pilotent
+            les mêmes projets que l'app : création, rendu SVG/PNG et échange .qcp,
+            sans interface ni réseau.
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <HudReadout label="CMD" value={status.commands.join(" · ")} />
+            <HudReadout label="BIN" value={status.binDir ?? "—"} />
+            <HudReadout label="SCRIPT" value={scriptTail(status.scriptPath)} />
+          </div>
+        </div>
+      </section>
+
+      <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+        <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+          L'espace de travail du CLI (un dossier, un fichier JSON par projet) se
+          règle par commande avec <span className="font-mono">--dir</span>, ou une
+          fois pour toutes avec la variable{" "}
+          <span className="font-mono">EVENTAGES_LITE_DIR</span>.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Chemin du script résumé à ses deux derniers segments (cli/eventages-lite.ts). */
+function scriptTail(path: string | null): string {
+  if (!path) return "—";
+  const parts = path.split(/[\\/]/);
+  return parts.slice(-2).join("/");
 }
 
 /** Ligne de réglage : icône crantée + intitulé + description + contrôle. */

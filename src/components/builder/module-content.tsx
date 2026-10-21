@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { FileControl, SectionTitle, SwitchControl } from "@/components/builder/controls";
+import { FileControl, SectionTitle, SwitchControl } from "@/components/ui/controls";
 import { barcodeFormat } from "@/lib/barcode";
 import {
   QR_FAMILIES,

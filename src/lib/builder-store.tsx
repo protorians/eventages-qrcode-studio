@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Channel } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import {
   defaultValuesFor,
@@ -30,7 +31,17 @@ import {
 } from "@/lib/barcode";
 import { buildPayload } from "@/lib/qr-payload";
 import { sanitizeFileName } from "@/lib/qr-svg";
-import { contentFromPayload } from "@/lib/qr-import";
+import {
+  backendToOverall,
+  contentFromPayload,
+  designFromHints,
+  hexFromImport,
+  ImportCancelled,
+  isBarcode1DFormat,
+  type BackendImportProgress,
+  type ImportProgressCallback,
+  type ImportedDesignHints,
+} from "@/lib/qr-import";
 import { applyQcpManifest, buildQcpManifest, type QcpFilePayload } from "@/lib/qcp";
 import { useSettings } from "@/hooks/use-settings";
 
@@ -80,6 +91,13 @@ export type BuilderState = {
    * enregistrement automatique écrivent directement à cet emplacement.
    */
   filePath: string | null;
+  /**
+   * Chemin du fichier d'origine du projet (archive .qcp ouverte ou image
+   * importée), uniquement à des fins de dédoublonnage : rouvrir le même
+   * fichier réactive le projet existant au lieu d'en créer une copie.
+   * Non modifiable ensuite (la duplication l'efface).
+   */
+  sourcePath: string | null;
 };
 
 export type BuilderAction =
@@ -94,7 +112,9 @@ export type BuilderAction =
   | { type: "setSaveSize"; size: number }
   | { type: "markSaved"; at: number }
   | { type: "setFilePath"; path: string }
-  | { type: "hydrate"; state: BuilderState };
+  | { type: "hydrate"; state: BuilderState }
+  | { type: "undo" }
+  | { type: "redo" };
 
 /** Projet complet stocké dans le registre local (100 % hors ligne). */
 export type StoredProject = {
@@ -165,6 +185,7 @@ function createInitialState(projectId = createProjectId()): BuilderState {
     saveSize: 1024,
     savedAt: null,
     filePath: null,
+    sourcePath: null,
   };
 }
 
@@ -210,6 +231,12 @@ function normalizeStoredProject(raw: unknown): StoredProject | null {
     valuesByType,
     design: { ...DEFAULT_DESIGN, ...(candidate.state.design ?? {}) },
     barcode: normalizeBarcodeDesign(candidate.state.barcode),
+    // Métadonnées de suivi de fichier : jamais de valeur absente ni non
+    // chaîne dans un projet restauré (les anciens registres n'en ont pas).
+    filePath:
+      typeof legacyState.filePath === "string" ? legacyState.filePath : null,
+    sourcePath:
+      typeof legacyState.sourcePath === "string" ? legacyState.sourcePath : null,
     projectId: candidate.id,
   };
   return {
@@ -341,6 +368,123 @@ function reducer(state: BuilderState, action: BuilderAction): BuilderState {
   }
 }
 
+/**
+ * Historique d'annulation du brouillon actif : un présent, un passé et un
+ * futur d'états complets, bornés. Les éditions de même nature rapprochées
+ * (frappe clavier champ par champ, glissement de curseur) sont coalescées
+ * en une seule entrée — un ⌘Z retire une séquence d'un coup, pas chaque
+ * frappe.
+ */
+type HistoryEdit = { kind: string; key: string; at: number };
+
+type HistoryState = {
+  present: BuilderState;
+  past: BuilderState[];
+  future: BuilderState[];
+  lastEdit: HistoryEdit | null;
+};
+
+/** Profondeur maximale de l'historique d'annulation. */
+const HISTORY_LIMIT = 100;
+
+/** Fenêtre de coalescence des éditions (ms) : au-delà, nouvelle entrée. */
+const COALESCE_WINDOW_MS = 500;
+
+/**
+ * Clé de coalescence d'une action annulable (modification du contenu du
+ * projet) ; null pour une action non annulable (métadonnées, navigation).
+ */
+function editKey(
+  action: BuilderAction,
+  typeId: string,
+): { kind: string; key: string } | null {
+  switch (action.type) {
+    case "setProjectName":
+      return { kind: action.type, key: "name" };
+    case "setType":
+      return { kind: action.type, key: "type" };
+    case "setValue":
+      return { kind: action.type, key: `${typeId}:${action.field}` };
+    case "patchDesign":
+      return { kind: action.type, key: Object.keys(action.patch).sort().join(",") };
+    case "patchBarcode":
+      return { kind: action.type, key: Object.keys(action.patch).sort().join(",") };
+    case "resetDesign":
+      return { kind: action.type, key: "design" };
+    default:
+      return null;
+  }
+}
+
+/**
+ * Réducteur enveloppant le réducteur d'état avec l'historique d'annulation.
+ * Les actions de contenu alimentent passé/futur ; les actions de métadonnées
+ * (enregistrement, module actif, chemin lié) ne touchent qu'au présent ;
+ * « hydrate » (changement de projet) repart d'un historique vierge — celui
+ * du brouillon précédent n'a plus de sens.
+ */
+function historyReducer(history: HistoryState, action: BuilderAction): HistoryState {
+  if (action.type === "undo" || action.type === "redo") {
+    const back = action.type === "undo";
+    const neighbour = back
+      ? history.past[history.past.length - 1]
+      : history.future[0];
+    if (!neighbour) return history;
+    // La navigation n'est pas annulée : on reste dans le module courant,
+    // sauf s'il n'existe plus pour le type restauré (repli sur « Contenu »).
+    const withCurrentModule = { ...neighbour, activeModule: history.present.activeModule };
+    const restored = modulesForType(withCurrentModule.typeId).some(
+      (module) => module.id === withCurrentModule.activeModule,
+    )
+      ? withCurrentModule
+      : { ...withCurrentModule, activeModule: "content" as const };
+    return back
+      ? {
+          present: restored,
+          past: history.past.slice(0, -1),
+          future: [history.present, ...history.future].slice(0, HISTORY_LIMIT),
+          lastEdit: null,
+        }
+      : {
+          present: restored,
+          past: [...history.past, history.present],
+          future: history.future.slice(1),
+          lastEdit: null,
+        };
+  }
+
+  const present = reducer(history.present, action);
+  // Action sans effet (reducer rendu idempotent) : rien à enregistrer.
+  if (present === history.present) return history;
+
+  if (action.type === "hydrate") {
+    return { present, past: [], future: [], lastEdit: null };
+  }
+
+  const key = editKey(action, present.typeId);
+  if (!key) {
+    // Métadonnées (savedAt, filePath, module actif…) : ni annulables, ni
+    // cassantes pour l'historique existant.
+    return { present, past: history.past, future: history.future, lastEdit: null };
+  }
+
+  const now = Date.now();
+  const coalesced =
+    history.lastEdit !== null &&
+    history.lastEdit.kind === key.kind &&
+    history.lastEdit.key === key.key &&
+    now - history.lastEdit.at < COALESCE_WINDOW_MS;
+  // Toute nouvelle édition invalide le futur (redo).
+  return coalesced
+    ? { present, past: history.past, future: [], lastEdit: { ...key, at: now } }
+    : {
+        present,
+        past: [...history.past, history.present].slice(-HISTORY_LIMIT),
+        future: [],
+        lastEdit: { ...key, at: now },
+      };
+}
+
 export type BuilderContextValue = {
   state: BuilderState;
   dispatch: Dispatch<BuilderAction>;
@@ -353,6 +497,14 @@ export type BuilderContextValue = {
   setValue: (field: string, value: string) => void;
   patchDesign: (patch: Partial<QrDesign>) => void;
   patchBarcode: (patch: Partial<BarcodeDesign>) => void;
+  /** Annule la dernière édition du brouillon actif (sans effet si aucune). */
+  undo: () => void;
+  /** Rétablit la dernière édition annulée (sans effet si aucune). */
+  redo: () => void;
+  /** Vrai si le brouillon actif a une édition annulable. */
+  canUndo: boolean;
+  /** Vrai si le brouillon actif a une édition rétablissable. */
+  canRedo: boolean;
   /** Date du dernier enregistrement local, en heure courte. */
   savedLabel: string | null;
   /** Projets du registre local, triés du plus récent au plus ancien. */
@@ -381,9 +533,32 @@ export type BuilderContextValue = {
   /** Vrai si des modifications ne sont pas encore écrites dans le fichier lié. */
   dirty: boolean;
   /** Ouvre un fichier .qcp et l'ajoute au registre ; renvoie l'ID du projet. */
-  openProjectFromQcp: (path: string) => Promise<string>;
-  /** Crée un projet depuis un QR existant ; renvoie l'ID du projet. */
-  newProjectFromQr: (path: string) => Promise<string>;
+  openProjectFromQcp: (path: string) => Promise<OpenedQcpProject>;
+  /**
+   * Convertit un fichier image/SVG/PDF (QR ou code-barres) en projet : appelle
+   * le décodage backend avec progression, analyse le contenu puis enregistre
+   * le projet. `isCancelled` est consulté juste avant l'enregistrement — un
+   * import annulé ne touche ni au registre ni au brouillon.
+   */
+  newProjectFromQr: (
+    path: string,
+    options?: NewQrProjectOptions,
+  ) => Promise<string>;
+};
+
+/** Résultat d'une ouverture de .qcp : projet réactivé (doublon) ou créé. */
+export type OpenedQcpProject = {
+  id: string;
+  /** Vrai si le projet existait déjà : son onglet a simplement été réactivé. */
+  deduped: boolean;
+};
+
+/** Options de conversion d'un fichier image en projet. */
+export type NewQrProjectOptions = {
+  /** Progression globale (0-100) et étape courante. */
+  onProgress?: ImportProgressCallback;
+  /** Consulté juste avant l'enregistrement : vrai = abandon silencieux. */
+  isCancelled?: () => boolean;
 };
 
 const BuilderContext = createContext<BuilderContextValue | null>(null);
@@ -407,7 +582,17 @@ function useDebounced<T>(value: T, delay: number): T {
 }
 
 export function BuilderProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, createInitialState);
+  // L'état exposé est le présent de l'historique d'annulation : toute action
+  // passe par historyReducer, qui alimente passé/futur selon sa nature.
+  const [history, dispatch] = useReducer(historyReducer, undefined, (): HistoryState => ({
+    present: createInitialState(),
+    past: [],
+    future: [],
+    lastEdit: null,
+  }));
+  const state = history.present;
+  const canUndo = history.past.length > 0;
+  const canRedo = history.future.length > 0;
   // Réglage applicatif : l'enregistrement auto du fichier lié est activé par
   // défaut et désactivable dans les paramètres (préférence persistée).
   const { autoSaveFile } = useSettings();
@@ -552,6 +737,12 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     signatureRef.current = stateSignature;
   });
 
+  // Traitements de fichiers en cours, par chemin : un second déclenchement
+  // du même fichier (double clic, accueil + menu) attend le premier résultat
+  // au lieu d'enregistrer un doublon. Réservé à l'ouverture .qcp — sans
+  // annulation possible, la promesse partagée ne peut pas être empoisonnée.
+  const pendingPathsRef = useRef(new Map<string, Promise<OpenedQcpProject>>());
+
   // Changer de projet actif établit une nouvelle base « enregistrée ».
   useEffect(() => {
     setSavedSignature(signatureRef.current);
@@ -621,6 +812,8 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         activeModule: "content",
         savedAt: null,
         filePath: null,
+        // Une copie est un projet distinct : plus liée au fichier d'origine.
+        sourcePath: null,
       };
       projectsDispatch({
         type: "insert",
@@ -652,21 +845,10 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [projectsData.items, state.projectId],
   );
 
-  /** Enregistre le projet dans le registre et en fait le projet actif. */
-  const registerAndActivate = useCallback((imported: BuilderState): string => {
-    const now = Date.now();
-    projectsDispatch({
-      type: "add",
-      project: { id: imported.projectId, createdAt: now, updatedAt: now, state: imported },
-    });
-    dispatch({ type: "hydrate", state: imported });
-    return imported.projectId;
-  }, []);
-
   /**
    * Écrit immédiatement le brouillon actif dans le registre, sans attendre le
-   * debounce : appelé avant tout changement d'onglet ou fermeture, afin qu'
-   * aucun dernier frappe ne puisse être perdu au passage.
+   * debounce : appelé avant tout changement d'onglet, d'import ou de fermeture,
+   * afin qu'aucun dernier frappe ne puisse être perdu au passage.
    */
   const flushActiveProject = useCallback(() => {
     const current = stateRef.current;
@@ -676,10 +858,31 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /** Enregistre le projet dans le registre et en fait le projet actif. */
+  const registerAndActivate = useCallback(
+    (imported: BuilderState): string => {
+      // Écrit d'abord le brouillon à l'écran dans le registre : l'hydratation
+      // qui suit annule le debounce d'enregistrement automatique, les
+      // dernières frappes du projet quitté seraient sinon perdues.
+      flushActiveProject();
+      const now = Date.now();
+      projectsDispatch({
+        type: "add",
+        project: { id: imported.projectId, createdAt: now, updatedAt: now, state: imported },
+      });
+      dispatch({ type: "hydrate", state: imported });
+      return imported.projectId;
+    },
+    [flushActiveProject],
+  );
+
   /** Écrit l'archive .qcp du projet courant à un chemin donné, sans dialogue. */
   const writeProjectQcp = useCallback(async (target: string): Promise<string> => {
     const current = stateRef.current;
     const { manifest, assets } = buildQcpManifest({
+      // L'identifiant stable du projet part dans l'archive : rouvrir ce
+      // fichier (même copié) réactivera ce projet au lieu d'en créer un double.
+      projectId: current.projectId,
       name: current.projectName,
       typeId: current.typeId,
       valuesByType: current.valuesByType,
@@ -720,53 +923,121 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
   }, [saveProjectAsQcp, writeProjectQcp]);
 
   const openProjectFromQcp = useCallback(
-    async (path: string): Promise<string> => {
-      const file = await invoke<QcpFilePayload>("open_project_qcp", { path });
-      const data = applyQcpManifest({ manifest: file.manifest, assets: file.assets ?? [] });
-      return registerAndActivate({
-        projectId: createProjectId(),
-        projectName: data.name,
-        typeId: data.typeId,
-        valuesByType: data.valuesByType,
-        design: data.design,
-        barcode: data.barcode,
-        activeModule: "content",
-        mockupId: data.mockupId,
-        saveSize: data.saveSize,
-        savedAt: null,
-        // Nouveau projet dans le registre : non lié à l'archive d'origine.
-        filePath: null,
-      });
+    async (path: string): Promise<OpenedQcpProject> => {
+      // Un même fichier ne s'ouvre qu'une fois à la fois.
+      const pending = pendingPathsRef.current.get(path);
+      if (pending) return pending;
+      const task = (async (): Promise<OpenedQcpProject> => {
+        const file = await invoke<QcpFilePayload>("open_project_qcp", { path });
+        const data = applyQcpManifest({ manifest: file.manifest, assets: file.assets ?? [] });
+        // Dédoublonnage : un projet déjà connu n'est jamais réenregistré.
+        // 1) UUID inscrit dans l'archive à l'enregistrement (retrouve le
+        //    projet même si le fichier a été copié ou déplacé) ;
+        // 2) chemin d'origine, pour les archives anciennes sans UUID.
+        const known = data.projectId
+          ? projectsData.items.find((project) => project.id === data.projectId)
+          : undefined;
+        const byPath = projectsData.items.find(
+          (project) => project.state.sourcePath === path,
+        );
+        const existing = known ?? byPath;
+        if (existing) return { id: existing.id, deduped: true };
+        return {
+          id: registerAndActivate({
+            projectId: data.projectId ?? createProjectId(),
+            projectName: data.name,
+            typeId: data.typeId,
+            valuesByType: data.valuesByType,
+            design: data.design,
+            barcode: data.barcode,
+            activeModule: "content",
+            mockupId: data.mockupId,
+            saveSize: data.saveSize,
+            savedAt: null,
+            // Nouveau projet dans le registre : non lié à l'archive d'origine.
+            filePath: null,
+            // Mémorisé pour reconnaître ce fichier à la réouverture.
+            sourcePath: path,
+          }),
+          deduped: false,
+        };
+      })();
+      pendingPathsRef.current.set(path, task);
+      try {
+        return await task;
+      } finally {
+        pendingPathsRef.current.delete(path);
+      }
     },
-    [registerAndActivate],
+    [projectsData.items, registerAndActivate],
   );
 
   const newProjectFromQr = useCallback(
-    async (path: string): Promise<string> => {
-      const result = await invoke<{ payload: string; errorCorrection: string | null }>(
-        "import_qr_from_file",
-        { path },
+    async (path: string, options?: NewQrProjectOptions): Promise<string> => {
+      // Cette image a déjà été convertie : on réactive le projet existant
+      // au lieu d'en créer une copie.
+      const byPath = projectsData.items.find(
+        (project) => project.state.sourcePath === path,
       );
-      const content = contentFromPayload(result.payload);
+      if (byPath) {
+        options?.onProgress?.({ stage: "open", percent: 100 });
+        return byPath.id;
+      }
+
+      options?.onProgress?.({ stage: "open", percent: 8 });
+      // Étape « décodage » : le backend pousse sa progression sur un canal
+      // (lecture, tentatives de détection, images du PDF…). Chaque conversion
+      // décode dans son propre canal : une annulation n'empoisonne jamais une
+      // relance du même fichier (le workspace ne lance qu'une conversion à
+      // la fois et annule la précédente avant de repartir).
+      const onBackendProgress = new Channel<BackendImportProgress>();
+      onBackendProgress.onmessage = (message) => {
+        options?.onProgress?.(backendToOverall(message));
+      };
+      const result = await invoke<{
+        payload: string;
+        errorCorrection: string | null;
+        codeFormat: string | null;
+        design: ImportedDesignHints | null;
+      }>("import_qr_from_file", { path, onProgress: onBackendProgress });
+
+      // Import annulé pendant le décodage : rien à écrire nulle part.
+      if (options?.isCancelled?.()) throw new ImportCancelled();
+
+      options?.onProgress?.({ stage: "content", percent: 88 });
+      const content = contentFromPayload(result.payload, result.codeFormat);
       const type = getQrType(content.typeId);
       const errorCorrection = ["L", "M", "Q", "H"].includes(result.errorCorrection ?? "")
         ? (result.errorCorrection as QrDesign["errorCorrection"])
         : DEFAULT_DESIGN.errorCorrection;
+      // Le design détecté dans l'image (couleurs, angles, logo, cadre)
+      // remplace les défauts ; les aspects incertains restent d'origine.
+      const design = designFromHints(result.design, errorCorrection);
+      const barcode = { ...DEFAULT_BARCODE_DESIGN };
+      if (isBarcode1DFormat(result.codeFormat)) {
+        const barColor = hexFromImport(result.design?.dotColor);
+        if (barColor) barcode.barColor = barColor;
+      }
+
+      options?.onProgress?.({ stage: "create", percent: 94 });
+      if (options?.isCancelled?.()) throw new ImportCancelled();
       return registerAndActivate({
         projectId: createProjectId(),
         projectName: uniqueProjectName(
           projectsData.items.map((item) => item.state.projectName),
-          "QR importé",
+          isBarcode1DFormat(result.codeFormat) ? "Code-barres importé" : "QR importé",
         ),
         typeId: type.id,
         valuesByType: { [type.id]: { ...defaultValuesFor(type), ...content.values } },
-        design: { ...DEFAULT_DESIGN, errorCorrection },
-        barcode: { ...DEFAULT_BARCODE_DESIGN },
+        design,
+        barcode,
         activeModule: "content",
         mockupId: "plain",
         saveSize: 1024,
         savedAt: null,
         filePath: null,
+        // Mémorisé pour reconnaître cette image à la réimportation.
+        sourcePath: path,
       });
     },
     [projectsData.items, registerAndActivate],
@@ -813,6 +1084,9 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const undo = useCallback(() => dispatch({ type: "undo" }), []);
+  const redo = useCallback(() => dispatch({ type: "redo" }), []);
+
   const savedLabel = useMemo(() => {
     if (!state.savedAt) return null;
     return new Date(state.savedAt).toLocaleTimeString("fr-FR", {
@@ -834,6 +1108,10 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       setValue,
       patchDesign,
       patchBarcode,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       savedLabel,
       projects,
       ready,
@@ -860,6 +1138,10 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       setValue,
       patchDesign,
       patchBarcode,
+      undo,
+      redo,
+      canUndo,
+      canRedo,
       savedLabel,
       projects,
       ready,

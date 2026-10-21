@@ -20,7 +20,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { QrGlyph } from "@/components/builder/previews";
-import { HudLabel, HudStatusDot } from "@/components/builder/hud";
+import { HudLabel, HudStatusDot } from "@/components/shell/hud";
 import { useSettings } from "@/hooks/use-settings";import {
   QR_FAMILIES,
   QR_TYPES,

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Crop, Download, Frame, Image as ImageIcon, Shapes, Type } from "lucide-react";
-import { HudCorners } from "@/components/builder/hud";
+import { HudCorners } from "@/components/shell/hud";
 import { BUILDER_MODULES, type BuilderModule } from "@/lib/builder-store";
 import { cn } from "@/lib/utils";
 

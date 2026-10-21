@@ -1,10 +1,94 @@
 # Changelog
 
-All notable changes to **QR Code Studio** are documented here.
+All notable changes to **Eventages Lite** are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and follows
 [semantic versioning](https://semver.org/): at this stage, the app is in
 `0.x` and the product is not yet promised stable.
+
+---
+
+## [0.8.0] — 2026-10-21 · CLI `eventages-lite`, image import and native menu
+
+### Added
+
+- **Image → project conversion (QR codes and barcodes)**: an existing image,
+  SVG or PDF containing a QR code or a barcode becomes a real editing project.
+  Decoding is fully local — `rqrr` first for QR, with `rxing` as fallback for
+  1D symbologies (EAN, UPC, Code 128/39/93, ITF, Codabar…) and the other 2D
+  matrices (Data Matrix, Aztec, PDF417…), including inverted or dark-mode
+  codes. The decoded payload is analysed to pre-fill the right project type
+  (URL, Wi-Fi, email, SMS, barcode…) with "Texte" as the last resort.
+  During the conversion a transient tab hosts a progress panel
+  (`import-view.tsx`, new shadcn `progress.tsx` component): stage-by-stage
+  statuses (file opening, decoding, content, project creation), a percentage
+  driven by a Tauri channel, and Cancel / Retry actions — a cancelled import
+  never touches the registry or the draft. On success the tab becomes the new
+  project's tab (`src-tauri/src/import.rs`, `src/lib/qr-import.ts`,
+  `src/lib/workspace-store.tsx`).
+- **Reconstruction of decoded design**: the visual settings are deduced from
+  the pixels alone — module and background colours, gradient, corner and eye
+  styles, dot styles, centred logo, frame — so a code produced by any
+  generator comes back editable as seen (`src-tauri/src/import_design.rs`).
+- **Native application menubar**: the system menu bar now carries the app
+  menus. Fichier covers the project lifecycle — new project (new ⌘N
+  shortcut), open a `.qcp` file, import an existing QR image, save, save
+  as, export — with draft actions disabled on the Home tab; Édition and
+  Fenêtre provide the native predefined roles (clipboard, window
+  management), keeping ⌘C/⌘V working in text fields on macOS; Affichage
+  gathers the light/dark mode, the color themes (submenu), the HUD
+  ornaments and animations toggles, kept in sync with the settings
+  dialog; Aide opens an "About" dialog showing the app version. Built
+  with the Tauri menu API and wired to the front-end stores
+  (`native-menu.tsx`); save logic is shared with the title-bar button
+  through the `useProjectSave` hook (`use-project-save.ts`), whose ⌘S
+  shortcuts now only apply in the browser shell, and the native
+  file-picker filters moved to `lib/qcp.ts` and `lib/qr-import.ts`.
+- **Undo/redo of draft edits**: the active draft carries a bounded
+  past/future history of complete states — ⌘Z/⌘⇧Z undo and redo. Edits of
+  the same kind made in quick succession (key-by-key typing, slider drags)
+  are coalesced into a single entry, so one ⌘Z removes a whole sequence.
+  Metadata actions (saving, active module, linked path) stay out of the
+  history, and switching projects starts a fresh one
+  (`src/lib/builder-store.tsx`).
+- **"Eventages" color theme**: a new palette joins the light/dark color
+  themes, selectable from the settings and the Affichage menu
+  (`src/themes.css`, `src/hooks/use-settings.tsx`).
+- **CLI availability from the app settings**: a new "CLI" section
+  (Settings → MOD.05) shows the state of the headless commands and exposes a
+  switch that makes them available in the terminal — the native backend creates
+  `eventages-lite` and `evenlite` symlinks in the PATH (`/usr/local/bin` on
+  macOS, `~/.local/bin` elsewhere on Unix) pointing at the CLI entry script,
+  and turning the switch off removes them. A real file already in place is
+  refused, never overwritten (`src-tauri/src/cli.rs`, `src/lib/cli-desktop.ts`,
+  `settings-dialog.tsx`); covered by a symlink roundtrip test (`cargo test`).
+
+### Changed
+
+- **CLI renamed to `eventages-lite` (alias `evenlite`)**: the headless entry
+  script `cli/qrs.ts` becomes `cli/eventages-lite.ts` and all command names,
+  help texts, usage strings and `--version` output use the new name. `bun run
+  cli` remains the development entry point, and the `bin` field
+  (`eventages-lite` / `evenlite`) supports `bun link`.
+- **Reworked tab ribbon**: the Home tab and a "new project" button are pinned
+  outside of the scroll area, the open-project tabs scroll on their own, and
+  the transient import tab lives inside the ribbon (`stage.tsx`,
+  `module-dock.tsx`).
+- **Component architecture documented and reorganized**: shell parts move out
+  of `builder/` (`app-header`, `hud`, `mobile-nav`, `settings-dialog` →
+  `src/components/shell/`), shared composites move to
+  `src/components/ui/controls.tsx`, and the app views live under
+  `src/components/builder/views/`. The single allowed dependency direction
+  `ui ← builder ← shell` is written down in the new `src/components/README.md`.
+- **Bilingual README**: the main `README.md` is now written in English, with
+  the original French version kept as `README.fr.md`.
+- Workspace directory override renamed to `EVENTAGES_LITE_DIR`; the legacy
+  `QRS_STUDIO_DIR` is still honoured for compatibility.
+- Project files keep the internal `.qcp`/JSON format identifier unchanged, so
+  existing projects and archives stay readable by both the app and the CLI.
+- Bundle identifier aligned with the product name:
+  `com.protorians.eventages-lite`.
+- Versions aligned to 0.8.0 (`package.json`, `tauri.conf.json`, `Cargo.toml`).
 
 ---
 
@@ -32,7 +116,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   `.qcp` projects — created by both the UI and the CLI
   (`package.json`, `src-tauri/Cargo.toml`, `cli/workspace.ts`,
   `src-tauri/src/qcp.rs`). The bundle identifier remains
-  `com.protorians.qrcode-studio`.
+  `com.protorians.eventages-lite`.
 - **New app icon set**: light, dark, black and white icons served from
   `public/assets/images/` (favicon and brand mark), plus a fully regenerated
   Tauri icon set — desktop (`.icns`, `.ico`, PNG), Android (mipmaps +
@@ -128,7 +212,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Changed
 - **App renamed "Eventages Lite"**: product name, window and tab titles,
   file filters and messages — the bundle identifier remains
-  `com.protorians.qrcode-studio`.
+  `com.protorians.eventages-lite`.
 - **"Standalone page" types on hold**: vCard Plus, Contact, Linktree,
   Social, Menu, etc. are marked "Soon" — disabled in the gallery
   (grouped at the end of the list, dedicated badge) with an explanatory

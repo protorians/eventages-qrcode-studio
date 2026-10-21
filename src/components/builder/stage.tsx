@@ -1,4 +1,12 @@
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import {
   Grid3x3,
   Maximize,
@@ -15,7 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { HudCross, HudCorners, HudLabel, HudReadout } from "@/components/builder/hud";
+import { HudCross, HudCorners, HudLabel, HudReadout } from "@/components/shell/hud";
 import { MockupScene } from "@/components/builder/mockup-scene";
 import { CodeArtboard } from "@/components/builder/qr-artboard";
 import { BASE_QR_SIZE, frameMetrics } from "@/lib/qr-frame";
@@ -44,6 +52,105 @@ export function Stage({ dock }: { dock?: ReactNode }) {
     BASE_QR_SIZE,
     Boolean(state.design.frameText),
   );
+
+  const zoomBy = useCallback((delta: number) => {
+    setZoom((value) =>
+      Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value + delta)),
+    );
+  }, []);
+
+  // Zoom continu (pinch trackpad / tactile, molette cmd) : valeur lissée et
+  // arrondie à l'entier, bornée une seule fois (pas de re-clamp intermédiaire).
+  const zoomTo = useCallback((value: number) => {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
+    setZoom(Math.round(clamped));
+  }, []);
+
+  // Facteur multiplicatif : mise à jour fonctionnelle pour que des événements
+  // rapprochés (trackpad) s'accumulent même entre deux rendus React.
+  const zoomByFactor = useCallback((factor: number) => {
+    if (!Number.isFinite(factor) || factor <= 0) return;
+    setZoom((value) => {
+      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value * factor));
+      return Math.round(next);
+    });
+  }, []);
+
+  // ⌘/Ctrl + / − : piloter le zoom au clavier (default évite le zoom du webview).
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.metaKey && !event.ctrlKey) return;
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        zoomBy(10);
+      } else if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        zoomBy(-10);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomBy]);
+
+  // Molette + pinch (trackpad : ctrl+wheel) : zoom continu centré sur la scène.
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      const raw =
+        event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+      // Lissage : un événement de pinch ne doit jamais faire un saut brutal.
+      const amount = Math.max(-80, Math.min(80, raw));
+      zoomByFactor(Math.exp(-amount * 0.003));
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ref est stable
+  }, [ref, zoomByFactor]);
+
+  // Zoom tactile : pinch à deux doigts, suivi via Pointer Events.
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    pointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+    if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      pinchRef.current = {
+        distance: Math.hypot(a.x - b.x, a.y - b.y),
+        zoom: zoomRef.current,
+      };
+    }
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pointers = pointersRef.current;
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.size === 2 && pinchRef.current?.distance) {
+      const [a, b] = [...pointers.values()];
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      event.preventDefault();
+      zoomTo((pinchRef.current.zoom * distance) / pinchRef.current.distance);
+    }
+  };
+
+  const onPointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
+  };
+
+  // Zoom courant pour les handlers natifs non-React (wheel) et les gestes.
+  const zoomRef = useRef(zoom);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const scale = useMemo(() => {
     if (!size.width || !size.height) return 0.6;
@@ -138,10 +245,13 @@ export function Stage({ dock }: { dock?: ReactNode }) {
       >
         <div
           ref={ref}
-          className={cn(
-            "relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden",
-            showGrid && "stage-grid",
-          )}
+          className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden"
+          style={{ touchAction: "none" }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+          onPointerLeave={onPointerEnd}
         >
           {/* Règles graduées + marqueurs de visée aux coins de la scène. */}
           <span
@@ -211,6 +321,15 @@ export function Stage({ dock }: { dock?: ReactNode }) {
               />
             </div>
           </MockupScene>
+
+          {/* Grille « blueprint » en surimpression : peinte au-dessus du décor
+              (le mockup couvre sinon la classe posée sur ce conteneur). */}
+          {showGrid ? (
+            <span
+              aria-hidden="true"
+              className="stage-grid pointer-events-none absolute inset-0 z-10"
+            />
+          ) : null}
 
           {/* Coordonnées de la vue, façon télémétrie. */}
           {hud ? (

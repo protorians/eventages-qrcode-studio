@@ -9,17 +9,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { AppHeader } from "@/components/builder/app-header";
+import { AppHeader } from "@/components/shell/app-header";
 import { LibraryPanel } from "@/components/builder/library-panel";
-import { MobileNav } from "@/components/builder/mobile-nav";
+import { MobileNav } from "@/components/shell/mobile-nav";
 import { ModuleDock } from "@/components/builder/module-dock";
 import { OptionsPanel } from "@/components/builder/options-panel";
 import { Stage } from "@/components/builder/stage";
-import { HomeView } from "@/components/shell/home-view";
+import { HomeView } from "@/components/builder/views/home-view";
+import { ImportView } from "@/components/builder/views/import-view";
 import { TitleBar } from "@/components/shell/title-bar";
+import { NativeMenu } from "@/components/shell/native-menu";
 import { BuilderProvider, useBuilder, modulesForType } from "@/lib/builder-store";
-import { HOME_TAB_ID, WorkspaceProvider, useWorkspace } from "@/lib/workspace-store";
-import { SettingsDialog } from "@/components/builder/settings-dialog";
+import {
+  HOME_TAB_ID,
+  IMPORT_TAB_ID,
+  WorkspaceProvider,
+  useWorkspace,
+} from "@/lib/workspace-store";
+import { SettingsDialog } from "@/components/shell/settings-dialog";
 import { useIsDesktop, useIsTablet } from "@/hooks/use-media-query";
 import { SettingsProvider, useSettings } from "@/hooks/use-settings";
 
@@ -29,7 +36,6 @@ function WorkspaceShell() {
   const { activeTabId, openHome } = useWorkspace();
   const isTablet = useIsTablet();
   const isDesktop = useIsDesktop();
-
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [modulesOpen, setModulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -51,6 +57,7 @@ function WorkspaceShell() {
   const exportModule = () => openModule("export");
 
   const isHome = activeTabId === HOME_TAB_ID;
+  const isImport = activeTabId === IMPORT_TAB_ID;
 
   // Adaptations de la coque native selon l'OS (flag data-os pour le CSS).
   useEffect(() => applyPlatformDomFlags(), []);
@@ -71,6 +78,8 @@ function WorkspaceShell() {
 
       {isHome ? (
         <HomeView />
+      ) : isImport ? (
+        <ImportView />
       ) : (
         <>
           <AppHeader
@@ -134,6 +143,9 @@ function WorkspaceShell() {
       )}
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {/* Menubar native (barre système) : Fichier, Édition, Affichage, Fenêtre, Aide. */}
+      <NativeMenu onExport={exportModule} />
     </div>
   );
 }

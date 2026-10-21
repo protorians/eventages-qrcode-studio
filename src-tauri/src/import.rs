@@ -1,31 +1,88 @@
-//! Import d'un QR code existant : l'utilisateur fournit une image (PNG, JPEG,
-//! WebP, GIF, BMP, TIFF), un fichier vectoriel SVG ou un PDF ; le backend le
-//! décode nativement — aucun réseau — et renvoie le contenu encodé plus le
-//! niveau de correction d'erreur détecté.
+//! Import d'un QR code ou d'un code-barres existant : l'utilisateur fournit
+//! une image (PNG, JPEG, WebP, GIF, BMP, TIFF), un fichier vectoriel SVG ou
+//! un PDF ; le backend le décode nativement — aucun réseau — et renvoie le
+//! contenu encodé, le format détecté et le niveau de correction d'erreur.
 //!
-//! - Images : décodage direct après aplani­ssement sur fond blanc.
+//! - Images : décodage direct après aplanissement sur fond blanc.
 //! - SVG : rasterisation hors ligne (usvg + resvg) puis décodage.
 //! - PDF : extraction des images embarquées (JPEG ou échantillons bruts),
 //!   de la plus grande à la plus petite, puis décodage.
+//!
+//! Chaque étape émet une progression (nom d'étape + pourcentage) via un canal
+//! Tauri : l'interface affiche une barre d'avancement au lieu de geler. La
+//! commande est par ailleurs exécutée hors du thread principal
+//! (`spawn_blocking`, voir lib.rs) — un décodage long ne bloque ni la
+//! fenêtre ni le rendu.
+//!
+//! Décodage : rqrr lit le QR ; en repli, rxing (port Rust de ZXing) lit les
+//! codes-barres 1D (EAN, UPC, Code 128/39/93, ITF, Codabar…) et les autres
+//! matrices 2D (Data Matrix, Aztec, PDF417…).
 
+use crate::import_design::{self, GridData, ImportedDesign};
 use image::DynamicImage;
 use serde::Serialize;
+use tauri::ipc::Channel;
 
 /// Résultat d'un import réussi.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QrImport {
     pub payload: String,
-    /// Niveau de correction détecté : « L », « M », « Q » ou « H ».
+    /// Niveau de correction détecté : « L », « M », « Q » ou « H » (QR seul).
     pub error_correction: Option<String>,
+    /// Format détecté : « QR_CODE » ou symbologie rxing (« EAN_13 »…).
+    pub code_format: String,
     /// Origine du décodage : « image », « svg » ou « pdf ».
     pub source_kind: String,
+    /// Indices de design reconstruits de l'image (couleurs, angles, logo…).
+    pub design: Option<ImportedDesign>,
 }
+
+/// Progression d'une étape d'import, poussée à l'interface en temps réel.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportProgress {
+    /// Étape en cours : « read » (lecture du fichier) ou « decode » (détection).
+    pub stage: String,
+    /// Avancement de l'étape, de 0 à 100.
+    pub percent: u32,
+}
+
+/// Émetteur de progression : (nom d'étape, pourcentage 0-100 de l'étape).
+type ProgressEmit<'a> = &'a (dyn Fn(&str, u32) + 'a);
 
 struct Decoded {
     payload: String,
-    ecc_level: u16,
+    /// Indicateur brut de correction d'erreur du format QR (2 bits) ; absent
+    /// pour les autres symbologies.
+    ecc_level: Option<u16>,
+    /// Format du code lu : « QR_CODE » ou nom de symbologie rxing.
+    format: String,
+    /// Matrice de modules du QR décodé et sa position dans l'image ;
+    /// absente pour les décodages sans grille (repli rxing).
+    grid: Option<GridData>,
+    /// Facteur pixels-grille → pixels-couleur (le décodeur peut avoir
+    /// agrandi une petite image avant de la lire).
+    color_rescale: f64,
+    /// Région rectangulaire approximative du code (repli rxing, sans grille).
+    region: Option<[f64; 4]>,
 }
+
+impl Decoded {
+    fn new(payload: String, ecc_level: Option<u16>, format: String) -> Self {
+        Decoded {
+            payload,
+            ecc_level,
+            format,
+            grid: None,
+            color_rescale: 1.0,
+            region: None,
+        }
+    }
+}
+
+/// Format déclaré pour tout décodage QR (rqrr en priorité, rxing en repli).
+const QR_CODE_FORMAT: &str = "QR_CODE";
 
 /// Dimension de rendu cible pour la détection.
 const DECODE_TARGET: u32 = 1024;
@@ -36,18 +93,36 @@ const MAX_PDF_DECOMPRESS: usize = 128 * 1024 * 1024;
 /// Nombre maximal d'images PDF à essayer.
 const MAX_PDF_CANDIDATES: usize = 8;
 
-pub fn import_qr(path: &str) -> Result<QrImport, String> {
+/// Point d'entrée de la commande Tauri : décode avec progression sur canal.
+pub fn import_qr(path: &str, on_progress: &Channel<ImportProgress>) -> Result<QrImport, String> {
+    import_qr_with_progress(path, &|stage, percent| {
+        // Un canal indisponible ne doit jamais faire échouer l'import.
+        let _ = on_progress.send(ImportProgress {
+            stage: stage.to_string(),
+            percent,
+        });
+    })
+}
+
+/// Traitement complet, avec émetteur de progression injectable (les tests
+/// passent une fonction neutre).
+pub fn import_qr_with_progress(path: &str, emit: ProgressEmit) -> Result<QrImport, String> {
+    emit("read", 0);
     let bytes =
         std::fs::read(path).map_err(|error| format!("Lecture du fichier impossible : {error}"))?;
     if bytes.is_empty() {
-        return Err("Fichier vide : aucun QR code à décoder.".to_string());
+        return Err("Fichier vide : aucun code lisible à décoder.".to_string());
     }
+    emit("read", 100);
 
-    match detect_kind(&bytes, path) {
-        SourceKind::Svg => import_svg(&bytes),
-        SourceKind::Pdf => import_pdf(&bytes),
-        SourceKind::Image => import_image(&bytes),
-    }
+    emit("decode", 0);
+    let result = match detect_kind(&bytes, path) {
+        SourceKind::Svg => import_svg(&bytes, emit),
+        SourceKind::Pdf => import_pdf(&bytes, emit),
+        SourceKind::Image => import_image(&bytes, emit),
+    };
+    emit("decode", 100);
+    result
 }
 
 enum SourceKind {
@@ -81,38 +156,131 @@ fn detect_kind(bytes: &[u8], path: &str) -> SourceKind {
 }
 
 // ---------------------------------------------------------------------------
-// Décodage QR
+// Décodage : rqrr (QR) puis rxing en repli (codes-barres 1D, matrices 2D)
 // ---------------------------------------------------------------------------
 
-/// Tente le décodage, puis réessaie en négatif (QR clair sur fond sombre).
-fn try_decode(gray: image::GrayImage) -> Option<Decoded> {
-    if let Some(decoded) = decode_once(gray.clone()) {
-        return Some(decoded);
-    }
-    let inverted = image::ImageBuffer::from_fn(gray.width(), gray.height(), |x, y| {
+/// Inverse les niveaux de gris (QR clair sur fond sombre).
+fn inverted(gray: &image::GrayImage) -> image::GrayImage {
+    image::ImageBuffer::from_fn(gray.width(), gray.height(), |x, y| {
         let mut value = gray.get_pixel(x, y).0;
         value[0] = 255 - value[0];
         image::Luma(value)
-    });
-    decode_once(inverted)
+    })
+}
+
+/// Tente le décodage QR, puis réessaie en négatif.
+fn try_decode(gray: image::GrayImage) -> Option<Decoded> {
+    decode_once(gray.clone()).or_else(|| decode_once(inverted(&gray)))
 }
 
 fn decode_once(gray: image::GrayImage) -> Option<Decoded> {
+    use rqrr::BitGrid as _;
     let mut prepared = rqrr::PreparedImage::prepare(gray);
     for grid in prepared.detect_grids() {
         if let Ok((meta, payload)) = grid.decode() {
-            return Some(Decoded {
+            // Copie la matrice et les coins : la grille référence l'image
+            // préparée, empruntée jusqu'à la fin de la boucle.
+            let size = grid.grid.size();
+            let mut bits = Vec::with_capacity(size * size);
+            for y in 0..size {
+                for x in 0..size {
+                    bits.push(grid.grid.bit(y, x));
+                }
+            }
+            let mut decoded = Decoded::new(
                 payload,
-                ecc_level: meta.ecc_level,
+                Some(meta.ecc_level),
+                QR_CODE_FORMAT.to_string(),
+            );
+            decoded.grid = Some(GridData {
+                size,
+                bits,
+                bounds: grid.bounds.map(|point| [point.x as f64, point.y as f64]),
             });
+            return Some(decoded);
         }
     }
     None
 }
 
+/// Repli multi-formats via rxing : rqrr ne sait lire que le QR. Décode les
+/// codes-barres 1D (EAN-13, UPC, Code 128/39/93, ITF, Codabar…) et les
+/// autres matrices 2D (Data Matrix, Aztec, PDF417…). Le tampon luma8 est
+/// passé brut : aucune conversion via la crate `image` (versions divergentes).
+fn decode_with_rxing(gray: &image::GrayImage) -> Option<Decoded> {
+    let result = rxing::helpers::detect_in_luma_slice(
+        gray.as_raw(),
+        gray.width(),
+        gray.height(),
+        None,
+    )
+    .ok()?;
+    // Points caractéristiques du code (extrémités pour un 1D, angles pour un
+    // 2D) : servent de région pour les couleurs dominantes.
+    let points = result.getPoints();
+    let region = if points.len() >= 2 {
+        let mut min_x = f64::MAX;
+        let mut min_y = f64::MAX;
+        let mut max_x = f64::MIN;
+        let mut max_y = f64::MIN;
+        for point in points {
+            let (x, y) = (point.x as f64, point.y as f64);
+            min_x = min_x.min(x);
+            min_y = min_y.min(y);
+            max_x = max_x.max(x);
+            max_y = max_y.max(y);
+        }
+        // Un code 1D ne couvre que la ligne de balayage : marge verticale.
+        let margin = (max_x - min_x).max(max_y - min_y) * 0.4;
+        Some([
+            (min_x - margin).max(0.0),
+            (min_y - margin).max(0.0),
+            max_x + margin,
+            max_y + margin,
+        ])
+    } else {
+        None
+    };
+    let mut decoded = Decoded::new(
+        result.getText().to_string(),
+        None,
+        rxing_format_name(*result.getBarcodeFormat()),
+    );
+    decoded.region = region;
+    Some(decoded)
+}
+
+/// Nom de symbologie stable transmis à l'interface (nomenclature ZXing).
+fn rxing_format_name(format: rxing::BarcodeFormat) -> String {
+    use rxing::BarcodeFormat as F;
+    match format {
+        F::QR_CODE => "QR_CODE",
+        F::MICRO_QR_CODE => "MICRO_QR_CODE",
+        F::RECTANGULAR_MICRO_QR_CODE => "RECTANGULAR_MICRO_QR_CODE",
+        F::EAN_13 => "EAN_13",
+        F::EAN_8 => "EAN_8",
+        F::UPC_A => "UPC_A",
+        F::UPC_E => "UPC_E",
+        F::CODE_39 => "CODE_39",
+        F::CODE_93 => "CODE_93",
+        F::CODE_128 => "CODE_128",
+        F::ITF => "ITF",
+        F::CODABAR => "CODABAR",
+        F::TELEPEN => "TELEPEN",
+        F::RSS_14 => "RSS_14",
+        F::RSS_EXPANDED => "RSS_EXPANDED",
+        F::DATA_MATRIX => "DATA_MATRIX",
+        F::PDF_417 => "PDF_417",
+        F::AZTEC => "AZTEC",
+        _ => "UNSUPPORTED",
+    }
+    .to_string()
+}
+
 /// Aplatit sur fond blanc puis convertit en niveaux de gris (Rec. 601).
-fn flatten_to_gray(image: &DynamicImage) -> image::GrayImage {
-    let rgba = image.to_rgba8();
+/// L'image couleur d'origine sert ensuite à l'extraction du design : les
+/// coordonnées de la grille rqrr s'y appliquent telles quelles.
+fn flatten_to_gray(rgba: &image::RgbaImage) -> image::GrayImage {
     let mut gray = image::GrayImage::new(rgba.width(), rgba.height());
     for (x, y, output) in gray.enumerate_pixels_mut() {
         let pixel = rgba.get_pixel(x, y);
@@ -140,30 +308,50 @@ fn cap_dimension(image: DynamicImage) -> DynamicImage {
     )
 }
 
-/// Pipeline complet : cadrage, aplani­ssement, détection (avec retentes).
-fn decode_dynamic(image: DynamicImage) -> Option<Decoded> {
-    let gray = flatten_to_gray(&cap_dimension(image));
+/// Pipeline complet : cadrage, aplanissement, détection (avec retentes) puis
+/// repli multi-formats. La progression suit les tentatives, de la plus rapide
+/// à la plus coûteuse. Renvoie aussi l'image couleur (même dimensions que la
+/// grille décodée) pour l'extraction du design.
+fn decode_dynamic(image: DynamicImage, emit: ProgressEmit) -> Option<(Decoded, image::RgbaImage)> {
+    let capped = cap_dimension(image);
+    let rgba = capped.to_rgba8();
+    let gray = flatten_to_gray(&rgba);
     if let Some(decoded) = try_decode(gray.clone()) {
-        return Some(decoded);
+        emit("decode", 75);
+        return Some((decoded, rgba));
     }
+    emit("decode", 35);
     // Les petites images (QR extraits d'un PDF) gagnent à être agrandies.
     let largest = gray.width().max(gray.height());
     if largest < 400 {
         let scale = 400.0 / largest as f64;
         let upscaled_width = ((gray.width() as f64 * scale).round().max(1.0)) as u32;
         let upscaled_height = ((gray.height() as f64 * scale).round().max(1.0)) as u32;
-        let upscaled = DynamicImage::ImageLuma8(gray).resize_exact(
+        let upscaled = DynamicImage::ImageLuma8(gray.clone()).resize_exact(
             upscaled_width,
             upscaled_height,
             image::imageops::FilterType::Nearest,
         );
-        return try_decode(upscaled.to_luma8());
+        if let Some(mut decoded) = try_decode(upscaled.to_luma8()) {
+            // La grille vit dans l'espace agrandi : un facteur la ramène vers
+            // les pixels de l'image couleur.
+            decoded.color_rescale = gray.width() as f64 / upscaled.width() as f64;
+            emit("decode", 75);
+            return Some((decoded, rgba));
+        }
     }
-    None
+    emit("decode", 55);
+    // rqrr n'a rien vu : repli rxing sur l'image puis sur son négatif.
+    if let Some(decoded) = decode_with_rxing(&gray) {
+        emit("decode", 75);
+        return Some((decoded, rgba));
+    }
+    decode_with_rxing(&inverted(&gray)).map(|decoded| (decoded, rgba))
 }
 
 fn no_qr_found() -> String {
-    "Aucun QR code détecté. Vérifiez que le QR est net, non rogné et suffisamment grand."
+    "Aucun QR code ou code-barres détecté. Vérifiez que le code est net, non \
+     rogné et suffisamment grand."
         .to_string()
 }
 
@@ -180,11 +368,24 @@ fn error_correction_label(level: u16) -> Option<String> {
     .map(String::from)
 }
 
-fn to_import(decoded: Decoded, source_kind: &str) -> QrImport {
+fn to_import(mut decoded: Decoded, source_kind: &str, rgba: &image::RgbaImage) -> QrImport {
+    // Design : analyse complète avec la grille du QR, sinon les couleurs
+    // dominantes de la région détectée (codes-barres, repli rxing).
+    let design = decoded
+        .grid
+        .take()
+        .and_then(|grid| import_design::extract(rgba, &grid, decoded.color_rescale))
+        .or_else(|| {
+            decoded
+                .region
+                .and_then(|region| import_design::colors_from_region(rgba, region))
+        });
     QrImport {
         payload: decoded.payload,
-        error_correction: error_correction_label(decoded.ecc_level),
+        error_correction: decoded.ecc_level.and_then(error_correction_label),
+        code_format: decoded.format,
         source_kind: source_kind.to_string(),
+        design,
     }
 }
 
@@ -192,11 +393,11 @@ fn to_import(decoded: Decoded, source_kind: &str) -> QrImport {
 // Images matricielles
 // ---------------------------------------------------------------------------
 
-fn import_image(bytes: &[u8]) -> Result<QrImport, String> {
+fn import_image(bytes: &[u8], emit: ProgressEmit) -> Result<QrImport, String> {
     let image = image::load_from_memory(bytes)
         .map_err(|_| "Image illisible : format non pris en charge.".to_string())?;
-    decode_dynamic(image)
-        .map(|decoded| to_import(decoded, "image"))
+    decode_dynamic(image, emit)
+        .map(|(decoded, rgba)| to_import(decoded, "image", &rgba))
         .ok_or_else(no_qr_found)
 }
 
@@ -204,7 +405,7 @@ fn import_image(bytes: &[u8]) -> Result<QrImport, String> {
 // SVG : rasterisation hors ligne puis décodage
 // ---------------------------------------------------------------------------
 
-fn import_svg(bytes: &[u8]) -> Result<QrImport, String> {
+fn import_svg(bytes: &[u8], emit: ProgressEmit) -> Result<QrImport, String> {
     let options = usvg::Options::default();
     let tree = usvg::Tree::from_data(bytes, &options)
         .map_err(|_| "SVG illisible : le fichier est corrompu.".to_string())?;
@@ -222,6 +423,7 @@ fn import_svg(bytes: &[u8]) -> Result<QrImport, String> {
         tiny_skia::Transform::from_scale(scale, scale),
         &mut pixmap.as_mut(),
     );
+    emit("decode", 25);
 
     let rgba = image::RgbaImage::from_fn(out_width, out_height, |x, y| {
         match pixmap.pixel(x, y) {
@@ -233,8 +435,8 @@ fn import_svg(bytes: &[u8]) -> Result<QrImport, String> {
         }
     });
 
-    decode_dynamic(DynamicImage::ImageRgba8(rgba))
-        .map(|decoded| to_import(decoded, "svg"))
+    decode_dynamic(DynamicImage::ImageRgba8(rgba), emit)
+        .map(|(decoded, rgba)| to_import(decoded, "svg", &rgba))
         .ok_or_else(no_qr_found)
 }
 
@@ -242,9 +444,10 @@ fn import_svg(bytes: &[u8]) -> Result<QrImport, String> {
 // PDF : extraction des images embarquées puis décodage
 // ---------------------------------------------------------------------------
 
-fn import_pdf(bytes: &[u8]) -> Result<QrImport, String> {
+fn import_pdf(bytes: &[u8], emit: ProgressEmit) -> Result<QrImport, String> {
     let doc = lopdf::Document::load_mem(bytes)
         .map_err(|_| "PDF illisible : le fichier est corrompu.".to_string())?;
+    emit("decode", 10);
 
     // Collecte des XObject image, de la plus grande à la plus petite.
     let mut candidates: Vec<(lopdf::ObjectId, u64)> = Vec::new();
@@ -287,15 +490,18 @@ fn import_pdf(bytes: &[u8]) -> Result<QrImport, String> {
     }
     candidates.sort_by(|a, b| b.1.cmp(&a.1));
 
-    for (id, _) in candidates.into_iter().take(MAX_PDF_CANDIDATES) {
+    let total = candidates.len().min(MAX_PDF_CANDIDATES) as u32;
+    for (attempt, (id, _)) in candidates.into_iter().take(MAX_PDF_CANDIDATES).enumerate() {
+        emit("decode", 30 + (attempt as u32 * 40 / total.max(1)));
         let Some(image) = extract_pdf_image(&doc, id) else {
             continue;
         };
-        if let Some(decoded) = decode_dynamic(image) {
-            return Ok(to_import(decoded, "pdf"));
+        if let Some(decoded) = decode_dynamic(image, emit) {
+            let (decoded, rgba) = decoded;
+            return Ok(to_import(decoded, "pdf", &rgba));
         }
     }
-    Err("Aucun QR code détecté dans les images de ce PDF.".to_string())
+    Err("Aucun QR code ou code-barres détecté dans les images de ce PDF.".to_string())
 }
 
 /// Reconstruit une image depuis un XObject PDF (JPEG direct ou échantillons).
@@ -645,9 +851,42 @@ mod tests {
     #[test]
     fn décode_un_png() {
         let path = temp_file("qr.png", &png_bytes(&qr_gray(PAYLOAD, 8)));
-        let imported = import_qr(&path).expect("décodage réussi");
+        let imported = import_qr_with_progress(&path, &|_, _| {}).expect("décodage réussi");
         assert_eq!(imported.payload, PAYLOAD);
+        assert_eq!(imported.code_format, "QR_CODE");
         assert_eq!(imported.error_correction.as_deref(), Some("Q"));
+        assert_eq!(imported.source_kind, "image");
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn décode_un_code_barres_ean13() {
+        use rxing::Writer;
+        // EAN-13 « 400638133393(1) » : clé de contrôle incluse par le writer.
+        let matrix = rxing::oned::EAN13Writer::default()
+            .encode(
+                "4006381333931",
+                &rxing::BarcodeFormat::EAN_13,
+                300,
+                80,
+            )
+            .expect("encodage EAN-13");
+        // Marge blanche autour du code : la zone de silence est requise.
+        let margin = 40u32;
+        let width = matrix.width() + margin * 2;
+        let height = matrix.height() + margin * 2;
+        let mut gray = image::GrayImage::from_pixel(width, height, image::Luma([255]));
+        for y in 0..matrix.height() {
+            for x in 0..matrix.width() {
+                if matrix.get(x, y) {
+                    gray.put_pixel(x + margin, y + margin, image::Luma([0]));
+                }
+            }
+        }
+        let path = temp_file("ean13.png", &png_bytes(&gray));
+        let imported = import_qr_with_progress(&path, &|_, _| {}).expect("décodage réussi");
+        assert_eq!(imported.payload, "4006381333931");
+        assert_eq!(imported.code_format, "EAN_13");
         assert_eq!(imported.source_kind, "image");
         std::fs::remove_file(&path).unwrap();
     }
@@ -659,7 +898,7 @@ mod tests {
             image::Luma([255 - normal.get_pixel(x, y)[0]])
         });
         let path = temp_file("qr-inverted.png", &png_bytes(&inverted));
-        let imported = import_qr(&path).expect("décodage réussi");
+        let imported = import_qr_with_progress(&path, &|_, _| {}).expect("décodage réussi");
         assert_eq!(imported.payload, PAYLOAD);
         std::fs::remove_file(&path).unwrap();
     }
@@ -672,7 +911,7 @@ mod tests {
             base64::engine::general_purpose::STANDARD.encode(png)
         );
         let path = temp_file("qr.svg", svg.as_bytes());
-        let imported = import_qr(&path).expect("décodage réussi");
+        let imported = import_qr_with_progress(&path, &|_, _| {}).expect("décodage réussi");
         assert_eq!(imported.payload, PAYLOAD);
         assert_eq!(imported.source_kind, "svg");
         std::fs::remove_file(&path).unwrap();
@@ -726,7 +965,7 @@ mod tests {
         doc.save_to(&mut bytes).unwrap();
         let path = temp_file("qr.pdf", &bytes);
 
-        let imported = import_qr(&path).expect("décodage réussi");
+        let imported = import_qr_with_progress(&path, &|_, _| {}).expect("décodage réussi");
         assert_eq!(imported.payload, PAYLOAD);
         assert_eq!(imported.source_kind, "pdf");
         std::fs::remove_file(&path).unwrap();

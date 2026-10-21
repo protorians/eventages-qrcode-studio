@@ -28,7 +28,7 @@ import {
   ControlStack,
   InfoTip,
   SectionTitle,
-} from "@/components/builder/controls";
+} from "@/components/ui/controls";
 import { EXPORT_FORMATS, EXPORT_SIZES, type ExportFormat } from "@/lib/qr-design";
 import { exportQr } from "@/lib/qr-export";
 import { isShareSupported, ShareError, shareQrImage } from "@/lib/qr-share";

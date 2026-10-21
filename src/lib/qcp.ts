@@ -16,6 +16,9 @@ import { normalizeBarcodeDesign, type BarcodeDesign } from "@/lib/barcode";
 /** Échec de lecture d'une archive projet, avec un message prêt à afficher. */
 export class QcpError extends Error {}
 
+/** Filtre de boîte de dialogue natif pour les fichiers projet .qcp. */
+export const QCP_FILTERS = [{ name: "Projet Eventages Lite", extensions: ["qcp"] }];
+
 /** Référence d'un fichier média embarqué dans l'archive. */
 export type QcpAssetRef =
   | { slot: "logo"; path: string; mime: string }
@@ -27,6 +30,13 @@ export type QcpManifest = {
   version: 1;
   app: "qrcode-studio";
   savedAt: number;
+  /**
+   * Identifiant stable du projet (UUID), inscrit à l'enregistrement. Rouvrir
+   * la même archive — même copiée ou déplacée — retrouve ainsi le projet déjà
+   * connu et réactive son onglet au lieu d'en créer un doublon. Absent des
+   * archives antérieures.
+   */
+  projectId?: string;
   project: {
     name: string;
     typeId: string;
@@ -51,6 +61,8 @@ export type QcpFilePayload = {
 
 /** Données de projet reconstruites depuis un manifeste. */
 export type QcpProjectData = {
+  /** Identifiant inscrit dans l'archive, ou null si absente (archives anciennes). */
+  projectId: string | null;
   name: string;
   typeId: string;
   valuesByType: Record<string, QrValues>;
@@ -123,6 +135,8 @@ export function describeError(error: unknown, fallback: string): string {
 }
 
 type QcpBuildInput = {
+  /** Identifiant stable du projet, inscrit dans le manifeste (dédoublonnage). */
+  projectId?: string;
   name: string;
   typeId: string;
   valuesByType: Record<string, QrValues>;
@@ -183,6 +197,7 @@ export function buildQcpManifest(input: QcpBuildInput): {
     version: 1,
     app: "qrcode-studio",
     savedAt: Date.now(),
+    projectId: input.projectId,
     project: {
       name: input.name,
       typeId: input.typeId,
@@ -245,6 +260,10 @@ export function applyQcpManifest({ manifest, assets }: QcpFilePayload): QcpProje
   }
 
   return {
+    projectId:
+      typeof parsed.projectId === "string" && parsed.projectId.trim()
+        ? parsed.projectId
+        : null,
     name:
       typeof raw.name === "string" && raw.name.trim() ? raw.name : "Projet importé",
     typeId: resolveTypeId(raw.typeId ?? "") ?? QR_TYPE_DEFAULT,

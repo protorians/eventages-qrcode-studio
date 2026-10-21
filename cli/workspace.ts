@@ -64,9 +64,13 @@ export function createProjectFile(input: {
   };
 }
 
-/** Dossier d'espace de travail : `--dir` > `QRS_STUDIO_DIR` > `./studio`. */
+/**
+ * Dossier d'espace de travail : `--dir` > `EVENTAGES_LITE_DIR` (alias historique
+ * `QRS_STUDIO_DIR` encore accepté) > `./studio`.
+ */
 export function workspaceDir(explicit?: string | null): string {
-  const dir = explicit ?? process.env.QRS_STUDIO_DIR ?? "./studio";
+  const dir =
+    explicit ?? process.env.EVENTAGES_LITE_DIR ?? process.env.QRS_STUDIO_DIR ?? "./studio";
   return resolve(dir);
 }
 

@@ -17,9 +17,16 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PALETTES } from "@/lib/qr-design";
+
+/**
+ * Composants d'interface réutilisables (hors primitives shadcn) : ils ne
+ * dépendent d'aucun store ni d'aucune donnée métier. Un projet hôte peut
+ * copier ce fichier avec `src/components/ui/*` et `@/lib/utils` tel quel.
+ */
 
 const HEX_PATTERN = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
+
+export type ColorSwatch = { name: string; value: string };
 
 export function InfoTip({ children }: { children: ReactNode }) {
   return (
@@ -110,15 +117,17 @@ export function ControlStack({
 export function SwatchRail({
   value,
   onChange,
+  swatches,
   columns = 8,
   className,
 }: {
   value: string;
   onChange: (color: string) => void;
+  /** Palette fournie par l'application hôte (aucune palette imposée). */
+  swatches: ColorSwatch[];
   columns?: number;
   className?: string;
 }) {
-  const swatches = PALETTES.flatMap((palette) => palette.colors);
   return (
     <div
       className={cn("grid gap-1.5", className)}
@@ -146,12 +155,15 @@ export function ColorControl({
   value,
   onChange,
   label,
+  swatches,
   className,
   compact = false,
 }: {
   value: string;
   onChange: (color: string) => void;
   label: string;
+  /** Palette optionnelle affichée sous le sélecteur natif. */
+  swatches?: ColorSwatch[];
   className?: string;
   compact?: boolean;
 }) {
@@ -211,8 +223,12 @@ export function ColorControl({
             className="h-9 font-mono text-xs uppercase"
           />
         </div>
-        <Separator />
-        <SwatchRail value={value} onChange={onChange} />
+        {swatches?.length ? (
+          <>
+            <Separator />
+            <SwatchRail value={value} onChange={onChange} swatches={swatches} />
+          </>
+        ) : null}
       </PopoverContent>
     </Popover>
   );
@@ -409,6 +425,7 @@ export function GradientEditor({
   onToChange,
   onRotationChange,
   presets,
+  swatches,
 }: {
   from: string;
   to: string;
@@ -417,6 +434,7 @@ export function GradientEditor({
   onToChange: (color: string) => void;
   onRotationChange: (angle: number) => void;
   presets: { id: string; name: string; from: string; to: string }[];
+  swatches?: ColorSwatch[];
 }) {
   return (
     <div className="space-y-3">
@@ -425,8 +443,18 @@ export function GradientEditor({
         style={{ background: `linear-gradient(${rotation}deg, ${from}, ${to})` }}
       />
       <div className="grid grid-cols-2 gap-2">
-        <ColorControl label="Couleur de départ" value={from} onChange={onFromChange} />
-        <ColorControl label="Couleur d'arrivée" value={to} onChange={onToChange} />
+        <ColorControl
+          label="Couleur de départ"
+          value={from}
+          onChange={onFromChange}
+          swatches={swatches}
+        />
+        <ColorControl
+          label="Couleur d'arrivée"
+          value={to}
+          onChange={onToChange}
+          swatches={swatches}
+        />
       </div>
       <div className="flex flex-wrap gap-1.5">
         {presets.map((preset) => (

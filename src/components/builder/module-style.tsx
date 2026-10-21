@@ -8,7 +8,7 @@ import {
   SliderControl,
   SwatchRail,
   SwitchControl,
-} from "@/components/builder/controls";
+} from "@/components/ui/controls";
 import { ModulePatternPreview } from "@/components/builder/previews";
 import {
   Select,
@@ -23,6 +23,7 @@ import {
   ERROR_CORRECTION_LEVELS,
   GRADIENT_PRESETS,
   QR_BACKGROUNDS,
+  QR_SWATCHES,
   type QrDesign,
 } from "@/lib/qr-design";
 import type { BarcodeDesign } from "@/lib/barcode";
@@ -76,11 +77,13 @@ export function ModuleStyle() {
               label="Couleur des modules"
               value={design.dotsColor}
               onChange={(color) => patchDesign({ dotsColor: color })}
+              swatches={QR_SWATCHES}
               className="w-full justify-between"
             />
             <SwatchRail
               value={design.dotsColor}
               onChange={(color) => patchDesign({ dotsColor: color })}
+              swatches={QR_SWATCHES}
             />
           </div>
         ) : (
@@ -90,6 +93,7 @@ export function ModuleStyle() {
               to={design.dotsGradientTo}
               rotation={design.dotsGradientRotation}
               presets={GRADIENT_PRESETS}
+              swatches={QR_SWATCHES}
               onFromChange={(color) => patchDesign({ dotsGradientFrom: color })}
               onToChange={(color) => patchDesign({ dotsGradientTo: color })}
               onRotationChange={(angle) => patchDesign({ dotsGradientRotation: angle })}
@@ -123,6 +127,7 @@ export function ModuleStyle() {
             compact
             value={design.background}
             onChange={(color) => patchDesign({ background: color, transparentBackground: false })}
+            swatches={QR_SWATCHES}
             className="size-8 p-0"
           />
         </div>
@@ -211,11 +216,13 @@ function BarcodeStyle({
             label="Couleur des barres"
             value={barcode.barColor}
             onChange={(color) => patchBarcode({ barColor: color })}
+            swatches={QR_SWATCHES}
             className="w-full justify-between"
           />
           <SwatchRail
             value={barcode.barColor}
             onChange={(color) => patchBarcode({ barColor: color })}
+            swatches={QR_SWATCHES}
           />
         </div>
       </ControlStack>
@@ -245,6 +252,7 @@ function BarcodeStyle({
             compact
             value={design.background}
             onChange={(color) => patchDesign({ background: color, transparentBackground: false })}
+            swatches={QR_SWATCHES}
             className="size-8 p-0"
           />
         </div>

@@ -17,22 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { QrGlyph } from "@/components/builder/previews";
-import { HudCorners, HudLabel, HudReadout, HudStatusDot } from "@/components/builder/hud";
+import { HudCorners, HudLabel, HudReadout, HudStatusDot } from "@/components/shell/hud";
 import { getQrType } from "@/lib/qr-catalog";
 import { useBuilder, type ProjectSummary } from "@/lib/builder-store";
 import { useWorkspace } from "@/lib/workspace-store";
 import { useSettings } from "@/hooks/use-settings";
-import { describeError } from "@/lib/qcp";
+import { describeError, QCP_FILTERS } from "@/lib/qcp";
+import { QR_SOURCE_FILTERS } from "@/lib/qr-import";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { cn } from "@/lib/utils";
-
-const QCP_FILTERS = [{ name: "Projet Eventages Lite", extensions: ["qcp"] }];
-const QR_SOURCE_FILTERS = [
-  {
-    name: "QR code (image, SVG, PDF)",
-    extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "pdf"],
-  },
-];
 
 const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
   day: "numeric",
@@ -53,14 +46,19 @@ export function HomeView() {
     deleteProject,
     saveProjectAsQcp,
     openProjectFromQcp,
-    newProjectFromQr,
   } = useBuilder();
-  const { activeTabId, openProjectIds, openProjectTab, createProjectTab, closeProjectTab } =
-    useWorkspace();
+  const {
+    activeTabId,
+    openProjectIds,
+    openProjectTab,
+    createProjectTab,
+    closeProjectTab,
+    startQrImport,
+  } = useWorkspace();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"open" | "import" | "save" | null>(null);
+  const [busy, setBusy] = useState<"open" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const confirmTimer = useRef<number | null>(null);
@@ -113,7 +111,10 @@ export function HomeView() {
 
   const handleOpen = (id: string) => openProjectTab(id);
 
-  /** Ouvre un fichier .qcp et l'ajoute au registre comme nouveau projet. */
+  /**
+   * Ouvre un fichier .qcp : un projet déjà connu (UUID inscrit dans l'archive
+   * ou même chemin) voit simplement son onglet réactivé — jamais de doublon.
+   */
   const handleOpenQcp = async () => {
     setError(null);
     setNotice(null);
@@ -125,8 +126,11 @@ export function HomeView() {
     if (typeof selection !== "string") return;
     setBusy("open");
     try {
-      const id = await openProjectFromQcp(selection);
+      const { id, deduped } = await openProjectFromQcp(selection);
       openProjectTab(id);
+      if (deduped) {
+        setNotice("Projet déjà ouvert : son onglet existant a été réactivé.");
+      }
     } catch (cause) {
       setError(describeError(cause, "Ouverture du fichier projet impossible."));
     } finally {
@@ -134,25 +138,22 @@ export function HomeView() {
     }
   };
 
-  /** Décode un QR existant (image, SVG, PDF) et crée un projet pré-rempli. */
-  const handleImportQr = async () => {
+  /**
+   * Importe un QR ou un code-barres existant : la conversion se déroule dans
+   * un onglet dédié avec barre de progression — l'application ne se fige pas.
+   */
+  const handleImportQr = () => {
     setError(null);
     setNotice(null);
-    const selection = await openFileDialog({
-      multiple: false,
-      directory: false,
-      filters: QR_SOURCE_FILTERS,
-    });
-    if (typeof selection !== "string") return;
-    setBusy("import");
-    try {
-      const id = await newProjectFromQr(selection);
-      openProjectTab(id);
-    } catch (cause) {
-      setError(describeError(cause, "Import du QR code impossible."));
-    } finally {
-      setBusy(null);
-    }
+    void (async () => {
+      const selection = await openFileDialog({
+        multiple: false,
+        directory: false,
+        filters: QR_SOURCE_FILTERS,
+      });
+      if (typeof selection !== "string") return;
+      startQrImport(selection);
+    })();
   };
 
   /** Écrit le brouillon actif dans une archive .qcp via le backend Rust. */
@@ -221,11 +222,10 @@ export function HomeView() {
                 {busy === "open" ? <Loader2 className="animate-spin" /> : <FolderOpen />}
               </IconAction>
               <IconAction
-                label="Importer un QR existant"
-                disabled={busy !== null}
-                onClick={() => void handleImportQr()}
+                label="Importer un QR ou un code-barres existant"
+                onClick={() => handleImportQr()}
               >
-                {busy === "import" ? <Loader2 className="animate-spin" /> : <ImageUp />}
+                <ImageUp />
               </IconAction>
               <IconAction
                 label="Enregistrer le brouillon actif sous…"

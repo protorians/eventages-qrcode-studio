@@ -1,6 +1,6 @@
 [package]
 name = "Eventages-Lite"
-version = "0.7.1"
+version = "0.8.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2024"
@@ -26,6 +26,16 @@ base64 = "0.22"
 zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp", "tiff"] }
 rqrr = "0.11.0"
+# Repli de décodage après rqrr : codes-barres 1D (EAN, UPC, Code 128…) et
+# matrices 2D exotiques (port Rust de ZXing). La feature « image » est
+# volontairement absente : rxing épingle image =0.25.8, incompatible avec la
+# version ci-dessus — on décode depuis des tampons luma8 bruts, sans la crate.
+rxing = { version = "0.9.3", default-features = false, features = [
+  "decoders",
+  "encoders",
+  "full_barcode_format_support",
+  "encoding_rs",
+] }
 resvg = "0.48.1"
 lopdf = "0.45.0"
 tauri-plugin-dialog = "2.8.3"

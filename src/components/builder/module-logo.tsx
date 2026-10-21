@@ -8,7 +8,7 @@ import {
   SectionTitle,
   SliderControl,
   SwitchControl,
-} from "@/components/builder/controls";
+} from "@/components/ui/controls";
 import { LOGO_PRESETS } from "@/lib/logo-presets";
 import { useBuilder } from "@/lib/builder-store";
 import { cn } from "@/lib/utils";

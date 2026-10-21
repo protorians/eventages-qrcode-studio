@@ -1,4 +1,3 @@
-import {useCallback, useEffect, useState} from "react";
 import {Check, Download, Loader2, Save, TriangleAlert} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {
@@ -6,54 +5,17 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {useBuilder} from "@/lib/builder-store";
-import {describeError} from "@/lib/qcp";
+import {useProjectSave} from "@/hooks/use-project-save";
 import {cn} from "@/lib/utils";
 
 /**
  * Actions d'enregistrement (⌘S) et d'export du brouillon affiché, hébergées
- * dans la barre de titre. Le store d'éditeur ne porte qu'un brouillon à la
- * fois (celui de l'onglet actif, hydraté à chaque changement d'onglet) :
- * ces actions n'impactent donc que l'onglet courant, jamais les autres.
+ * dans la barre de titre. La logique de sauvegarde vit dans useProjectSave
+ * (partagée avec le menu Fichier) ; ce composant en détient les raccourcis
+ * clavier et l'afficheur d'état (busy, confirmation, erreur).
  */
 export function ProjectActions({onExport}: {onExport: () => void}) {
-    const {dirty, saveProject, saveProjectAsQcp} = useBuilder();
-    const [busy, setBusy] = useState(false);
-    const [flash, setFlash] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    /** Sauvegarde manuelle (fichier lié, sinon boîte de dialogue). */
-    const runSave = useCallback(
-        async (mode: "save" | "saveAs") => {
-            if (busy) return;
-            setBusy(true);
-            setError(null);
-            try {
-                if (mode === "save") await saveProject();
-                else await saveProjectAsQcp();
-                setFlash(true);
-                window.setTimeout(() => setFlash(false), 2000);
-            } catch (cause) {
-                setError(describeError(cause, "Enregistrement du projet impossible."));
-                window.setTimeout(() => setError(null), 6000);
-            } finally {
-                setBusy(false);
-            }
-        },
-        [busy, saveProject, saveProjectAsQcp],
-    );
-
-    // Raccourcis clavier : ⌘S enregistre, ⌘⇧S propose « Enregistrer sous… ».
-    useEffect(() => {
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
-            event.preventDefault();
-            event.stopPropagation();
-            void runSave(event.shiftKey ? "saveAs" : "save");
-        };
-        window.addEventListener("keydown", onKeyDown);
-        return () => window.removeEventListener("keydown", onKeyDown);
-    }, [runSave]);
+    const {dirty, busy, flash, error, runSave} = useProjectSave({shortcuts: true});
 
     return (
         <>

@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Crop, Download, Frame, Image as ImageIcon, Shapes, Type } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HudCorners, HudLabel } from "@/components/builder/hud";
+import { HudCorners, HudLabel } from "@/components/shell/hud";
 import { ModuleContent } from "@/components/builder/module-content";
 import { ModuleCorners } from "@/components/builder/module-corners";
 import { ModuleExport } from "@/components/builder/module-export";
