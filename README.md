@@ -1,59 +1,67 @@
-# QR Code Studio
+# Eventages Lite
 
-Application desktop (Tauri 2) de création de QR codes, 100 % locale et sans compte.
+**English** · [Français](./README.fr.md)
+
+Eventages Lite is a desktop app (Tauri 2) for creating QR codes — 100% local, no account required.
 
 ## Stack
 
 - **Tauri 2** + **React 19** + **TypeScript**
-- **Tailwind CSS v4** (config CSS-first dans `src/index.css`, `@theme inline`)
-- **shadcn/ui**, style `base-nova` (primitives Base UI)
-- **Icônes : [lucide-react](https://lucide.dev/icons)** — set unique pour toute l'interface. Aucune autre librairie d'icônes, aucun SVG d'icône écrit à la main, aucun emoji utilisé comme icône. Les seuls SVG inline du code sont des graphiques fonctionnels (aperçus de motifs QR, jauge de score), pas des icônes UI.
-- Polices : Manrope Variable (sans) et JetBrains Mono Variable (mono), embarquées en sous-ensembles latins dans `src/index.css`
+- **Tailwind CSS v4** (CSS-first config in `src/index.css`, `@theme inline`)
+- **shadcn/ui**, `base-nova` style (Base UI primitives)
+- **Icons: [lucide-react](https://lucide.dev/icons)** — the single icon set for the whole UI. No other icon library, no hand-written icon SVGs, no emoji used as icons. The only inline SVGs in the code are functional graphics (QR pattern previews, score gauge), not UI icons.
+- Fonts: Manrope Variable (sans) and JetBrains Mono Variable (mono), embedded as latin subsets in `src/index.css`
 
-## Développement
-
-```sh
-bun install          # installer les dépendances (bun obligatoire)
-bun run tauri dev    # lancer l'app desktop en développement
-bun run build        # typecheck + build production (à valider avant toute fin de modification UI)
-```
-
-## CLI headless (`qrs`)
-
-Créer, gérer et composer des projets QR sans interface, depuis un terminal ou un
-script — mêmes modules que l'app (`qr-catalog`, `qr-payload`, `qr-design`,
-`qr-frame`, `qcp`), même tracé de rendu que l'aperçu.
+## Development
 
 ```sh
-bun run cli help                  # aide complète
-bun run cli types                 # catalogue des types de QR
-
-bun run cli init                  # préparer ./studio (ou QRS_STUDIO_DIR, ou --dir …)
-bun run cli create "Wi-Fi invité" --type wifi \
-  --set ssid=Invités --set password=bienvenue --template mint
-bun run cli list
-bun run cli payload "Wi-Fi invité"
-
-bun run cli set "Wi-Fi invité" --set password=nouvelcode --design dotsColor=#10b981
-bun run cli render "Wi-Fi invité" -o affiche.png --size 2048   # SVG avec --format svg
-bun run cli pack "Wi-Fi invité"   # → archive .qcp ouvrable dans l'app desktop
-bun run cli import projet.qcp     # et l'inverse
-
-bun run cli duplicate "Wi-Fi invité"
-bun run cli delete "Wi-Fi invité"
+bun install          # install dependencies (bun required)
+bun run tauri dev    # run the desktop app in development
+bun run build        # typecheck + production build (must pass before finishing any UI change)
 ```
 
-Espace de travail : un fichier JSON par projet (`./studio`, substituable par
-l'option `--dir` ou `QRS_STUDIO_DIR`). Composition SVG sans DOM, PNG via
-`@resvg/resvg-js` ; `--no-frame`, `--size` et `--design clé=valeur` permettent
-de composer une variante sans modifier le projet (`bun run cli help <commande>`
-pour le détail de chaque commande).
+## Headless CLI (`eventages-lite`)
+
+Create, manage and compose QR projects without any UI, from a terminal or a
+script — same modules as the app (`qr-catalog`, `qr-payload`, `qr-design`,
+`qr-frame`, `qcp`), same rendering path as the preview. The command ships under
+two names, `eventages-lite` and its short alias `evenlite`.
+
+```sh
+eventages-lite help                # full help (or `evenlite`)
+bun run cli types                  # equivalent while developing
+
+eventages-lite init                # prepare ./studio (or EVENTAGES_LITE_DIR, or --dir …)
+eventages-lite create "Guest Wi-Fi" --type wifi \
+  --set ssid=Guests --set password=welcome --template mint
+eventages-lite list
+eventages-lite payload "Guest Wi-Fi"
+
+eventages-lite set "Guest Wi-Fi" --set password=newcode --design dotsColor=#10b981
+eventages-lite render "Guest Wi-Fi" -o poster.png --size 2048   # SVG with --format svg
+eventages-lite pack "Guest Wi-Fi"    # → .qcp archive, openable in the desktop app
+eventages-lite import project.qcp    # and the other way around
+
+eventages-lite duplicate "Guest Wi-Fi"
+eventages-lite delete "Guest Wi-Fi"
+```
+
+Workspace: one JSON file per project (`./studio`, overridable with the `--dir`
+option or `EVENTAGES_LITE_DIR` — the legacy `QRS_STUDIO_DIR` is still honoured).
+SVG composition without a DOM, PNG via `@resvg/resvg-js`; `--no-frame`,
+`--size` and `--design key=value` let you compose a variant without modifying
+the project (`eventages-lite help <command>` for details on each command).
+
+To make the commands available system-wide, open the app settings (CLI
+section): the switch creates `eventages-lite` and `evenlite` symlinks in the
+PATH (macOS: `/usr/local/bin`), and turning it off removes them. Without
+installation, `bun run cli <command>` works from the repository.
 
 ## Documentation
 
-- [`AGENTS.md`](./AGENTS.md) — conventions à suivre pour travailler sur ce dépôt (dont la règle « icônes lucide-react uniquement »)
-- [`docs/`](./docs/README.md) — specs produit (SpecKit) et checklists par fonctionnalité
+- [`AGENTS.md`](./AGENTS.md) — conventions to follow when working on this repo (including the "lucide-react icons only" rule)
+- [`docs/`](./docs/README.md) — product specs (SpecKit) and per-feature checklists
 
-## IDE recommandé
+## Recommended IDE
 
 - [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://rust-lang.github.io/rust-analyzer/)

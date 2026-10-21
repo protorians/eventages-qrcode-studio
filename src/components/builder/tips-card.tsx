@@ -1,6 +1,6 @@
 import { CheckCircle2, RotateCcw, ShieldAlert, Sparkles, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HudLabel } from "@/components/builder/hud";
+import { HudLabel } from "@/components/shell/hud";
 import { useBuilder } from "@/lib/builder-store";
 import { analyzeDesign, type ScanIssue } from "@/lib/qr-analysis";
 import { cn } from "@/lib/utils";

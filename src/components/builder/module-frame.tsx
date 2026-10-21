@@ -9,9 +9,9 @@ import {
   SectionTitle,
   SelectableTile,
   SliderControl,
-} from "@/components/builder/controls";
+} from "@/components/ui/controls";
 import { FramePreview } from "@/components/builder/previews";
-import { FRAMES, FRAMES_BY_ID } from "@/lib/qr-design";
+import { FRAMES, FRAMES_BY_ID, QR_SWATCHES } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +101,7 @@ export function ModuleFrame() {
                 label="Couleur du cadre"
                 value={design.frameColor}
                 onChange={(frameColor) => patchDesign({ frameColor })}
+                swatches={QR_SWATCHES}
                 className="w-full justify-between"
               />
             </div>
@@ -110,6 +111,7 @@ export function ModuleFrame() {
                 label="Couleur du texte"
                 value={design.frameTextColor}
                 onChange={(frameTextColor) => patchDesign({ frameTextColor })}
+                swatches={QR_SWATCHES}
                 className="w-full justify-between"
               />
             </div>
@@ -119,6 +121,7 @@ export function ModuleFrame() {
                 label="Fond du cadre"
                 value={design.frameBackground}
                 onChange={(frameBackground) => patchDesign({ frameBackground })}
+                swatches={QR_SWATCHES}
                 className="w-full justify-between"
               />
             </div>

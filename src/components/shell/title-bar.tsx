@@ -1,6 +1,6 @@
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import type {LucideIcon} from "lucide-react";
-import {House, Minus, Moon, Settings2, Square, SquareDashedBottom, Sun, X} from "lucide-react";
+import {House, Loader2, Minus, Moon, Plus, ScanLine, Settings2, Square, SquareDashedBottom, Sun, X} from "lucide-react";
 import type {ReactNode} from "react";
 import {Button} from "@/components/ui/button";
 import {Separator} from "@/components/ui/separator";
@@ -9,11 +9,11 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {HudStatusDot} from "@/components/builder/hud";
+import {HudStatusDot} from "@/components/shell/hud";
 import {ProjectActions} from "@/components/builder/project-actions";
 import {getQrType} from "@/lib/qr-catalog";
 import {useBuilder} from "@/lib/builder-store";
-import {HOME_TAB_ID, useWorkspace} from "@/lib/workspace-store";
+import {HOME_TAB_ID, IMPORT_TAB_ID, useWorkspace} from "@/lib/workspace-store";
 import {isTauriRuntime, detectOS} from "@/lib/tauri";
 import {useWindowState} from "@/hooks/use-window-state";
 import {useSettings} from "@/hooks/use-settings";
@@ -40,13 +40,14 @@ export function TitleBar(
         onExport: () => void;
     }) {
     const {projects} = useBuilder();
-    const {activeTabId, openProjectIds, openHome, openProjectTab, closeProjectTab} =
+    const {activeTabId, openProjectIds, importTask, openHome, openProjectTab, closeProjectTab, createProjectTab} =
         useWorkspace();
     const {hud} = useSettings();
     const tauri = isTauriRuntime();
     const isMac = detectOS() === "macos";
     const {fullscreen, maximized} = useWindowState();
     const isHome = activeTabId === HOME_TAB_ID;
+    const isImportTab = activeTabId === IMPORT_TAB_ID;
 
     return (
         <header
@@ -93,18 +94,55 @@ export function TitleBar(
 
             <Separator orientation="vertical" className="my-2.5"/>
 
-            {/* Ruban d'onglets : l'accueil, puis un onglet par projet ouvert. */}
+            {/* Ruban d'onglets : accueil + bouton « nouveau projet » (épinglés,
+                hors défilement), puis un onglet par projet ouvert qui défile. */}
             <div
                 role="tablist"
                 aria-label="Onglets de l'espace de travail"
-                className="flex min-w-0 flex-1 items-center overflow-x-auto no-scrollbar"
+                className="flex min-w-0 flex-1 items-center gap-0.5"
             >
-                <div data-tauri-drag-region className="flex h-full w-max min-w-full items-center gap-1 px-1">
+                {/* Zone épinglée : jamais recouverte par le défilement des onglets. */}
+                <div className="flex h-full shrink-0 items-center gap-1 pl-1">
                     <HomeTab
                         selected={activeTabId === HOME_TAB_ID}
                         onSelect={openHome}
                     />
-                    {openProjectIds.map((projectId) => {
+                    <Tooltip>
+                        <TooltipTrigger
+                            render={
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={createProjectTab}
+                                    aria-label="Nouveau projet"
+                                    className="rounded-sm text-muted-foreground"
+                                />
+                            }
+                        >
+                            <Plus className="size-4"/>
+                        </TooltipTrigger>
+                        <TooltipContent>Nouveau projet</TooltipContent>
+                    </Tooltip>
+                </div>
+
+                {/* Zone défilante : un onglet par projet ouvert. */}
+                <div className="flex h-full min-w-0 flex-1 items-center overflow-x-auto no-scrollbar">
+                    <div data-tauri-drag-region
+                         className="flex h-full w-max min-w-full items-center gap-1 px-1">
+                        {openProjectIds.map((projectId) => {
+                        if (projectId === IMPORT_TAB_ID) {
+                            return (
+                                <ImportTab
+                                    key={projectId}
+                                    name={importTask?.fileName ?? "Import…"}
+                                    running={importTask?.status !== "error"}
+                                    selected={activeTabId === IMPORT_TAB_ID}
+                                    onSelect={() => openProjectTab(IMPORT_TAB_ID)}
+                                    onClose={() => closeProjectTab(IMPORT_TAB_ID)}
+                                />
+                            );
+                        }
                         const project = projects.find((item) => item.id === projectId);
                         if (!project) return null;
                         return (
@@ -117,7 +155,8 @@ export function TitleBar(
                                 onClose={() => closeProjectTab(projectId)}
                             />
                         );
-                    })}
+                        })}
+                    </div>
                 </div>
             </div>
 
@@ -173,8 +212,9 @@ export function TitleBar(
                 </Tooltip>
 
                 {/* Enregistrement et export : agissent sur le brouillon de
-                    l'onglet actif uniquement (masqués sur l'accueil). */}
-                {!isHome ? <ProjectActions onExport={onExport}/> : null}
+                    l'onglet actif uniquement (masqués sur l'accueil et
+                    pendant un import). */}
+                {!isHome && !isImportTab ? <ProjectActions onExport={onExport}/> : null}
             </div>
 
             <Separator orientation="vertical" className="my-2.5"/>
@@ -203,8 +243,69 @@ function HomeTab({selected, onSelect}: { selected: boolean; onSelect: () => void
             )}
         >
             <House className="size-3.5 shrink-0 opacity-70"/>
-            Accueil
+            <span className="sr-only">Accueil</span>
         </button>
+    );
+}
+
+/** Onglet d'import : transitoire, le temps d'une conversion image → projet. */
+function ImportTab({
+    name,
+    running,
+    selected,
+    onSelect,
+    onClose,
+}: {
+    name: string;
+    running: boolean;
+    selected: boolean;
+    onSelect: () => void;
+    onClose: () => void;
+}) {
+    return (
+        <div
+            role="tab"
+            aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
+            title={`Import en cours : ${name}`}
+            data-slot="workspace-tab"
+            data-active={selected}
+            onClick={onSelect}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect();
+                }
+            }}
+            onAuxClick={(event) => {
+                if (event.button === 1) onClose();
+            }}
+            className={cn(
+                "group/tab flex h-7 shrink-0 cursor-default items-center gap-1.5 rounded-sm border px-2.5 text-[0.68rem] font-medium transition-colors duration-200",
+                "focus-visible:outline-none pr-1!",
+                selected
+                    ? "border-border/60 bg-accent/70 text-foreground"
+                    : "border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground",
+            )}
+        >
+            {running ? (
+                <Loader2 className="size-3.5 shrink-0 animate-spin opacity-70"/>
+            ) : (
+                <ScanLine className="size-3.5 shrink-0 opacity-70"/>
+            )}
+            <span className="max-w-28 truncate sm:max-w-40">{name}</span>
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onClose();
+                }}
+                aria-label={`Annuler l'import de ${name}`}
+                className="flex size-4 shrink-0 items-center justify-center rounded-[2px] text-muted-foreground/70 transition-colors duration-150 hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none md:opacity-50 md:group-hover/tab:opacity-100 md:focus-visible:opacity-100"
+            >
+                <X className="size-3"/>
+            </button>
+        </div>
     );
 }
 

@@ -1,5 +1,5 @@
 /**
- * Analyse des arguments du CLI `qrs` : positionnels, drapeaux valeur
+ * Analyse des arguments du CLI `eventages-lite` : positionnels, drapeaux valeur
  * (`--type wifi`), drapeaux inline (`--type=wifi`), booléens (`--no-frame`)
  * et drapeaux répétables (`--set a=1 --set b=2`). Volontairement sans
  * dépendance : un parseur de 80 lignes vaut mieux qu'un arbre de paquets.

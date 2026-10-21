@@ -287,6 +287,8 @@ export const PALETTES: { id: string; name: string; colors: ColorSwatch[] }[] = [
   },
 ];
 
+export const QR_SWATCHES: ColorSwatch[] = PALETTES.flatMap((palette) => palette.colors);
+
 export const GRADIENT_PRESETS: { id: string; name: string; from: string; to: string }[] = [
   { id: "sunset", name: "Coucher de soleil", from: "#f97316", to: "#db2777" },
   { id: "ocean", name: "Océan", from: "#0ea5e9", to: "#4f46e5" },

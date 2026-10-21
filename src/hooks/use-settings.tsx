@@ -10,8 +10,28 @@ import {
 
 export type ThemeMode = "light" | "dark";
 
-/** Identifiants des thèmes de couleurs (les 4 nommés vivent dans src/themes.css). */
-export type ColorThemeId = "default" | "crimson" | "cramoisy" | "shalk" | "violate";
+/**
+ * Identifiants des thèmes de couleurs (les nommés vivent dans src/themes.css).
+ * Thèmes d'origine : crimson, cramoisy, shalk, violate, eventages.
+ * Thèmes variés (sobres / modernes / atypiques) : dracula, tokyo, mono,
+ * humanizer, mokoto, highness, lucy, corporate, noble.
+ */
+export type ColorThemeId =
+  | "default"
+  | "crimson"
+  | "cramoisy"
+  | "shalk"
+  | "violate"
+  | "eventages"
+  | "dracula"
+  | "tokyo"
+  | "mono"
+  | "humanizer"
+  | "mokoto"
+  | "highness"
+  | "lucy"
+  | "corporate"
+  | "noble";
 
 export type ColorThemePalette = {
   /** Fond de la zone d'aperçu. */
@@ -112,6 +132,166 @@ export const COLOR_THEMES: {
       },
     },
   },
+  {
+    id: "eventages",
+    label: "Eventages",
+    palettes: {
+      light: {
+        bg: "oklch(0.982 0.006 230)",
+        primary: "oklch(0.41 0.105 250)",
+        accent: "oklch(0.94 0.05 145)",
+      },
+      dark: {
+        bg: "oklch(0.17 0.03 250)",
+        primary: "oklch(0.82 0.19 130)",
+        accent: "oklch(0.3 0.05 150)",
+      },
+    },
+  },
+  {
+    id: "dracula",
+    label: "Dracula",
+    palettes: {
+      light: {
+        bg: "#F6F4FB",
+        primary: "#7B5EA7",
+        accent: "#E8E3F6",
+      },
+      dark: {
+        bg: "#282A36",
+        primary: "#BD93F9",
+        accent: "#3F4456",
+      },
+    },
+  },
+  {
+    id: "tokyo",
+    label: "Tokyo",
+    palettes: {
+      light: {
+        bg: "#EFF1F6",
+        primary: "#4664C9",
+        accent: "#E2E7F8",
+      },
+      dark: {
+        bg: "#1A1B26",
+        primary: "#7AA2F7",
+        accent: "#2A3049",
+      },
+    },
+  },
+  {
+    id: "mono",
+    label: "Mono",
+    palettes: {
+      light: {
+        bg: "#F7F7F7",
+        primary: "#242424",
+        accent: "#E7E7E7",
+      },
+      dark: {
+        bg: "#111111",
+        primary: "#F4F4F4",
+        accent: "#2C2C2C",
+      },
+    },
+  },
+  {
+    id: "humanizer",
+    label: "Humanizer",
+    palettes: {
+      light: {
+        bg: "#FAF5ED",
+        primary: "#AD6A45",
+        accent: "#EFE3D1",
+      },
+      dark: {
+        bg: "#241E18",
+        primary: "#D99A6C",
+        accent: "#3F352A",
+      },
+    },
+  },
+  {
+    id: "mokoto",
+    label: "Mokoto",
+    palettes: {
+      light: {
+        bg: "#F7F4F1",
+        primary: "#46557A",
+        accent: "#F5E4E4",
+      },
+      dark: {
+        bg: "#262429",
+        primary: "#9AA7CC",
+        accent: "#3E3941",
+      },
+    },
+  },
+  {
+    id: "highness",
+    label: "Highness",
+    palettes: {
+      light: {
+        bg: "#FAF8F5",
+        primary: "#FC6E20",
+        accent: "#FFE7D0",
+      },
+      dark: {
+        bg: "#1B1B1B",
+        primary: "#FC6E20",
+        accent: "#33241A",
+      },
+    },
+  },
+  {
+    id: "lucy",
+    label: "Lucy",
+    palettes: {
+      light: {
+        bg: "#FDF5F7",
+        primary: "#C25B7F",
+        accent: "#F6E2E9",
+      },
+      dark: {
+        bg: "#211A20",
+        primary: "#DE8AA8",
+        accent: "#44303B",
+      },
+    },
+  },
+  {
+    id: "corporate",
+    label: "Corporate",
+    palettes: {
+      light: {
+        bg: "#F4F6F9",
+        primary: "#1E4F8F",
+        accent: "#E2EAF4",
+      },
+      dark: {
+        bg: "#10151C",
+        primary: "#5191CE",
+        accent: "#233144",
+      },
+    },
+  },
+  {
+    id: "noble",
+    label: "Noble",
+    palettes: {
+      light: {
+        bg: "#FBFAF5",
+        primary: "#17694F",
+        accent: "#F2E9D4",
+      },
+      dark: {
+        bg: "#0F1411",
+        primary: "#CDA34A",
+        accent: "#263028",
+      },
+    },
+  },
 ];
 
 type SettingsState = {
@@ -142,7 +322,7 @@ const LEGACY_THEME_KEY = "qrcode-studio:theme";
 
 const DEFAULT_SETTINGS: SettingsState = {
   mode: "dark",
-  colorTheme: "default",
+  colorTheme: "eventages",
   hud: true,
   animations: true,
   autoSaveFile: true,

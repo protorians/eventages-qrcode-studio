@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Eventages Lite",
-  "version": "0.7.1",
-  "identifier": "com.protorians.qrcode-studio",
+  "version": "0.8.0",
+  "identifier": "com.protorians.eventages-lite",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",

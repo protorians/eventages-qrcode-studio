@@ -4,12 +4,13 @@ import {
   SectionTitle,
   SelectableTile,
   SwitchControl,
-} from "@/components/builder/controls";
+} from "@/components/ui/controls";
 import { CornerPreview } from "@/components/builder/previews";
 import { Separator } from "@/components/ui/separator";
 import {
   CORNER_DOT_STYLES,
   CORNER_SQUARE_STYLES,
+  QR_SWATCHES,
 } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
 
@@ -110,6 +111,7 @@ export function ModuleCorners() {
               label="Couleur du coin extérieur"
               value={design.cornerSquareColor}
               onChange={(color) => patchDesign({ cornerSquareColor: color })}
+              swatches={QR_SWATCHES}
               className="w-full justify-between"
             />
           </ControlStack>
@@ -118,6 +120,7 @@ export function ModuleCorners() {
               label="Couleur du centre"
               value={design.cornerDotColor}
               onChange={(color) => patchDesign({ cornerDotColor: color })}
+              swatches={QR_SWATCHES}
               className="w-full justify-between"
             />
           </ControlStack>
