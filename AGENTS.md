@@ -57,3 +57,4 @@ Commit messages, merge requests (titles, descriptions) and `CHANGELOG.md` entrie
 
 - `bun run build` — typecheck + production build (must pass before finishing any UI change)
 - `bun run tauri dev` — run the desktop app in development
+- `bun run macos:sign` — sign the latest macOS `.app` produced by `tauri build` (prompts to pick a certificate when several identities are found, falls back to ad-hoc; `--dmg` also signs the latest `.dmg`, `--all` signs every `.app`, `--identity` / `--no-prompt` skip the prompt)

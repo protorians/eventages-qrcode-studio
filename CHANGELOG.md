@@ -18,6 +18,33 @@ Tranche d'infrastructure : aucune évolution fonctionnelle, l'application est in
   tag `v*`.
 - Correctif CI : `tauri-action` épinglé sur `v1` (le tag `v2` n'existe pas).
 ## [0.7.0] — 2026-10-20 · Identité Eventages Lite : nommage technique et icônes
+## [0.11.0] — 2026-10-21 · macOS code signing and documentation overhaul
+
+### Added
+
+- **macOS code signing script** (`scripts/sign-macos.sh`) that signs the
+  `.app` bundle (and optionally the `.dmg` via `--dmg`) produced by
+  `tauri build`: when several code-signing identities exist, an interactive
+  menu lets you pick the certificate to use (Developer ID first, then Apple
+  Development; `--identity` / `--no-prompt` bypass the menu, non-interactive
+  environments default to the first certificate), and it falls back to ad-hoc
+  signing when no certificate is available; hardened runtime + timestamping
+  are enabled automatically for Developer ID certificates (notarization-
+  ready). Exposed as npm scripts `macos:sign`, `macos:sign:dmg` and
+  `desktop:build:signed`.
+
+### Changed
+
+- **Documentation overhaul**: both READMEs rewritten as full product
+  presentations (feature highlights, project/tab workflow, QR type gallery,
+  design customization, import, export, settings & privacy) with screenshots
+  embedded from the new `docs/images/` folder, and `AGENTS.md` documents the
+  new `macos:sign` command.
+- Versions aligned to 0.11.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.10.0] — 2026-10-21 · Product rename to "Eventages QrCode Studio" and `.qrd` archives
 
 ### Added
@@ -510,6 +537,7 @@ no server — Tauri desktop with native system sharing.
 ---
 
 [0.1.1]: https://example.invalid/releases/v0.1.1
+[0.11.0]: https://example.invalid/releases/v0.11.0
 [0.10.0]: https://example.invalid/releases/v0.10.0
 [0.9.0]: https://example.invalid/releases/v0.9.0
 [0.8.0]: https://example.invalid/releases/v0.8.0
