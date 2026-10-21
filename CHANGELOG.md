@@ -8,6 +8,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ---
 
+## [0.12.0] — 2026-10-21 · Multilingual interface (11 languages, RTL)
+
+### Added
+
+- **Interface language setting** with a new "Language" section in Settings:
+  eleven languages are offered (English, French, Spanish, German, Italian,
+  Portuguese, Dutch, Russian, Japanese, Simplified Chinese, Arabic) and
+  English is the default. The choice is applied instantly to the whole UI
+  (including native menus, rebuild on language change), persisted locally
+  with the other preferences, and reflected in `<html lang>`.
+- **i18n infrastructure** (`src/lib/i18n/`): flat keyed dictionaries
+  (`dictionaries/{en,fr,es,de,it,pt,nl,ru,ja,zh,ar}.ts`), `I18nProvider` +
+  `useT()` React hook and `translate()` for non-React modules, `{param}`
+  interpolation, and per-key English fallback. The English dictionary keys
+  type the translator (`TranslationKey`), so `tsc` enforces key parity for
+  every language.
+- **System language detection on first launch**: when no language
+  preference is stored yet, the interface starts in the system's preferred
+  language (primary subtag match over `navigator.languages`, e.g.
+  "pt-BR" → Portuguese); an explicit choice in Settings always wins and is
+  then persisted as usual.
+- **Right-to-left support with Arabic** (العربية): `<html lang>` and
+  `<html dir>` track the UI language (`rtl`/`ltr` via `isRtlLocale`),
+  setting `dir="rtl"` mirrors the shell — panel dividers and search fields
+  moved to logical properties (`border-e/s`, `ps/pe`, `text-start`) and the
+  mobile library/options drawers slide from the reading-side edge. Arabic
+  system fonts ("Geeza Pro", "Segoe UI", "Noto Sans Arabic") serve as
+  fallbacks for the latin-subset fonts without growing the binary, and
+  letter-spacing is neutralized while `lang=ar` because it breaks Arabic
+  letter joining (HUD/typestyle spacing included). Noun morphology uses an
+  Arabic-aware `{plural}` param (full noun phrase: zero, singular, dual,
+  plural for 3–10, and the 11–99 singular form).
+- **Translated backend messages** (`src-tauri/src/i18n.rs`): the
+  user-facing strings returned by Tauri commands are translated in the UI
+  language — CLI status and install/uninstall, save/open/import/export
+  interruptions, `.qrd` archive and QR-decode errors, and native share
+  failures across the same eleven languages, with per-key English fallback.
+  The `I18nProvider` sets the language at startup and on every change via
+  the new `set_ui_locale` command, so command signatures stay untouched;
+  catalog parity is enforced by unit tests, and system errors (io errors)
+  remain in the OS language inside the translated wrapper.
+
+### Changed
+
+- **Release pipeline** (`.github/workflows/release.yml`): `tauri-action`
+  bumped to v2, RPM build tools installed on the Linux runner, and the tag
+  resolution step extracts the version from `tauri.conf.json` in native
+  Bash (no Node.js required on the runner).
+- All user-facing French strings moved to translation keys across the shell
+  (title bar, native menus, settings dialog), home/import views, builder
+  panels, QR type catalog (labels, taglines, form fields), design presets,
+  barcode format hints, analysis messages and CLI dialog. Sample/default
+  project CONTENT (e.g. vCard samples, template texts like "Scannez-moi")
+  remains French by design: it is user data seeded into projects, not UI
+  chrome.
+- Versions aligned to 0.12.0 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.11.0] — 2026-10-21 · macOS code signing and documentation overhaul
 
 ### Added

@@ -3,6 +3,7 @@ import { renderExportBlob, type BarcodeExportInput } from "@/lib/qr-export";
 import { sanitizeFileName } from "@/lib/qr-svg";
 import { blobToBase64, isTauriRuntime } from "@/lib/tauri";
 import type { ExportFormat, QrDesign } from "@/lib/qr-design";
+import { translate } from "@/lib/i18n";
 
 /** Résultat d'un partage : fichier transmis, ou fenêtre refermée par l'utilisateur. */
 export type ShareOutcome = { kind: "shared"; message: string } | { kind: "cancelled" };
@@ -73,7 +74,7 @@ export async function shareQrImage({
     if (canShare) {
       try {
         await nav.share({ files: [file], title: fileName });
-        return { kind: "shared", message: `${name} partagé via le menu système.` };
+        return { kind: "shared", message: translate("share.partageMenu", { name }) };
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return { kind: "cancelled" };
@@ -92,16 +93,14 @@ export async function shareQrImage({
         kind: "shared",
         message:
           method === "sheet"
-            ? `Menu de partage ouvert pour ${name}.`
-            : `${name} enregistré et affiché dans le dossier système.`,
+            ? translate("share.menuOuvert", { name })
+            : translate("share.enregistreDossier", { name }),
       };
     } catch {
-      throw new ShareError(
-        "Partage natif indisponible ici. Exportez le fichier puis partagez-le depuis votre dossier.",
-      );
+      throw new ShareError(translate("share.natifIndisponible"));
     }
   }
 
   // Navigateur sans Web Share exploitable : le bouton devrait être désactivé.
-  throw new ShareError("Le partage n'est pas pris en charge par ce navigateur.");
+  throw new ShareError(translate("share.nonPrisEnCharge"));
 }

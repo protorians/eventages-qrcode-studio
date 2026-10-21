@@ -13,6 +13,7 @@ import {HudStatusDot} from "@/components/shell/hud";
 import {ProjectActions} from "@/components/builder/project-actions";
 import {getQrType} from "@/lib/qr-catalog";
 import {useBuilder} from "@/lib/builder-store";
+import {useT} from "@/lib/i18n";
 import {HOME_TAB_ID, IMPORT_TAB_ID, useWorkspace} from "@/lib/workspace-store";
 import {isTauriRuntime, detectOS} from "@/lib/tauri";
 import {useWindowState} from "@/hooks/use-window-state";
@@ -43,6 +44,7 @@ export function TitleBar(
     const {activeTabId, openProjectIds, importTask, openHome, openProjectTab, closeProjectTab, createProjectTab} =
         useWorkspace();
     const {hud} = useSettings();
+    const t = useT();
     const tauri = isTauriRuntime();
     const isMac = detectOS() === "macos";
     const {fullscreen, maximized} = useWindowState();
@@ -99,7 +101,7 @@ export function TitleBar(
                 hors défilement), puis un onglet par projet ouvert qui défile. */}
             <div
                 role="tablist"
-                aria-label="Onglets de l'espace de travail"
+                aria-label={t("titleBar.ongletsAria")}
                 className="flex min-w-0 flex-1 items-center gap-0.5"
             >
                 {/* Zone épinglée : jamais recouverte par le défilement des onglets. */}
@@ -116,14 +118,14 @@ export function TitleBar(
                                     variant="ghost"
                                     size="icon-sm"
                                     onClick={createProjectTab}
-                                    aria-label="Nouveau projet"
+                                    aria-label={t("titleBar.nouveauProjet")}
                                     className="rounded-sm text-muted-foreground"
                                 />
                             }
                         >
                             <Plus className="size-4"/>
                         </TooltipTrigger>
-                        <TooltipContent>Nouveau projet</TooltipContent>
+                        <TooltipContent>{t("titleBar.nouveauProjet")}</TooltipContent>
                     </Tooltip>
                 </div>
 
@@ -136,7 +138,7 @@ export function TitleBar(
                                 return (
                                     <ImportTab
                                         key={projectId}
-                                        name={importTask?.fileName ?? "Import…"}
+                                        name={importTask?.fileName ?? t("titleBar.importFallback")}
                                         running={importTask?.status !== "error"}
                                         selected={activeTabId === IMPORT_TAB_ID}
                                         onSelect={() => openProjectTab(IMPORT_TAB_ID)}
@@ -171,7 +173,7 @@ export function TitleBar(
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onToggleTheme}
-                                aria-label="Changer de thème"
+                                aria-label={t("titleBar.changerTheme")}
                                 className="rounded-sm text-muted-foreground"
                             />
                         }
@@ -191,7 +193,7 @@ export function TitleBar(
               />
             </span>
                     </TooltipTrigger>
-                    <TooltipContent>Thème clair / sombre</TooltipContent>
+                    <TooltipContent>{t("titleBar.themeClairSombre")}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -202,14 +204,14 @@ export function TitleBar(
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onOpenSettings}
-                                aria-label="Paramètres"
+                                aria-label={t("titleBar.parametres")}
                                 className="rounded-sm text-muted-foreground"
                             />
                         }
                     >
                         <Settings2/>
                     </TooltipTrigger>
-                    <TooltipContent>Paramètres, thèmes et HUD</TooltipContent>
+                    <TooltipContent>{t("titleBar.parametresTooltip")}</TooltipContent>
                 </Tooltip>
 
                 {/* Enregistrement et export : agissent sur le brouillon de
@@ -227,6 +229,7 @@ export function TitleBar(
 
 /** Onglet Accueil : permanent, jamais fermable. */
 function HomeTab({selected, onSelect}: { selected: boolean; onSelect: () => void }) {
+    const t = useT();
     return (
         <button
             type="button"
@@ -244,7 +247,7 @@ function HomeTab({selected, onSelect}: { selected: boolean; onSelect: () => void
             )}
         >
             <House className="size-3.5 shrink-0 opacity-70"/>
-            <span className="sr-only">Accueil</span>
+            <span className="sr-only">{t("titleBar.accueil")}</span>
         </button>
     );
 }
@@ -263,12 +266,13 @@ function ImportTab({
     onSelect: () => void;
     onClose: () => void;
 }) {
+    const t = useT();
     return (
         <div
             role="tab"
             aria-selected={selected}
             tabIndex={selected ? 0 : -1}
-            title={`Import en cours : ${name}`}
+            title={t("titleBar.importEnCours", {name})}
             data-slot="workspace-tab"
             data-active={selected}
             onClick={onSelect}
@@ -301,7 +305,7 @@ function ImportTab({
                     event.stopPropagation();
                     onClose();
                 }}
-                aria-label={`Annuler l'import de ${name}`}
+                aria-label={t("titleBar.annulerImport", {name})}
                 className="flex size-4 shrink-0 items-center justify-center rounded-[2px] text-muted-foreground/70 transition-colors duration-150 hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none md:opacity-50 md:group-hover/tab:opacity-100 md:focus-visible:opacity-100"
             >
                 <X className="size-3"/>
@@ -324,6 +328,7 @@ function ProjectTab({
     onSelect: () => void;
     onClose: () => void;
 }) {
+    const t = useT();
     const type = getQrType(typeId);
     return (
         <div
@@ -359,7 +364,7 @@ function ProjectTab({
                     event.stopPropagation();
                     onClose();
                 }}
-                aria-label={`Fermer l'onglet ${name}`}
+                aria-label={t("titleBar.fermerOnglet", {name})}
                 className="flex size-4 shrink-0 items-center justify-center rounded-[2px] text-muted-foreground/70 transition-colors duration-150 hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none md:opacity-50 md:group-hover/tab:opacity-100 md:focus-visible:opacity-100"
             >
                 <X className="size-3"/>
@@ -383,6 +388,7 @@ function WindowControls({
     maximized: boolean;
 }) {
     const os = detectOS();
+    const t = useT();
     if (!isTauriRuntime() || fullscreen || os === "web") return null;
     const appWindow = getCurrentWindow();
     const isWindows = os === "windows";
@@ -390,19 +396,19 @@ function WindowControls({
     return (
         <div className="flex items-stretch self-stretch rounded-tl-sm">
             <ControlButton
-                label="Réduire la fenêtre"
+                label={t("titleBar.reduireFenetre")}
                 glyph={<Glyph glyph={Minus}/>}
                 onClick={() => void appWindow.minimize()}
                 hoverClass={restHover}
             />
             <ControlButton
-                label={maximized ? "Restaurer la fenêtre" : "Agrandir la fenêtre"}
+                label={maximized ? t("titleBar.restaurerFenetre") : t("titleBar.agrandirFenetre")}
                 glyph={<Glyph glyph={maximized ? SquareDashedBottom : Square}/>}
                 onClick={() => void appWindow.toggleMaximize()}
                 hoverClass={restHover}
             />
             <ControlButton
-                label="Fermer la fenêtre"
+                label={t("titleBar.fermerFenetre")}
                 glyph={<Glyph glyph={X}/>}
                 onClick={() => void appWindow.close()}
                 hoverClass={

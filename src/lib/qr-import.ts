@@ -15,13 +15,14 @@ import {
   FRAMES,
   type QrDesign,
 } from "@/lib/qr-design";
+import { translate } from "@/lib/i18n";
 
 export type ImportedContent = { typeId: string; values: QrValues };
 
 /** Filtre de boîte de dialogue natif pour les images / SVG / PDF contenant un code. */
 export const QR_SOURCE_FILTERS = [
   {
-    name: "QR code ou code-barres (image, SVG, PDF)",
+    name: translate("importLib.filtreSource"),
     extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "pdf"],
   },
 ];
@@ -56,7 +57,7 @@ export function backendToOverall(raw: BackendImportProgress): ImportProgressStep
 /** Échec d'import volontairement annulé (onglet fermé) : à ignorer en silence. */
 export class ImportCancelled extends Error {
   constructor() {
-    super("Import annulé");
+    super(translate("importLib.annule"));
     this.name = "ImportCancelled";
   }
 }

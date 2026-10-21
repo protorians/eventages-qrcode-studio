@@ -25,6 +25,7 @@ import {useBuilder} from "@/lib/builder-store";
 import {HOME_TAB_ID, IMPORT_TAB_ID, useWorkspace} from "@/lib/workspace-store";
 import {describeError, QCP_FILTERS} from "@/lib/qcp";
 import {QR_SOURCE_FILTERS} from "@/lib/qr-import";
+import {useT, type Translator} from "@/lib/i18n";
 import {detectOS, isTauriRuntime} from "@/lib/tauri";
 
 import {version as APP_VERSION} from "../../../package.json";
@@ -133,6 +134,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
         setAnimations,
     } = useSettings();
     const {runSave} = useProjectSave();
+    const t = useT();
     const [aboutOpen, setAboutOpen] = useState(false);
     /** Sortie en cours : "confirm" (projet propre), "unsaved" (modifié), null. */
     const [quitDialog, setQuitDialog] = useState<"confirm" | "unsaved" | null>(null);
@@ -169,7 +171,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
             const {id} = await openProjectFromQcp(selection);
             openProjectTab(id);
         } catch (cause) {
-            await reportError("Ouverture du projet", cause, "Ouverture du fichier projet impossible.");
+            await reportError(t("menu.erreurOuvertureTitre"), cause, t("menu.erreurOuvertureDetail"));
         }
     };
 
@@ -188,7 +190,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
             if (typeof selection !== "string") return;
             startQrImport(selection);
         } catch (cause) {
-            await reportError("Import d'un code", cause, "Import du fichier impossible.");
+            await reportError(t("menu.erreurImportTitre"), cause, t("menu.erreurImportDetail"));
         }
     };
 
@@ -214,9 +216,9 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
             } catch (cause) {
                 quittingRef.current = false;
                 await reportError(
-                    "Enregistrement du projet",
+                    t("menu.erreurEnregistrementTitre"),
                     cause,
-                    "Enregistrement du projet impossible.",
+                    t("menu.erreurEnregistrementDetail"),
                 );
                 return;
             }
@@ -271,14 +273,15 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
         for (const item of items.draft) void item.setEnabled(hasDraft);
         void items.undo.setEnabled(hasDraft && canUndo);
         void items.redo.setEnabled(hasDraft && canRedo);
-        void items.close.setText(isHome ? "Fermer Eventages QrCode Studio" : "Fermer l'onglet");
-    }, []);
+        void items.close.setText(isHome ? t("menu.fermerApp") : t("menu.fermerOnglet"));
+    }, [t]);
 
-    // Construction unique de la menubar native (shell Tauri uniquement).
+    // Construction de la menubar native (shell Tauri uniquement), relancée
+    // au changement de langue pour reconstruire les libellés localisés.
     useEffect(() => {
         if (!isTauriRuntime()) return;
         let disposed = false;
-        void buildAppMenu(settingsRef.current, () => actionsRef.current!).then((built) => {
+        void buildAppMenu(settingsRef.current, () => actionsRef.current!, t).then((built) => {
             if (disposed) return;
             itemsRef.current = built.items;
             // Réaligne les états : réglages et brouillon ont pu bouger pendant
@@ -288,13 +291,13 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
         return () => {
             disposed = true;
         };
-    }, [syncMenu]);
+    }, [syncMenu, t]);
 
     // Coches, activations et libellés réalignés à chaque changement d'état :
     // le menu, la boîte de paramètres et le bouton de thème restent synchrones.
     useEffect(() => {
         syncMenu();
-    }, [syncMenu, mode, colorTheme, hud, animations, isHome, isImport, canUndo, canRedo]);
+    }, [syncMenu, mode, colorTheme, hud, animations, isHome, isImport, canUndo, canRedo, t]);
 
     // Demandes de fermeture natives (traffic lights macOS, Alt+F4, croix
     // Windows/Linux) : interception et confirmation de sortie, comme ⌘W
@@ -315,17 +318,14 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
             <Dialog open={aboutOpen} onOpenChange={setAboutOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>À propos d'Eventages QrCode Studio</DialogTitle>
+                        <DialogTitle>{t("menu.aProposApp")}</DialogTitle>
                         <DialogDescription>
-                            Studio de création de codes QR : URL, Wi-Fi, contact,
-                            code-barres et plus.
+                            {t("menu.aProposDescription")}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 text-sm">
                         <p className="leading-relaxed text-muted-foreground">
-                            Eventages QrCode Studio conçoit, habille et exporte des codes
-                            QR, en entier hors ligne — aucun compte, aucun
-                            serveur : vos projets restent sur votre machine.
+                            {t("menu.aProposCorps")}
                         </p>
                         <p className="font-mono text-xs tracking-wider text-muted-foreground/80">
                             VERSION {APP_VERSION} · TAURI + REACT
@@ -333,7 +333,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
                     </div>
                     <DialogFooter>
                         <DialogClose render={<Button type="button" variant="outline"/>}>
-                            Fermer
+                            {t("menu.fermer")}
                         </DialogClose>
                     </DialogFooter>
                 </DialogContent>
@@ -350,11 +350,9 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
                     {quitDialog === "unsaved" ? (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Projet non enregistré</DialogTitle>
+                                <DialogTitle>{t("menu.projetNonEnregistre")}</DialogTitle>
                                 <DialogDescription>
-                                    « {state.projectName} » contient des
-                                    modifications non enregistrées. Voulez-vous
-                                    l'enregistrer avant de quitter ?
+                                    {t("menu.projetNonEnregistreDescription", {name: state.projectName})}
                                 </DialogDescription>
                             </DialogHeader>
                             <DialogFooter className="flex-wrap">
@@ -363,31 +361,30 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
                                     variant="destructive"
                                     onClick={() => void confirmQuit(false)}
                                 >
-                                    Quitter sans enregistrer
+                                    {t("menu.quitterSansEnregistrer")}
                                 </Button>
                                 <DialogClose render={<Button type="button" variant="outline"/>}>
-                                    Annuler
+                                    {t("menu.annulerDialog")}
                                 </DialogClose>
                                 <Button type="button" onClick={() => void confirmQuit(true)}>
-                                    Enregistrer et quitter
+                                    {t("menu.enregistrerEtQuitter")}
                                 </Button>
                             </DialogFooter>
                         </>
                     ) : (
                         <>
                             <DialogHeader>
-                                <DialogTitle>Quitter Eventages QrCode Studio ?</DialogTitle>
+                                <DialogTitle>{t("menu.quitterTitre")}</DialogTitle>
                                 <DialogDescription>
-                                    L'application va être fermée. Voulez-vous
-                                    continuer ?
+                                    {t("menu.quitterDescription")}
                                 </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>
                                 <DialogClose render={<Button type="button" variant="outline"/>}>
-                                    Annuler
+                                    {t("menu.annulerDialog")}
                                 </DialogClose>
                                 <Button type="button" onClick={() => void confirmQuit(false)}>
-                                    Quitter
+                                    {t("menu.quitter")}
                                 </Button>
                             </DialogFooter>
                         </>
@@ -406,6 +403,7 @@ export function NativeMenu({onExport}: {onExport: () => void}) {
 async function buildAppMenu(
     state: MenuSettings,
     getActions: () => MenuActions,
+    t: Translator,
 ): Promise<{menu: Menu; items: MenuItems}> {
     const os = detectOS();
     const isMac = os === "macos";
@@ -428,19 +426,19 @@ async function buildAppMenu(
     //   Fichier, après le groupe d'ouverture.
     const newProjectItem = await MenuItem.new({
         id: "file:new",
-        text: "Nouveau projet",
+        text: t("menu.nouveauProjet"),
         accelerator: "CmdOrCtrl+N",
         action: () => getActions().newProject(),
     });
     const openItem = await MenuItem.new({
         id: "file:open",
-        text: "Ouvrir un fichier projet…",
+        text: t("menu.ouvrirProjet"),
         accelerator: "CmdOrCtrl+O",
         action: () => getActions().openQcp(),
     });
     const importItem = await MenuItem.new({
         id: "file:import",
-        text: "Importer un QR existant…",
+        text: t("menu.importerQr"),
         accelerator: "CmdOrCtrl+I",
         action: () => getActions().importQr(),
     });
@@ -449,20 +447,20 @@ async function buildAppMenu(
     // CloseWindow fermerait la fenêtre sans confirmation.
     const closeItem = await MenuItem.new({
         id: "file:close",
-        text: state.isHome ? "Fermer Eventages QrCode Studio" : "Fermer l'onglet",
+        text: state.isHome ? t("menu.fermerApp") : t("menu.fermerOnglet"),
         accelerator: "CmdOrCtrl+W",
         action: () => getActions().closeTab(),
     });
     const saveItem = await MenuItem.new({
         id: "file:save",
-        text: "Enregistrer",
+        text: t("menu.enregistrer"),
         accelerator: "CmdOrCtrl+S",
         enabled: !state.isHome,
         action: () => getActions().save(),
     });
     const saveAsItem = await MenuItem.new({
         id: "file:save-as",
-        text: "Enregistrer sous…",
+        text: t("menu.enregistrerSous"),
         accelerator: "CmdOrCtrl+Shift+S",
         enabled: !state.isHome,
         action: () => getActions().saveAs(),
@@ -471,7 +469,7 @@ async function buildAppMenu(
     // partage, projet .qrd) : libellé neutre + accélération d'usage ⇧⌘E.
     const exportItem = await MenuItem.new({
         id: "file:export",
-        text: "Exporter…",
+        text: t("menu.exporter"),
         accelerator: "CmdOrCtrl+Shift+E",
         enabled: !state.isHome,
         action: () => getActions().exportImage(),
@@ -494,13 +492,13 @@ async function buildAppMenu(
             {item: "Separator"},
             await MenuItem.new({
                 id: "file:quit",
-                text: "Quitter Eventages QrCode Studio",
+                text: t("menu.quitterApp"),
                 accelerator: "CmdOrCtrl+Q",
                 action: () => getActions().quit(),
             }),
         );
     }
-    const fileSubmenu = await Submenu.new({text: "Fichier", items: fileItems});
+    const fileSubmenu = await Submenu.new({text: t("menu.fichier"), items: fileItems});
 
     // — Édition : Annuler/Rétablir branchés sur l'historique applicatif du
     //   brouillon (les rôles natifs Undo/Redo ne savent annuler que la saisie
@@ -509,14 +507,14 @@ async function buildAppMenu(
     //   (⌘X/⌘C/⌘V/⌘A). Activation réalignée par le front (syncMenu).
     const undoItem = await MenuItem.new({
         id: "edit:undo",
-        text: "Annuler",
+        text: t("menu.annuler"),
         accelerator: "CmdOrCtrl+Z",
         enabled: false,
         action: () => getActions().undo(),
     });
     const redoItem = await MenuItem.new({
         id: "edit:redo",
-        text: "Rétablir",
+        text: t("menu.retablir"),
         accelerator: "CmdOrCtrl+Shift+Z",
         enabled: false,
         action: () => getActions().redo(),
@@ -525,37 +523,37 @@ async function buildAppMenu(
         undoItem,
         redoItem,
         {item: "Separator"},
-        {item: "Cut", text: "Couper"},
-        {item: "Copy", text: "Copier"},
-        {item: "Paste", text: "Coller"},
-        {item: "SelectAll", text: "Tout sélectionner"},
+        {item: "Cut", text: t("menu.couper")},
+        {item: "Copy", text: t("menu.copier")},
+        {item: "Paste", text: t("menu.coller")},
+        {item: "SelectAll", text: t("menu.toutSelectionner")},
     ];
-    const editSubmenu = await Submenu.new({text: "Édition", items: editItems});
+    const editSubmenu = await Submenu.new({text: t("menu.edition"), items: editItems});
 
     // — Affichage : mode (paire de coches exclusives), thèmes de couleurs
     //   (sous-menu), ornements HUD et animations.
     const [modeLight, modeDark, hudItem, animationsItem] = await Promise.all([
         CheckMenuItem.new({
             id: "view:mode-light",
-            text: "Thème clair",
+            text: t("menu.themeClair"),
             checked: state.mode === "light",
             action: check((actions) => actions.setMode("light")),
         }),
         CheckMenuItem.new({
             id: "view:mode-dark",
-            text: "Thème sombre",
+            text: t("menu.themeSombre"),
             checked: state.mode === "dark",
             action: check((actions) => actions.setMode("dark")),
         }),
         CheckMenuItem.new({
             id: "view:hud",
-            text: "Ornements HUD",
+            text: t("menu.ornementsHud"),
             checked: state.hud,
             action: check((actions) => actions.toggleHud()),
         }),
         CheckMenuItem.new({
             id: "view:animations",
-            text: "Animations",
+            text: t("menu.animations"),
             checked: state.animations,
             action: check((actions) => actions.toggleAnimations()),
         }),
@@ -566,9 +564,9 @@ async function buildAppMenu(
         checked: state.colorTheme === theme.id,
         action: check((actions) => actions.setColorTheme(theme.id)),
     })));
-    const colorsSubmenu = await Submenu.new({text: "Thème de couleurs", items: themes});
+    const colorsSubmenu = await Submenu.new({text: t("menu.themeCouleurs"), items: themes});
     const viewSubmenu = await Submenu.new({
-        text: "Affichage",
+        text: t("menu.affichage"),
         items: [
             modeLight,
             modeDark,
@@ -588,35 +586,35 @@ async function buildAppMenu(
         ? [
             await MenuItem.new({
                 id: "window:minimize",
-                text: "Réduire",
+                text: t("menu.reduire"),
                 action: () => void getCurrentWindow().minimize(),
             }),
             await MenuItem.new({
                 id: "window:maximize",
-                text: "Agrandir ou restaurer",
+                text: t("menu.agrandirOuRestaurer"),
                 action: () => void getCurrentWindow().toggleMaximize(),
             }),
         ]
         : isMac
             ? [
-                {item: "Minimize", text: "Réduire"},
-                {item: "Maximize", text: "Zoom"},
+                {item: "Minimize", text: t("menu.reduire")},
+                {item: "Maximize", text: t("menu.zoom")},
                 {item: "Separator"},
-                {item: "BringAllToFront", text: "Placer toutes les fenêtres au premier plan"},
+                {item: "BringAllToFront", text: t("menu.toutAuPremierPlan")},
             ]
             : [
-                {item: "Minimize", text: "Réduire"},
-                {item: "Maximize", text: "Agrandir"},
+                {item: "Minimize", text: t("menu.reduire")},
+                {item: "Maximize", text: t("menu.agrandir")},
             ];
-    const windowSubmenu = await Submenu.new({text: "Fenêtre", items: windowItems});
+    const windowSubmenu = await Submenu.new({text: t("menu.fenetre"), items: windowItems});
 
     // — Aide : à propos (ouvre le dialog de l'application).
     const aboutHelpItem = await MenuItem.new({
         id: "help:about",
-        text: "À propos d'Eventages QrCode Studio",
+        text: t("menu.aProposApp"),
         action: () => getActions().about(),
     });
-    const helpSubmenu = await Submenu.new({text: "Aide", items: [aboutHelpItem]});
+    const helpSubmenu = await Submenu.new({text: t("menu.aide"), items: [aboutHelpItem]});
 
     // — macOS : le premier sous-menu devient le menu applicatif (titre
     //   remplacé par le nom de l'app) ; la convention le veut en tête.
@@ -624,7 +622,7 @@ async function buildAppMenu(
     if (isMac) {
         const aboutAppItem = await MenuItem.new({
             id: "app:about",
-            text: "À propos d'Eventages QrCode Studio",
+            text: t("menu.aProposApp"),
             action: () => getActions().about(),
         });
         submenus.push(await Submenu.new({
@@ -632,16 +630,16 @@ async function buildAppMenu(
             items: [
                 aboutAppItem,
                 {item: "Separator"},
-                {item: "Hide", text: "Masquer Eventages QrCode Studio"},
-                {item: "HideOthers", text: "Masquer les autres"},
-                {item: "ShowAll", text: "Tout afficher"},
+                {item: "Hide", text: t("menu.masquerApp")},
+                {item: "HideOthers", text: t("menu.masquerLesAutres")},
+                {item: "ShowAll", text: t("menu.toutAfficher")},
                 {item: "Separator"},
                 // Item réel plutôt que rôle Quit : ⌘Q passe par la
                 // confirmation de sortie (alerte renforcée si le projet
                 // n'est pas enregistré).
                 await MenuItem.new({
                     id: "app:quit",
-                    text: "Quitter Eventages QrCode Studio",
+                    text: t("menu.quitterApp"),
                     accelerator: "CmdOrCtrl+Q",
                     action: () => getActions().quit(),
                 }),

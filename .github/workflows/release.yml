@@ -61,11 +61,11 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Install Linux dependencies (Tauri v2)
+      - name: Install Linux dependencies (Tauri v2 + RPM build tools)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils rpm
 
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
@@ -79,15 +79,15 @@ jobs:
               tag="${GITHUB_REF#refs/tags/}"
               ;;
             *)
-              # Manual run: fall back to the version in tauri.conf.json.
-              version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+              # Extraction native en Bash de la version dans tauri.conf.json (évite d'avoir besoin de Node.js)
+              version=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | awk -F '"' '{print $4}')
               tag="v${version}"
               ;;
           esac
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
       - name: Build and upload release assets
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

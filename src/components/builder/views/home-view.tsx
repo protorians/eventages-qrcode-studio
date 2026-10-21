@@ -22,18 +22,59 @@ import {getQrType} from "@/lib/qr-catalog";
 import {useBuilder, type ProjectSummary} from "@/lib/builder-store";
 import {useWorkspace} from "@/lib/workspace-store";
 import {useSettings} from "@/hooks/use-settings";
+import {useLocale, useT} from "@/lib/i18n";
+import type {LocaleId} from "@/lib/i18n/locales";
 import {describeError, QCP_FILTERS} from "@/lib/qcp";
 import {QR_SOURCE_FILTERS} from "@/lib/qr-import";
 import {open as openFileDialog} from "@tauri-apps/plugin-dialog";
 import {cn} from "@/lib/utils";
 import {Separator} from "@/components/ui/separator.tsx";
 
-const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-});
+/**
+ * Suffixe de pluriel pour les gabarits du type « projet{plural} » : le
+ * lexique change selon la langue (le japonais et le chinois n'infléchissent
+ * pas, le russe suit ses règles numériques). L'arabe va plus loin : la
+ * forme du nom dépend du nombre (duel, pluriel 3–10, singulier au-delà de
+ * 11), et les gabarits arabes ne s'appuient que sur {plural} — la fonction
+ * leur renvoie alors le groupe nominal entier, nombre compris.
+ */
+function pluralSuffix(locale: LocaleId, count: number): string {
+    if (locale === "ja" || locale === "zh") return "";
+    if (locale === "ar") {
+        if (count === 0) return "لا توجد مشاريع محفوظة محليًا";
+        if (count === 1) return "مشروع واحد محفوظ محليًا";
+        if (count === 2) return "مشروعان محفوظان محليًا";
+        if (count >= 3 && count <= 10) return String(count) + " مشاريع محفوظة محليًا";
+        return String(count) + " مشروع محفوظ محليًا";
+    }
+    if (locale === "ru") {
+        if (count % 10 === 1 && count % 100 !== 11) return "";
+        if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14)) return "а";
+        return "ов";
+    }
+    if (count === 1) return "";
+    switch (locale) {
+        case "it": return "i";
+        case "nl": return "en";
+        case "de": return "e";
+        default: return "s";
+    }
+}
+
+/** Formateur de date courte, aligné sur la langue courante de l'interface. */
+function useDateFormatter() {
+    const locale = useLocale();
+    return useMemo(
+        () =>
+            new Intl.DateTimeFormat(locale, {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+            }),
+        [locale],
+    );
+}
 
 /**
  * Onglet « Accueil » de l'espace de travail : gestionnaire de projets à
@@ -64,6 +105,9 @@ export function HomeView() {
     const [notice, setNotice] = useState<string | null>(null);
     const confirmTimer = useRef<number | null>(null);
     const {hud} = useSettings();
+    const t = useT();
+    const locale = useLocale();
+    const dateFormatter = useDateFormatter();
 
     useEffect(() => {
         return () => {
@@ -78,10 +122,10 @@ export function HomeView() {
             if (!term) return true;
             return (
                 project.name.toLowerCase().includes(term) ||
-                getQrType(project.typeId).label.toLowerCase().includes(term)
+                t(getQrType(project.typeId).label).toLowerCase().includes(term)
             );
         });
-    }, [projects, query, typeFilter]);
+    }, [projects, query, typeFilter, t]);
 
     /** Filtres par type de code, déduits du registre, avec leur effectif. */
     const typeOptions = useMemo(() => {
@@ -130,10 +174,10 @@ export function HomeView() {
             const {id, deduped} = await openProjectFromQcp(selection);
             openProjectTab(id);
             if (deduped) {
-                setNotice("Projet déjà ouvert : son onglet existant a été réactivé.");
+                setNotice(t("home.noticeDejaOuvert"));
             }
         } catch (cause) {
-            setError(describeError(cause, "Ouverture du fichier projet impossible."));
+            setError(describeError(cause, t("home.erreurOuverture")));
         } finally {
             setBusy(null);
         }
@@ -164,16 +208,16 @@ export function HomeView() {
         setBusy("save");
         try {
             const path = await saveProjectAsQcp();
-            if (path) setNotice(`Projet enregistré : ${path}`);
+            if (path) setNotice(t("home.noticeEnregistre", {path}));
         } catch (cause) {
-            setError(describeError(cause, "Enregistrement du projet impossible."));
+            setError(describeError(cause, t("home.erreurEnregistrement")));
         } finally {
             setBusy(null);
         }
     };
 
     return (
-        <section aria-label="Gestionnaire de projets" className="flex min-h-0 flex-1 flex-col">
+        <section aria-label={t("home.managerAria")} className="flex min-h-0 flex-1 flex-col">
             {/* Bandeau d'en-tête : titre, statistiques et actions principales. */}
             <div className="relative shrink-0 border-b border-border/60 px-4 pt-5 pb-4 sm:px-6">
                 {hud && (
@@ -184,23 +228,21 @@ export function HomeView() {
                 )}
                 <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
                     <div className="min-w-0 space-y-1.5">
-                        <HudLabel className="block">REGISTRE — MOD.00</HudLabel>
+                        <HudLabel className="block">{t("home.heading.registre")}</HudLabel>
                         <h1 className="hud-heading text-2xl leading-none font-bold tracking-wide uppercase">
-                            Projets
+                            {t("home.titre")}
                         </h1>
                         <p className="max-w-prose text-[0.8rem] leading-snug text-muted-foreground">
-                            Créez, rouvrez et partagez vos codes QR. Ouvrir un projet lui
-                            dédie un onglet dans la barre de titre — l'accueil reste toujours
-                            à portée de clic.
+                            {t("home.description")}
                         </p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
                             <HudReadout label="ENTRIES" value={String(projects.length).padStart(2, "0")}/>
                             <HudReadout
-                                label="ONGLETS"
+                                label={t("home.readout.tabs")}
                                 value={String(openProjectIds.length).padStart(2, "0")}
                             />
                             <HudReadout
-                                label="DERNIÈRE"
+                                label={t("home.readout.last")}
                                 value={lastActivity ? dateFormatter.format(lastActivity) : "—"}
                             />
                         </div>
@@ -214,24 +256,24 @@ export function HomeView() {
                             onClick={handleCreate}
                         >
                             <Plus/>
-                            Nouveau projet
+                            {t("home.nouveauProjet")}
                         </Button>
                         <div className="flex items-center gap-1">
                             <IconAction
-                                label="Ouvrir un fichier projet (.qrd)"
+                                label={t("home.ouvrirQrd")}
                                 disabled={busy !== null}
                                 onClick={() => void handleOpenQcp()}
                             >
                                 {busy === "open" ? <Loader2 className="animate-spin"/> : <FolderOpen/>}
                             </IconAction>
                             <IconAction
-                                label="Importer un QR ou un code-barres existant"
+                                label={t("home.importerQr")}
                                 onClick={() => handleImportQr()}
                             >
                                 <ImageUp/>
                             </IconAction>
                             <IconAction
-                                label="Enregistrer le brouillon actif sous…"
+                                label={t("home.enregistrerSous")}
                                 disabled={busy !== null}
                                 onClick={() => void handleSaveQcp()}
                             >
@@ -246,19 +288,19 @@ export function HomeView() {
             <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 py-3 sm:px-6">
                 <div className="relative">
                     <Search
-                        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"/>
+                        className="pointer-events-none absolute top-1/2 start-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"/>
                     <Input
                         value={query}
-                        placeholder="Rechercher un projet…"
+                        placeholder={t("home.recherche.placeholder")}
                         onChange={(event) => setQuery(event.currentTarget.value)}
-                        className="h-8 w-52 rounded-sm pl-8 font-mono text-xs"
-                        aria-label="Rechercher un projet"
+                        className="h-8 w-52 rounded-sm ps-8 font-mono text-xs"
+                        aria-label={t("home.recherche.aria")}
                     />
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrer par type">
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("home.filtrerType")}>
                     <FilterChip
                         icon={<Layers/>}
-                        label="Tous"
+                        label={t("home.filtreTous")}
                         count={projects.length}
                         active={typeFilter === null}
                         onClick={() => setTypeFilter(null)}
@@ -269,7 +311,7 @@ export function HomeView() {
                             <FilterChip
                                 key={typeId}
                                 icon={<type.icon/>}
-                                label={type.label}
+                                label={t(type.label)}
                                 count={count}
                                 active={typeFilter === typeId}
                                 onClick={() => setTypeFilter(typeFilter === typeId ? null : typeId)}
@@ -346,18 +388,23 @@ export function HomeView() {
                   <HudStatusDot tone="ok"/>
                     {hud ? (
                         <span className="text-hud truncate text-muted-foreground">
-                      {projects.length} PROJET{projects.length > 1 ? "S" : ""} · STORAGE:LOCAL
+                      {t("home.footer.hudResume", {
+                          count: projects.length,
+                          plural: pluralSuffix(locale, projects.length).toUpperCase(),
+                      })}
                     </span>
                     ) : (
                         <span className="truncate text-[0.68rem] text-muted-foreground">
-                      {projects.length} projet{projects.length > 1 ? "s" : ""} enregistré
-                            {projects.length > 1 ? "s" : ""} localement
+                      {t("home.footer.localResume", {
+                          count: projects.length,
+                          plural: pluralSuffix(locale, projects.length),
+                      })}
                     </span>
                     )}
                 </span>
                 <div className="flex-auto flex justify-end gap-2">
                     <span className="truncate text-[0.62rem] text-muted-foreground/80">
-                      {hud ? "OFFLINE:OK — 100% LOCAL" : "Tout fonctionne hors ligne, sur cet appareil"}
+                      {hud ? "OFFLINE:OK — 100% LOCAL" : t("home.footer.horsLigne")}
                     </span>
                     <Separator orientation={'vertical'}/>
                     <span className="truncate text-[0.62rem] text-muted-foreground/80">
@@ -440,6 +487,7 @@ function NewProjectCard({
     onCreate: () => void;
     hud: boolean;
 }) {
+    const t = useT();
     return (
         <button
             type="button"
@@ -454,7 +502,7 @@ function NewProjectCard({
           className="hud-clip-tr flex size-9 items-center justify-center bg-muted/70 transition-colors duration-300 group-hover/new:bg-primary/15">
         <Plus className="size-4"/>
       </span>
-            <span className="text-[0.72rem] font-medium">Nouveau projet</span>
+            <span className="text-[0.72rem] font-medium">{t("home.nouveauProjet")}</span>
             {hud ? <span className="text-hud text-muted-foreground/60">NEW.ENTRY</span> : null}
         </button>
     );
@@ -487,6 +535,8 @@ function ProjectCard(
         onDelete: () => void;
     }) {
     const type = getQrType(project.typeId);
+    const t = useT();
+    const dateFormatter = useDateFormatter();
     return (
         <div
             style={style}
@@ -502,8 +552,8 @@ function ProjectCard(
             <button
                 type="button"
                 onClick={onOpen}
-                className="flex flex-1 flex-col text-left focus-visible:outline-none"
-                aria-label={`Ouvrir le projet ${project.name} dans un onglet`}
+                className="flex flex-1 flex-col text-start focus-visible:outline-none"
+                aria-label={t("home.carte.ouvrirAria", {nom: project.name})}
             >
                 <div
                     className="relative flex flex-col flex-auto w-full min-h-90 items-center justify-center border-b border-border/50 bg-muted/40 text-muted-foreground/80">
@@ -533,12 +583,12 @@ function ProjectCard(
                                 "text-[10px] font-medium!"
                             )}
                         >
-                            {active ? "En cours" : "Ouvert"}
+                            {active ? t("home.carte.enCours") : t("home.carte.ouvert")}
                         </div>
                     ) : null}
                     <div className="flex flex-auto items-center gap-1.5 text-[0.6rem] px-2 py-1.5">
                         <type.icon className="size-3 shrink-0"/>
-                        <span className="truncate">{type.label}</span>
+                        <span className="truncate">{t(type.label)}</span>
                         <span className="ml-auto shrink-0 font-mono">{project.progress}%</span>
                     </div>
                 </div>
@@ -550,7 +600,7 @@ function ProjectCard(
                     <div className="p-2.5 flex flex-col gap-1">
                         <span className="block truncate text-[0.76rem] font-medium">{project.name}</span>
                         <span className="block truncate pb-0.5 text-[0.58rem] text-muted-foreground/80">
-                            Modifié le {dateFormatter.format(project.updatedAt)}
+                            {t("home.carte.modifieLe", {date: dateFormatter.format(project.updatedAt)})}
                         </span>
                         <span className="block h-1 overflow-hidden bg-muted rounded-xl text-muted-foreground">
                         <span
@@ -564,13 +614,13 @@ function ProjectCard(
 
             <div className="hud-layer flex absolute top-0 right-0 rounded-md m-1 bg-background">
                 <div className="flex-auto"/>
-                <CardAction onClick={onDuplicate} label="Dupliquer">
+                <CardAction onClick={onDuplicate} label={t("home.carte.dupliquer")}>
                     <Copy size={12}/>
                 </CardAction>
                 <CardAction
                     onClick={confirming ? onDelete : onRequestDelete}
                     destructive={confirming}
-                    label={confirming ? "Confirmer la suppression" : "Supprimer"}
+                    label={confirming ? t("home.carte.confirmerSuppression") : t("home.carte.supprimer")}
                 >
                     <Trash2 size={12}/>
                     {/*<span>{confirming ? "Confirmer ?" : "Supprimer"}</span>*/}
@@ -621,6 +671,7 @@ function EmptyState({
     onCreate: () => void;
     onReset: () => void;
 }) {
+    const t = useT();
     const empty = count === 0;
     return (
         <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
@@ -630,22 +681,22 @@ function EmptyState({
       </span>
             <div className="space-y-1">
                 <p className="text-sm font-medium">
-                    {empty ? "Aucun projet pour l'instant" : "Aucun projet ne correspond"}
+                    {empty ? t("home.vide.titre") : t("home.vide.titreCorrespondance")}
                 </p>
                 <p className="mx-auto max-w-64 text-[0.68rem] leading-relaxed text-muted-foreground">
                     {empty
-                        ? "Créez votre premier code QR : contenu, style, logo et cadre restent modifiables à tout moment."
-                        : `Aucun résultat pour « ${query} ». Essayez un autre nom, un autre type, ou réinitialisez les filtres.`}
+                        ? t("home.vide.description")
+                        : t("home.vide.aucunResultat", {terme: query})}
                 </p>
             </div>
             {empty ? (
                 <Button type="button" className="gap-1.5" onClick={onCreate}>
                     <Plus/>
-                    Nouveau projet
+                    {t("home.nouveauProjet")}
                 </Button>
             ) : (
                 <Button type="button" variant="outline" size="sm" onClick={onReset}>
-                    Réinitialiser les filtres
+                    {t("home.vide.reinitialiserFiltres")}
                 </Button>
             )}
         </div>

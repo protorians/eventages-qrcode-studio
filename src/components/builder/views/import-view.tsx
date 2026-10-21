@@ -4,15 +4,17 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress";
 import { HudCorners, HudLabel, HudStatusDot } from "@/components/shell/hud";
 import { useWorkspace } from "@/lib/workspace-store";
+import { useT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 import type { ImportStage } from "@/lib/qr-import";
 import { cn } from "@/lib/utils";
 
 /** Étapes affichées de la conversion image → projet, dans l'ordre d'exécution. */
-const IMPORT_STAGES: { id: ImportStage; label: string }[] = [
-  { id: "open", label: "Ouverture du fichier" },
-  { id: "decode", label: "Décodage du code" },
-  { id: "content", label: "Analyse du contenu" },
-  { id: "create", label: "Création du projet" },
+const IMPORT_STAGES: { id: ImportStage; label: TranslationKey }[] = [
+  { id: "open", label: "importView.stage.open" },
+  { id: "decode", label: "importView.stage.decode" },
+  { id: "content", label: "importView.stage.content" },
+  { id: "create", label: "importView.stage.create" },
 ];
 
 /**
@@ -24,6 +26,7 @@ const IMPORT_STAGES: { id: ImportStage; label: string }[] = [
  */
 export function ImportView() {
   const { importTask, cancelImport, retryImport } = useWorkspace();
+  const t = useT();
 
   // La tâche peut avoir disparu entre la bascule d'onglet et ce rendu.
   if (!importTask) return null;
@@ -32,11 +35,11 @@ export function ImportView() {
   const failed = importTask.status === "error";
   const stageLabel =
     IMPORT_STAGES.find((stage) => stage.id === importTask.stage)?.label ??
-    "Ouverture du fichier";
+    "importView.stage.open";
 
   return (
     <section
-      aria-label="Conversion d'un fichier en projet"
+      aria-label={t("importView.conversionAria")}
       className="relative flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-8"
     >
       {/* Voile façon modale, contenu dans l'onglet : le reste de l'atelier
@@ -50,7 +53,7 @@ export function ImportView() {
         <HudCorners inset="0.35rem" size="0.6rem" />
 
         <CardHeader className="gap-2">
-          <HudLabel>CONVERSION — IMP.00</HudLabel>
+          <HudLabel>{t("importView.heading")}</HudLabel>
           <div className="flex items-center gap-3">
             <span
               className={cn(
@@ -68,7 +71,7 @@ export function ImportView() {
             </span>
             <div className="min-w-0 space-y-0.5">
               <h1 className="hud-heading truncate text-lg leading-tight font-bold uppercase">
-                {running ? "Conversion en projet…" : "Échec de la conversion"}
+                {running ? t("importView.conversionEnCours") : t("importView.conversionEchec")}
               </h1>
               <p
                 className="truncate font-mono text-[0.68rem] text-muted-foreground"
@@ -85,17 +88,17 @@ export function ImportView() {
             <div role="status" aria-live="polite" className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[0.72rem] text-muted-foreground">
-                  Traitement en cours, l'application reste utilisable.
+                  {t("importView.traitementEnCours")}
                 </span>
                 <HudReadoutPercent percent={importTask.percent} />
               </div>
-              <Progress value={importTask.percent} aria-label="Progression de la conversion" />
+              <Progress value={importTask.percent} aria-label={t("importView.progressionAria")} />
             </div>
           ) : (
             <div className="space-y-1.5" role="alert">
               <p className="text-[0.72rem] leading-snug text-muted-foreground">
                 {importTask.error ??
-                  "Le fichier n'a pas pu être converti en projet."}
+                  t("importView.erreurDefaut")}
               </p>
             </div>
           )}
@@ -115,7 +118,7 @@ export function ImportView() {
             ) : (
               <Loader2 className="size-3.5 shrink-0 animate-spin text-primary" />
             )}
-            {stageLabel}
+            {t(stageLabel)}
           </div>
         </CardContent>
 
@@ -129,7 +132,7 @@ export function ImportView() {
               className="gap-1.5"
             >
               <X />
-              Annuler
+              {t("importView.annuler")}
             </Button>
           ) : (
             <>
@@ -139,7 +142,7 @@ export function ImportView() {
                 size="sm"
                 onClick={cancelImport}
               >
-                Fermer
+                {t("importView.fermer")}
               </Button>
               <Button
                 type="button"
@@ -149,7 +152,7 @@ export function ImportView() {
                 className="gap-1.5"
               >
                 <RotateCcw />
-                Réessayer
+                {t("importView.ressayer")}
               </Button>
             </>
           )}

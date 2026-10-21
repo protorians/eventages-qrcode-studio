@@ -14,6 +14,7 @@
 import { getQrType, QR_TYPE_DEFAULT, resolveTypeId, type QrValues } from "@/lib/qr-catalog";
 import { DEFAULT_DESIGN, MOCKUPS_BY_ID, type QrDesign } from "@/lib/qr-design";
 import { normalizeBarcodeDesign, type BarcodeDesign } from "@/lib/barcode";
+import { translate } from "@/lib/i18n";
 
 /** Échec de lecture d'une archive projet, avec un message prêt à afficher. */
 export class QcpError extends Error {}
@@ -230,10 +231,10 @@ export function applyQcpManifest({ manifest, assets }: QcpFilePayload): QcpProje
   try {
     parsed = JSON.parse(manifest) as QcpManifest;
   } catch {
-    throw new QcpError("Fichier projet illisible : manifest.json est corrompu.");
+    throw new QcpError(translate("qcp.manifesteCorrompu"));
   }
   if (!parsed || (parsed.format !== "qrd" && parsed.format !== "qcp") || !parsed.project) {
-    throw new QcpError("Ce fichier n'est pas un projet Eventages QrCode Studio (.qrd).");
+    throw new QcpError(translate("qcp.formatInconnu"));
   }
 
   const mediaByPath = new Map(assets.map((asset) => [asset.path, asset.dataBase64]));
@@ -274,7 +275,7 @@ export function applyQcpManifest({ manifest, assets }: QcpFilePayload): QcpProje
         ? parsed.projectId
         : null,
     name:
-      typeof raw.name === "string" && raw.name.trim() ? raw.name : "Projet importé",
+      typeof raw.name === "string" && raw.name.trim() ? raw.name : translate("qcp.projetImporte"),
     typeId: resolveTypeId(raw.typeId ?? "") ?? QR_TYPE_DEFAULT,
     valuesByType,
     design,

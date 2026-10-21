@@ -1,6 +1,7 @@
 import type { ErrorCorrectionLevel } from "qr-code-styling";
 import type { QrDesign } from "@/lib/qr-design";
 import { bodyColors } from "@/lib/qr-options";
+import { translate } from "@/lib/i18n";
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const value = hex.trim().replace("#", "");
@@ -68,11 +69,10 @@ export function analyzeDesign(design: QrDesign, contentReady: boolean): {
     issues.push({
       id: "contrast-low",
       level: "danger",
-      title: "Contraste trop faible",
-      detail:
-        "Les modules se confondent avec le fond : la détection peut échouer sur papier ou écran peu lumineux.",
+      title: translate("analysis.contrasteFaible.title"),
+      detail: translate("analysis.contrasteFaible.detail"),
       fix: {
-        label: "Assombrir le corps",
+        label: translate("analysis.contrasteFaible.fix"),
         patch: {
           dotsColorMode: "solid",
           dotsColor: "#0f172a",
@@ -85,10 +85,10 @@ export function analyzeDesign(design: QrDesign, contentReady: boolean): {
     issues.push({
       id: "contrast-medium",
       level: "warn",
-      title: "Contraste juste",
-      detail: "Privilégiez un écart plus marqué entre le corps et le fond pour l'impression.",
+      title: translate("analysis.contrasteMoyen.title"),
+      detail: translate("analysis.contrasteMoyen.detail"),
       fix: {
-        label: "Renforcer",
+        label: translate("analysis.contrasteMoyen.fix"),
         patch: { dotsColorMode: "solid", dotsColor: "#111827" },
       },
     });
@@ -96,8 +96,10 @@ export function analyzeDesign(design: QrDesign, contentReady: boolean): {
     issues.push({
       id: "contrast-ok",
       level: "ok",
-      title: "Contraste conforme",
-      detail: `Ratio ${effectiveRatio.toFixed(1)}:1 — lisible par la plupart des lecteurs.`,
+      title: translate("analysis.contrasteOk.title"),
+      detail: translate("analysis.contrasteOk.detail", {
+        ratio: effectiveRatio.toFixed(1),
+      }),
     });
   }
 
@@ -106,20 +108,18 @@ export function analyzeDesign(design: QrDesign, contentReady: boolean): {
       issues.push({
         id: "logo-ecc",
         level: "warn",
-        title: "Logo sans marge de récupération",
-        detail:
-          "Un logo masque des modules : passez la correction d'erreur au moins à « Élevé » (Q) pour préserver la lecture.",
-        fix: { label: "Passer en Q", patch: { errorCorrection: "Q" } },
+        title: translate("analysis.logoSansMarge.title"),
+        detail: translate("analysis.logoSansMarge.detail"),
+        fix: { label: translate("analysis.logoSansMarge.fix"), patch: { errorCorrection: "Q" } },
       });
     }
     if (design.logoSize > 0.42) {
       issues.push({
         id: "logo-size",
         level: "warn",
-        title: "Logo volumineux",
-        detail:
-          "Au-delà de 42 % de la largeur, le logo empiète sur les zones de synchronisation du code.",
-        fix: { label: "Réduire à 38 %", patch: { logoSize: 0.38 } },
+        title: translate("analysis.logoVolumineux.title"),
+        detail: translate("analysis.logoVolumineux.detail"),
+        fix: { label: translate("analysis.logoVolumineux.fix"), patch: { logoSize: 0.38 } },
       });
     }
   }
@@ -128,10 +128,12 @@ export function analyzeDesign(design: QrDesign, contentReady: boolean): {
     issues.push({
       id: "transparent",
       level: "warn",
-      title: "Fond transparent",
-      detail:
-        "Sans fond opaque, le contraste dépend du support d'impression. Prévoyez un fond clair à l'usage.",
-      fix: { label: "Ajouter un fond blanc", patch: { transparentBackground: false, background: "#ffffff" } },
+      title: translate("analysis.fondTransparent.title"),
+      detail: translate("analysis.fondTransparent.detail"),
+      fix: {
+        label: translate("analysis.fondTransparent.fix"),
+        patch: { transparentBackground: false, background: "#ffffff" },
+      },
     });
   }
 
@@ -139,8 +141,8 @@ export function analyzeDesign(design: QrDesign, contentReady: boolean): {
     issues.push({
       id: "content",
       level: "warn",
-      title: "Contenu incomplet",
-      detail: "Complétez les champs obligatoires : le code affiché utilise les données actuelles.",
+      title: translate("analysis.contenuIncomplet.title"),
+      detail: translate("analysis.contenuIncomplet.detail"),
     });
   }
 
@@ -161,7 +163,10 @@ export function scanLabel(
   const level = issues.some((issue) => issue.level === "danger") ? "warn" : "ok";
   return {
     level,
-    label: level === "ok" ? `Prêt à scanner · ${score}/100` : `À revoir · ${score}/100`,
+    label:
+      level === "ok"
+        ? translate("analysis.scanLabel.ok", { score })
+        : translate("analysis.scanLabel.revoir", { score }),
   };
 }
 

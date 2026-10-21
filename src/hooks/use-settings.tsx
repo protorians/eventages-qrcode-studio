@@ -7,6 +7,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  DEFAULT_LOCALE,
+  detectSystemLocale,
+  isLocale,
+  type LocaleId,
+} from "@/lib/i18n/locales";
 
 export type ThemeMode = "light" | "dark";
 
@@ -305,6 +311,8 @@ type SettingsState = {
   animations: boolean;
   /** Enregistrement auto du fichier .qrd lié après stabilisation des modifications. */
   autoSaveFile: boolean;
+  /** Langue de l'interface (dictionnaires src/lib/i18n/dictionaries). */
+  language: LocaleId;
 };
 
 type SettingsContextValue = SettingsState & {
@@ -314,6 +322,7 @@ type SettingsContextValue = SettingsState & {
   setHud: (hud: boolean) => void;
   setAnimations: (animations: boolean) => void;
   setAutoSaveFile: (autoSaveFile: boolean) => void;
+  setLanguage: (language: LocaleId) => void;
 };
 
 const STORAGE_KEY = "qrcode-studio:settings:v1";
@@ -326,10 +335,21 @@ const DEFAULT_SETTINGS: SettingsState = {
   hud: true,
   animations: true,
   autoSaveFile: true,
+  language: DEFAULT_LOCALE,
 };
 
 function isColorTheme(value: unknown): value is ColorThemeId {
   return COLOR_THEMES.some((theme) => theme.id === value);
+}
+
+/**
+ * Langue de remplacement quand la préférence est absente ou invalide
+ * (premier lancement, préférences antérieures à l'i18n) : la langue du
+ * système détectée d'après l'agent utilisateur (« fr-CA » → « fr »),
+ * sinon l'anglais par défaut.
+ */
+function fallbackLanguage(): LocaleId {
+  return detectSystemLocale() ?? DEFAULT_SETTINGS.language;
 }
 
 function readInitialSettings(): SettingsState {
@@ -354,13 +374,18 @@ function readInitialSettings(): SettingsState {
           typeof parsed.autoSaveFile === "boolean"
             ? parsed.autoSaveFile
             : DEFAULT_SETTINGS.autoSaveFile,
+        language: isLocale(parsed.language)
+          ? parsed.language
+          : fallbackLanguage(),
       };
     }
     // Migration de l'ancienne préférence de mode sombre / clair.
     const legacy = window.localStorage.getItem(LEGACY_THEME_KEY);
     if (legacy === "light" || legacy === "dark") {
-      return { ...DEFAULT_SETTINGS, mode: legacy };
+      return { ...DEFAULT_SETTINGS, mode: legacy, language: fallbackLanguage() };
     }
+    // Premier lancement : la langue suit celle du système.
+    return { ...DEFAULT_SETTINGS, language: fallbackLanguage() };
   } catch {
     // Stockage indisponible : on repart des valeurs par défaut.
   }
@@ -370,8 +395,28 @@ function readInitialSettings(): SettingsState {
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 /**
- * Préférences applicatives (mode, thème de couleurs, mode HUD, animations).
- * Persistance locale 100 % hors ligne, application sur <html> :
+ * Lit la langue persistée sans monter le provider : utilisée par
+ * l'I18nProvider pour initialiser le traducteur hors React avant le premier
+ * rendu (évite un flash d'anglais). Fallback identique à
+ * readInitialSettings (langue du système au premier lancement) ; retourne
+ * null si le stockage est indisponible.
+ */
+export function readStoredLanguage(): LocaleId | null {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<SettingsState>;
+      return isLocale(parsed.language) ? parsed.language : fallbackLanguage();
+    }
+    return fallbackLanguage();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Préférences applicatives (mode, thème de couleurs, mode HUD, animations,
+ * langue). Persistance locale 100 % hors ligne, application sur <html> :
  * - `.dark` + `colorScheme` pour le mode ;
  * - `data-theme` pour les thèmes de couleurs (src/themes.css) ;
  * - `data-hud` / `data-anim` pour les neutralisations CSS (src/index.css).
@@ -430,6 +475,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHud: (hud) => setSettings((current) => ({ ...current, hud })),
       setAnimations: (animations) => setSettings((current) => ({ ...current, animations })),
       setAutoSaveFile: (autoSaveFile) => setSettings((current) => ({ ...current, autoSaveFile })),
+      setLanguage: (language) => setSettings((current) => ({ ...current, language })),
     }),
     [settings, toggleMode],
   );

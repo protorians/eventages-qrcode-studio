@@ -2,6 +2,7 @@
 //! temporaire, puis le menu de partage du système prend le relais — macOS ouvre
 //! la feuille de partage (`NSSharingServicePicker`), les autres plateformes
 //! révèlent le fichier dans le gestionnaire de fichiers. Aucun serveur.
+use crate::i18n;
 
 use base64::Engine as _;
 
@@ -14,9 +15,9 @@ pub fn share_image(
 ) -> Result<String, String> {
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(data_base64.trim())
-        .map_err(|_| "Image illisible : base64 invalide.".to_string())?;
+        .map_err(|_| i18n::tr("share.badBase64", &[]))?;
     if bytes.is_empty() {
-        return Err("Image vide : le rendu a échoué.".to_string());
+        return Err(i18n::tr("share.empty", &[]));
     }
 
     let file_path = temp_file_path(name)?;
@@ -61,6 +62,7 @@ fn temp_file_path(name: &str) -> Result<std::path::PathBuf, String> {
 
 #[cfg(target_os = "macos")]
 mod macos {
+    use crate::i18n;
     use std::path::Path;
 
     /// Présente la feuille de partage macOS, ancrée à la fenêtre principale.
@@ -98,10 +100,10 @@ mod macos {
             let window_ptr = window.ns_window().map_err(|error| error.to_string())?;
             let ns_window: &NSWindow = (window_ptr as *mut NSWindow)
                 .as_ref()
-                .ok_or_else(|| "Fenêtre native introuvable.".to_string())?;
+                .ok_or_else(|| i18n::tr("share.windowMissing", &[]))?;
             let content_view: Retained<NSView> = ns_window
                 .contentView()
-                .ok_or_else(|| "Vue de la fenêtre introuvable.".to_string())?;
+                .ok_or_else(|| i18n::tr("share.contentViewMissing", &[]))?;
 
             picker.showRelativeToRect_ofView_preferredEdge(
                 NSRect::ZERO,

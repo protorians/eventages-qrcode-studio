@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { HudLabel } from "@/components/shell/hud";
 import { useBuilder } from "@/lib/builder-store";
 import { analyzeDesign, type ScanIssue } from "@/lib/qr-analysis";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const LEVEL_STYLES: Record<ScanIssue["level"], { ring: string; text: string; icon: typeof CheckCircle2 }> = {
@@ -14,6 +15,7 @@ const LEVEL_STYLES: Record<ScanIssue["level"], { ring: string; text: string; ico
 /** Carte de contrôle : lisibilité, corrections en un clic (spec 004, FR-9/FR-11). */
 export function TipsCard() {
   const { state, dispatch, patchDesign, payload, progress } = useBuilder();
+  const t = useT();
   const { issues, score } = analyzeDesign(state.design, payload.trim().length > 0 && progress === 100);
   const actionable = issues.filter((issue) => issue.fix);
   const others = issues.filter((issue) => !issue.fix);
@@ -57,10 +59,10 @@ export function TipsCard() {
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-[0.78rem] font-medium">
             <Sparkles className="size-3.5 text-primary" />
-            Contrôle de lisibilité
+            {t("tips.readability.title")}
           </p>
           <p className="text-[0.66rem] text-muted-foreground">
-            Vérifie contraste, logo et robustesse avant impression.
+            {t("tips.readability.description")}
           </p>
         </div>
       </div>
@@ -92,7 +94,7 @@ export function TipsCard() {
                     className="w-full"
                     onClick={() => patchDesign(issue.fix!.patch)}
                   >
-                    {issue.fix.label}
+                    {issue.fix!.label}
                   </Button>
                 ) : null}
               </div>
@@ -120,7 +122,7 @@ export function TipsCard() {
         onClick={() => dispatch({ type: "resetDesign" })}
       >
         <RotateCcw />
-        Réinitialiser le design
+        {t("tips.reset")}
       </Button>
     </div>
   );

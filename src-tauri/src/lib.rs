@@ -1,5 +1,6 @@
 mod cli;
 mod export;
+mod i18n;
 mod import;
 mod import_design;
 mod qcp;
@@ -11,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            set_ui_locale,
             share_image,
             save_project_qcp,
             open_project_qcp,
@@ -22,6 +24,14 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Pose la langue de l'interface, utilisée pour traduire les messages
+/// renvoyés au webview (catalogue src-tauri/src/i18n.rs). Appelée par
+/// l'I18nProvider au démarrage, puis à chaque changement de langue.
+#[tauri::command]
+fn set_ui_locale(locale: String) {
+    i18n::set_locale(&locale);
 }
 
 /// Ouvre le partage natif du système pour une image rendue côté interface.
@@ -46,7 +56,7 @@ async fn save_project_qcp(
 ) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || qcp::save_project(&path, &manifest, &assets))
         .await
-        .map_err(|error| format!("Enregistrement interrompu : {error}"))?
+        .map_err(|error| i18n::tr("cmd.save.interrupted", &[("error", &error.to_string())]))?
 }
 
 /// Lit un fichier `.qrd` et renvoie le manifeste plus les fichiers média.
@@ -55,7 +65,7 @@ async fn save_project_qcp(
 async fn open_project_qcp(path: String) -> Result<qcp::QcpContents, String> {
     tauri::async_runtime::spawn_blocking(move || qcp::open_project(&path))
         .await
-        .map_err(|error| format!("Ouverture interrompue : {error}"))?
+        .map_err(|error| i18n::tr("cmd.open.interrupted", &[("error", &error.to_string())]))?
 }
 
 /// Décode un QR code ou un code-barres existant depuis une image, un SVG ou
@@ -76,7 +86,7 @@ async fn import_qr_from_file(
     .await;
     match decoded {
         Ok(result) => result,
-        Err(error) => Err(format!("Import interrompu : {error}")),
+        Err(error) => Err(i18n::tr("cmd.import.interrupted", &[("error", &error.to_string())])),
     }
 }
 
@@ -87,7 +97,7 @@ async fn import_qr_from_file(
 async fn save_export_file(path: String, data_base64: String) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || export::save_file(&path, &data_base64))
         .await
-        .map_err(|error| format!("Export interrompu : {error}"))?
+        .map_err(|error| i18n::tr("cmd.export.interrupted", &[("error", &error.to_string())]))?
 }
 
 /// État de disponibilité du CLI `eventages-qr` (script source, liens posés).

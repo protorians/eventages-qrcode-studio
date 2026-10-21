@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 import { describeError } from "@/lib/qcp";
 import { isTauriRuntime } from "@/lib/tauri";
 
@@ -19,6 +20,7 @@ import { isTauriRuntime } from "@/lib/tauri";
  */
 export function useProjectSave({ shortcuts = false }: { shortcuts?: boolean } = {}) {
   const { dirty, saveProject, saveProjectAsQcp } = useBuilder();
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,13 +37,13 @@ export function useProjectSave({ shortcuts = false }: { shortcuts?: boolean } = 
         setFlash(true);
         window.setTimeout(() => setFlash(false), 2000);
       } catch (cause) {
-        setError(describeError(cause, "Enregistrement du projet impossible."));
+        setError(describeError(cause, t("save.erreur")));
         window.setTimeout(() => setError(null), 6000);
       } finally {
         setBusy(false);
       }
     },
-    [busy, saveProject, saveProjectAsQcp],
+    [busy, saveProject, saveProjectAsQcp, t],
   );
 
   // Raccourcis clavier (navigateur uniquement) : ⌘S enregistre, ⌘⇧S propose
