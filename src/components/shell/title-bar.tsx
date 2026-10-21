@@ -59,6 +59,7 @@ export function TitleBar(
                 // tauri.macos.conf.json) se superposent en haut à gauche — on réserve
                 // leur zone (~70px) et on laisse le système gérer leurs états.
                 isMac && tauri ? "pl-[80px]" : "pl-2",
+                (isMac && fullscreen) ? 'pl-0!' : ''
             )}
         >
             {/* Ligne d'énergie sous la barre, en écho du bandeau d'atelier. */}
@@ -87,8 +88,8 @@ export function TitleBar(
                 <HudStatusDot tone="ok" className="hidden sm:flex"/>
                 {hud ? (
                     <span aria-hidden="true" className="text-hud hidden text-muted-foreground/60 lg:block">
-            SYS:LOCAL
-          </span>
+                    SYS:LOCAL
+                  </span>
                 ) : null}
             </div>
 
@@ -131,30 +132,30 @@ export function TitleBar(
                     <div data-tauri-drag-region
                          className="flex h-full w-max min-w-full items-center gap-1 px-1">
                         {openProjectIds.map((projectId) => {
-                        if (projectId === IMPORT_TAB_ID) {
+                            if (projectId === IMPORT_TAB_ID) {
+                                return (
+                                    <ImportTab
+                                        key={projectId}
+                                        name={importTask?.fileName ?? "Import…"}
+                                        running={importTask?.status !== "error"}
+                                        selected={activeTabId === IMPORT_TAB_ID}
+                                        onSelect={() => openProjectTab(IMPORT_TAB_ID)}
+                                        onClose={() => closeProjectTab(IMPORT_TAB_ID)}
+                                    />
+                                );
+                            }
+                            const project = projects.find((item) => item.id === projectId);
+                            if (!project) return null;
                             return (
-                                <ImportTab
+                                <ProjectTab
                                     key={projectId}
-                                    name={importTask?.fileName ?? "Import…"}
-                                    running={importTask?.status !== "error"}
-                                    selected={activeTabId === IMPORT_TAB_ID}
-                                    onSelect={() => openProjectTab(IMPORT_TAB_ID)}
-                                    onClose={() => closeProjectTab(IMPORT_TAB_ID)}
+                                    name={project.name}
+                                    typeId={project.typeId}
+                                    selected={activeTabId === projectId}
+                                    onSelect={() => openProjectTab(projectId)}
+                                    onClose={() => closeProjectTab(projectId)}
                                 />
                             );
-                        }
-                        const project = projects.find((item) => item.id === projectId);
-                        if (!project) return null;
-                        return (
-                            <ProjectTab
-                                key={projectId}
-                                name={project.name}
-                                typeId={project.typeId}
-                                selected={activeTabId === projectId}
-                                onSelect={() => openProjectTab(projectId)}
-                                onClose={() => closeProjectTab(projectId)}
-                            />
-                        );
                         })}
                     </div>
                 </div>
@@ -179,13 +180,13 @@ export function TitleBar(
               <Sun
                   className={cn(
                       "absolute inset-0 transition-all duration-500",
-                      theme === "dark" ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100",
+                      theme !== "dark" ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100",
                   )}
               />
               <Moon
                   className={cn(
                       "absolute inset-0 transition-all duration-500",
-                      theme === "dark" ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0",
+                      theme !== "dark" ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0",
                   )}
               />
             </span>
@@ -250,12 +251,12 @@ function HomeTab({selected, onSelect}: { selected: boolean; onSelect: () => void
 
 /** Onglet d'import : transitoire, le temps d'une conversion image → projet. */
 function ImportTab({
-    name,
-    running,
-    selected,
-    onSelect,
-    onClose,
-}: {
+                       name,
+                       running,
+                       selected,
+                       onSelect,
+                       onClose,
+                   }: {
     name: string;
     running: boolean;
     selected: boolean;

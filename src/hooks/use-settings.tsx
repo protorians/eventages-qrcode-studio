@@ -44,7 +44,7 @@ export type ColorThemePalette = {
 
 /**
  * Catalogue des thèmes de couleurs proposés dans les paramètres.
- * Les valeurs sont reprises de src/index.css (défaut « Or Studio ») et de
+ * Les valeurs sont reprises de src/index.css (défaut « Lior ») et de
  * src/themes.css (thèmes nommés), en clair sombre et clair.
  */
 export const COLOR_THEMES: {
@@ -54,7 +54,7 @@ export const COLOR_THEMES: {
 }[] = [
   {
     id: "default",
-    label: "Or Studio",
+    label: "Lior",
     palettes: {
       light: {
         bg: "oklch(0.965 0.004 240)",
@@ -395,7 +395,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     root.style.colorScheme = settings.mode;
   }, [settings.mode]);
 
-  // Thème de couleurs : le défaut (« Or Studio ») ne pose pas d'attribut,
+  // Thème de couleurs : le défaut (« Lior ») ne pose pas d'attribut,
   // les jetons de src/index.css s'appliquent déjà.
   useEffect(() => {
     const root = document.documentElement;

@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 /* Thèmes de couleurs nommés (sélectionnés via [data-theme] sur <html>,
-   cf. use-settings.tsx). Le défaut « Or Studio » vit ci-dessous. */
+   cf. use-settings.tsx). Le défaut « Lior » vit ci-dessous. */
 @import "./themes.css";
 
 /* Manrope Variable, latin subset only (normal style, variable weight 200-800).
@@ -881,7 +881,9 @@
 
   /* Carte : panneau à double cran, liseré intérieur neutre (équivalent
      de son ring-1, que le clip-path découperait). */
-  html:not([data-hud="off"]) [data-slot="card"] {
+  html:not([data-hud="off"]) [data-slot="card"],
+  html:not([data-hud="off"]) .hud-layer
+  {
     border-radius: 0;
     clip-path: polygon(
       0 0,
