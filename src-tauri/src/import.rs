@@ -17,6 +17,7 @@
 //! Décodage : rqrr lit le QR ; en repli, rxing (port Rust de ZXing) lit les
 //! codes-barres 1D (EAN, UPC, Code 128/39/93, ITF, Codabar…) et les autres
 //! matrices 2D (Data Matrix, Aztec, PDF417…).
+use crate::i18n;
 
 use crate::import_design::{self, GridData, ImportedDesign};
 use image::DynamicImage;
@@ -108,10 +109,10 @@ pub fn import_qr(path: &str, on_progress: &Channel<ImportProgress>) -> Result<Qr
 /// passent une fonction neutre).
 pub fn import_qr_with_progress(path: &str, emit: ProgressEmit) -> Result<QrImport, String> {
     emit("read", 0);
-    let bytes =
-        std::fs::read(path).map_err(|error| format!("Lecture du fichier impossible : {error}"))?;
+    let bytes = std::fs::read(path)
+        .map_err(|error| i18n::tr("import.readFailed", &[("error", &error.to_string())]))?;
     if bytes.is_empty() {
-        return Err("Fichier vide : aucun code lisible à décoder.".to_string());
+        return Err(i18n::tr("import.emptyFile", &[]));
     }
     emit("read", 100);
 
@@ -350,9 +351,7 @@ fn decode_dynamic(image: DynamicImage, emit: ProgressEmit) -> Option<(Decoded, i
 }
 
 fn no_qr_found() -> String {
-    "Aucun QR code ou code-barres détecté. Vérifiez que le code est net, non \
-     rogné et suffisamment grand."
-        .to_string()
+    i18n::tr("import.noCodeFound", &[])
 }
 
 /// rqrr renvoie l'indicateur brut de 2 bits du format (spec QR) :
@@ -501,7 +500,7 @@ fn import_pdf(bytes: &[u8], emit: ProgressEmit) -> Result<QrImport, String> {
             return Ok(to_import(decoded, "pdf", &rgba));
         }
     }
-    Err("Aucun QR code ou code-barres détecté dans les images de ce PDF.".to_string())
+    Err(i18n::tr("import.pdfNoCode", &[]))
 }
 
 /// Reconstruit une image depuis un XObject PDF (JPEG direct ou échantillons).

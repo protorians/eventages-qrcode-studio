@@ -13,11 +13,13 @@ import {
 import { FramePreview } from "@/components/builder/previews";
 import { FRAMES, FRAMES_BY_ID, QR_SWATCHES } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Onglet « Cadre » : habillage, libellé et couleurs (spec 004, FR-2). */
 export function ModuleFrame() {
   const { state, patchDesign } = useBuilder();
+  const t = useT();
   const { design } = state;
   const frame = FRAMES_BY_ID[design.frameId] ?? FRAMES_BY_ID.none;
   const hasFrame = frame.id !== "none";
@@ -25,14 +27,14 @@ export function ModuleFrame() {
   return (
     <div className="space-y-5">
       <ControlStack
-        label="Cadres disponibles"
-        hint="Les cadres numérotés reprennent la bibliothèque du studio ; aucun n'altère la lisibilité."
+        label={t("frame.selection.label")}
+        hint={t("frame.selection.description")}
       >
         <div className="grid grid-cols-3 gap-2">
           <SelectableTile
             selected={!hasFrame}
             onSelect={() => patchDesign({ frameId: "none" })}
-            title="Aucun"
+            title={t("frame.selection.none")}
             className="aspect-[4/3] justify-center"
           >
             <span className="flex size-9 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground">
@@ -70,21 +72,21 @@ export function ModuleFrame() {
         <Separator />
 
         <ControlStack
-          label="Texte du cadre"
-          hint="Affiché sous (ou au-dessus) du code, il guide l'utilisateur."
+          label={t("frame.text.label")}
+          hint={t("frame.text.description")}
         >
           <Input
             value={design.frameText}
             maxLength={28}
             disabled={!hasFrame}
             onChange={(event) => patchDesign({ frameText: event.currentTarget.value })}
-            placeholder="Scannez-moi"
+            placeholder={t("frame.text.placeholder")}
             className="text-[0.8rem]"
           />
         </ControlStack>
 
         <SliderControl
-          label="Taille du texte"
+          label={t("frame.textSize.label")}
           value={design.frameTextSize}
           min={9}
           max={22}
@@ -93,12 +95,14 @@ export function ModuleFrame() {
         />
 
         <div className="space-y-3">
-          <SectionTitle>Couleurs du cadre</SectionTitle>
+          <SectionTitle>{t("frame.colors.title")}</SectionTitle>
           <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-[0.78rem] text-muted-foreground">Couleur d&apos;accent</Label>
+              <Label className="text-[0.78rem] text-muted-foreground">
+                {t("frame.colors.accent.label")}
+              </Label>
               <ColorControl
-                label="Couleur du cadre"
+                label={t("frame.colors.frame.label")}
                 value={design.frameColor}
                 onChange={(frameColor) => patchDesign({ frameColor })}
                 swatches={QR_SWATCHES}
@@ -106,9 +110,11 @@ export function ModuleFrame() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[0.78rem] text-muted-foreground">Texte</Label>
+              <Label className="text-[0.78rem] text-muted-foreground">
+                {t("frame.colors.text.label")}
+              </Label>
               <ColorControl
-                label="Couleur du texte"
+                label={t("frame.colors.textColor.label")}
                 value={design.frameTextColor}
                 onChange={(frameTextColor) => patchDesign({ frameTextColor })}
                 swatches={QR_SWATCHES}
@@ -116,9 +122,11 @@ export function ModuleFrame() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[0.78rem] text-muted-foreground">Fond du cadre</Label>
+              <Label className="text-[0.78rem] text-muted-foreground">
+                {t("frame.colors.background.label")}
+              </Label>
               <ColorControl
-                label="Fond du cadre"
+                label={t("frame.colors.background.label")}
                 value={design.frameBackground}
                 onChange={(frameBackground) => patchDesign({ frameBackground })}
                 swatches={QR_SWATCHES}
@@ -131,10 +139,7 @@ export function ModuleFrame() {
 
       <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-2.5 text-[0.68rem] text-muted-foreground">
         <Frame className="mt-0.5 size-3.5 shrink-0" />
-        <p>
-          Le cadre est composé lors de l&apos;export : le fichier téléchargé contient le
-          QR, l&apos;habillage et le texte.
-        </p>
+        <p>{t("frame.assemblyNote")}</p>
       </div>
 
       <Button
@@ -151,7 +156,7 @@ export function ModuleFrame() {
           })
         }
       >
-        Retirer le cadre
+        {t("frame.remove")}
       </Button>
     </div>
   );

@@ -1,5 +1,6 @@
 import { Download, FolderOpen, Library, Settings2, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 /** Barre de navigation mobile (< 768 px) : accès aux panneaux en feuille. */
 export function MobileNav({
@@ -15,17 +16,18 @@ export function MobileNav({
   onOpenSettings: () => void;
   onExport: () => void;
 }) {
+  const t = useT();
   return (
     <nav className="relative z-20 grid shrink-0 grid-cols-5 gap-1 border-t border-border/60 bg-background/85 px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl md:hidden">
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 -top-px h-px bg-linear-to-r from-transparent via-primary/50 to-transparent"
       />
-      <NavButton label="Bibliothèque" icon={<Library />} onClick={onOpenLibrary} />
-      <NavButton label="Options" icon={<SlidersHorizontal />} onClick={onOpenModules} />
-      <NavButton label="Projets" icon={<FolderOpen />} onClick={onOpenProjects} />
-      <NavButton label="Réglages" icon={<Settings2 />} onClick={onOpenSettings} />
-      <NavButton label="Exporter" icon={<Download />} onClick={onExport} primary />
+      <NavButton label={t("nav.bibliotheque")} icon={<Library />} onClick={onOpenLibrary} />
+      <NavButton label={t("nav.options")} icon={<SlidersHorizontal />} onClick={onOpenModules} />
+      <NavButton label={t("nav.projets")} icon={<FolderOpen />} onClick={onOpenProjects} />
+      <NavButton label={t("nav.reglages")} icon={<Settings2 />} onClick={onOpenSettings} />
+      <NavButton label={t("nav.exporter")} icon={<Download />} onClick={onExport} primary />
     </nav>
   );
 }

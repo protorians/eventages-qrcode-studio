@@ -11,6 +11,7 @@ import { ModuleLogo } from "@/components/builder/module-logo";
 import { ModuleStyle } from "@/components/builder/module-style";
 import { TipsCard } from "@/components/builder/tips-card";
 import { BUILDER_MODULES, modulesForType, useBuilder, type BuilderModule } from "@/lib/builder-store";
+import { useT, type TranslationKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
@@ -22,13 +23,13 @@ const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
   export: Download,
 };
 
-const MODULE_TITLES: Record<BuilderModule, { title: string; detail: string }> = {
-  content: { title: "Contenu", detail: "Type de QR et données encodées" },
-  style: { title: "Style du code", detail: "Modules, couleurs et robustesse" },
-  corners: { title: "Coins", detail: "Marqueurs de position" },
-  logo: { title: "Logo", detail: "Image centrale et protection" },
-  frame: { title: "Cadre", detail: "Habillage et libellé" },
-  export: { title: "Export", detail: "Formats et téléchargement local" },
+const MODULE_TITLES: Record<BuilderModule, { title: TranslationKey; detail: TranslationKey }> = {
+  content: { title: "options.content.title", detail: "options.content.detail" },
+  style: { title: "options.style.title", detail: "options.style.detail" },
+  corners: { title: "options.corners.title", detail: "options.corners.detail" },
+  logo: { title: "options.logo.title", detail: "options.logo.detail" },
+  frame: { title: "options.frame.title", detail: "options.frame.detail" },
+  export: { title: "options.export.title", detail: "options.export.detail" },
 };
 
 const RENDERERS: Record<BuilderModule, () => React.JSX.Element> = {
@@ -52,6 +53,7 @@ export function OptionsPanel({
   className?: string;
 }) {
   const { state, dispatch, type } = useBuilder();
+  const t = useT();
   const modules = modulesForType(state.typeId);
   const active = modules.some((module) => module.id === state.activeModule)
     ? state.activeModule
@@ -63,10 +65,10 @@ export function OptionsPanel({
   return (
     <aside
       className={cn(
-        "flex min-h-0 flex-col border-l border-border/60 bg-sidebar/60 backdrop-blur",
+        "flex min-h-0 flex-col border-s border-border/60 bg-sidebar/60 backdrop-blur",
         className,
       )}
-      aria-label="Options de création"
+      aria-label={t("options.panel.aria")}
     >
       <header className="relative space-y-3 border-b border-border/60 px-3.5 py-3">
         <HudCorners
@@ -87,8 +89,8 @@ export function OptionsPanel({
             {moduleCode}
           </span>
           <div className="min-w-0">
-            <HudLabel className="block">MOD — {meta.title}</HudLabel>
-            <h2 className="truncate text-[0.68rem] text-muted-foreground">{meta.detail}</h2>
+            <HudLabel className="block">MOD — {t(meta.title)}</HudLabel>
+            <h2 className="truncate text-[0.68rem] text-muted-foreground">{t(meta.detail)}</h2>
           </div>
         </div>
 
@@ -104,7 +106,7 @@ export function OptionsPanel({
                 return (
                   <TabsTrigger key={module.id} value={module.id} className="gap-1 px-2 py-1 text-[0.68rem]">
                     <Icon className="size-3.5" />
-                    <span className="hidden sm:inline">{module.label}</span>
+                    <span className="hidden sm:inline">{t(module.label)}</span>
                   </TabsTrigger>
                 );
               })}

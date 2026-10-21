@@ -43,6 +43,8 @@ import {
   type ImportedDesignHints,
 } from "@/lib/qr-import";
 import { applyQcpManifest, buildQcpManifest, type QcpFilePayload } from "@/lib/qcp";
+import { translate } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 import { useSettings } from "@/hooks/use-settings";
 
 export type BuilderModule =
@@ -53,20 +55,20 @@ export type BuilderModule =
   | "frame"
   | "export";
 
-export const BUILDER_MODULES: { id: BuilderModule; label: string }[] = [
-  { id: "content", label: "Contenu" },
-  { id: "style", label: "Style" },
-  { id: "corners", label: "Coins" },
-  { id: "logo", label: "Logo" },
-  { id: "frame", label: "Cadre" },
-  { id: "export", label: "Export" },
+export const BUILDER_MODULES: { id: BuilderModule; label: TranslationKey }[] = [
+  { id: "content", label: "store.module.content.label" },
+  { id: "style", label: "store.module.style.label" },
+  { id: "corners", label: "store.module.corners.label" },
+  { id: "logo", label: "store.module.logo.label" },
+  { id: "frame", label: "store.module.frame.label" },
+  { id: "export", label: "store.module.export.label" },
 ];
 
 /**
  * Modules applicables au type courant : le code-barres 1D n'a ni coins ni
  * logo (les deux casseraient la lecture au scan).
  */
-export function modulesForType(typeId: string): { id: BuilderModule; label: string }[] {
+export function modulesForType(typeId: string): { id: BuilderModule; label: TranslationKey }[] {
   return typeId === "barcode"
     ? BUILDER_MODULES.filter((module) => module.id !== "corners" && module.id !== "logo")
     : BUILDER_MODULES;
@@ -164,7 +166,10 @@ function createProjectId(): string {
 }
 
 /** Nom de projet unique à la Photoshop : « Sans titre », « Sans titre 2 »… */
-function uniqueProjectName(existing: string[], base = "Sans titre"): string {
+function uniqueProjectName(
+  existing: string[],
+  base = translate("store.sansTitre"),
+): string {
   if (!existing.includes(base)) return base;
   let index = 2;
   while (existing.includes(`${base} ${index}`)) index += 1;
@@ -175,7 +180,7 @@ function createInitialState(projectId = createProjectId()): BuilderState {
   const type = getQrType(QR_TYPE_DEFAULT);
   return {
     projectId,
-    projectName: "Sans titre",
+    projectName: translate("store.sansTitre"),
     typeId: type.id,
     valuesByType: { [type.id]: defaultValuesFor(type) },
     design: { ...DEFAULT_DESIGN },
@@ -595,7 +600,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
   const canRedo = history.future.length > 0;
   // Réglage applicatif : l'enregistrement auto du fichier lié est activé par
   // défaut et désactivable dans les paramètres (préférence persistée).
-  const { autoSaveFile } = useSettings();
+  const { autoSaveFile, language } = useSettings();
   const [projectsData, projectsDispatch] = useReducer(projectsReducer, {
     activeId: "",
     items: [],
@@ -797,11 +802,11 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
       if (!source) return;
       const names = projectsData.items.map((item) => item.state.projectName);
       const baseName = source.state.projectName;
-      let name = `${baseName} (copie)`;
+      let name = `${baseName} ${translate("store.copie")}`;
       if (names.includes(name)) {
         let index = 2;
-        while (names.includes(`${baseName} (copie ${index})`)) index += 1;
-        name = `${baseName} (copie ${index})`;
+        while (names.includes(`${baseName} ${translate("store.copieIndex", { index })}`)) index += 1;
+        name = `${baseName} ${translate("store.copieIndex", { index })}`;
       }
       const copyId = createProjectId();
       const now = Date.now();
@@ -899,7 +904,7 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
     // Empreinte prise avant le dialogue : c'est l'état qui ira dans l'archive.
     const writtenSignature = signatureRef.current;
     const target = await save({
-      title: "Enregistrer le projet",
+      title: translate("store.dialogueEnregistrerProjet"),
       defaultPath: `${sanitizeFileName(stateRef.current.projectName)}.qrd`,
       filters: [{ name: "Projet Eventages QrCode Studio", extensions: ["qrd"] }],
     });
@@ -1025,7 +1030,9 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
         projectId: createProjectId(),
         projectName: uniqueProjectName(
           projectsData.items.map((item) => item.state.projectName),
-          isBarcode1DFormat(result.codeFormat) ? "Code-barres importé" : "QR importé",
+          isBarcode1DFormat(result.codeFormat)
+            ? translate("store.codeBarresImporte")
+            : translate("store.qrImporte"),
         ),
         typeId: type.id,
         valuesByType: { [type.id]: { ...defaultValuesFor(type), ...content.values } },
@@ -1089,11 +1096,12 @@ export function BuilderProvider({ children }: { children: ReactNode }) {
 
   const savedLabel = useMemo(() => {
     if (!state.savedAt) return null;
-    return new Date(state.savedAt).toLocaleTimeString("fr-FR", {
+    // Formaté dans la langue réglée par l'utilisateur (paramètres).
+    return new Date(state.savedAt).toLocaleTimeString(language, {
       hour: "2-digit",
       minute: "2-digit",
     });
-  }, [state.savedAt]);
+  }, [state.savedAt, language]);
 
   const value = useMemo<BuilderContextValue>(
     () => ({

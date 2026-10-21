@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Mockup } from "@/lib/qr-design";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,6 +16,9 @@ export function MockupScene({
   children: ReactNode;
   className?: string;
 }) {
+  const t = useT();
+
+  // Filigrane de marque : volontairement non traduit.
   const caption = (
     <span
       className="pointer-events-none absolute bottom-3 left-4 text-[0.6rem] font-medium tracking-[0.28em] uppercase opacity-50"
@@ -42,12 +46,12 @@ export function MockupScene({
             className="pointer-events-none absolute top-10 left-6 text-[0.65rem] font-semibold tracking-[0.3em] uppercase"
             style={{ color: mockup.accent }}
           >
-            Affiche
+            {t("mockup.poster.tag")}
           </span>
           <span
             className="pointer-events-none absolute top-16 left-6 max-w-[16rem] text-2xl leading-tight font-bold text-white"
           >
-            Scannez pour découvrir
+            {t("mockup.poster.title")}
           </span>
           <div className="mb-12">{children}</div>
           {caption}
@@ -66,9 +70,9 @@ export function MockupScene({
           >
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-[0.6rem] font-semibold tracking-[0.3em] uppercase text-slate-400">
-                Contact
+                {t("mockup.card.contact")}
               </p>
-              <p className="text-lg font-bold text-slate-900">Studio Créatif</p>
+              <p className="text-lg font-bold text-slate-900">{t("mockup.card.name")}</p>
               <p className="text-xs text-slate-500">02 40 12 34 56 · studio.fr</p>
               <div className="h-0.5 w-10 rounded-full" style={{ background: mockup.accent }} />
             </div>
@@ -91,12 +95,12 @@ export function MockupScene({
               className="text-[0.6rem] font-semibold tracking-[0.34em] uppercase"
               style={{ color: mockup.accent }}
             >
-              Carte du jour
+              {t("mockup.menu.tag")}
             </span>
             <div className="flex flex-col items-center gap-2 rounded-2xl bg-white/95 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/20">
               {children}
               <span className="text-[0.65rem] font-medium text-slate-500">
-                Le menu s&apos;ouvre sur votre téléphone
+                {t("mockup.menu.caption")}
               </span>
             </div>
           </div>
@@ -118,11 +122,11 @@ export function MockupScene({
               style={{ background: mockup.accent }}
             />
             <p className="text-xs font-semibold tracking-[0.2em] uppercase text-emerald-700">
-              Origine tracée
+              {t("mockup.packaging.tag")}
             </p>
             {children}
             <p className="text-center text-[0.65rem] leading-relaxed text-slate-500">
-              Nutrition, allergènes et certifications complètes
+              {t("mockup.packaging.caption")}
             </p>
           </div>
           {caption}
@@ -142,11 +146,11 @@ export function MockupScene({
             />
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-[0.6rem] font-semibold tracking-[0.32em] uppercase text-white/45">
-                Session en cours
+                {t("mockup.screen.tag")}
               </p>
-              <p className="text-xl font-semibold text-white">Rejoignez la présentation</p>
+              <p className="text-xl font-semibold text-white">{t("mockup.screen.title")}</p>
               <p className="text-xs text-white/50">
-                Ouvrez l&apos;appareil photo, visez le code.
+                {t("mockup.screen.caption")}
               </p>
             </div>
             <div className="shrink-0">{children}</div>
@@ -194,7 +198,7 @@ export function MockupScene({
                 className="text-[0.6rem] font-semibold tracking-[0.3em] uppercase"
                 style={{ color: mockup.accent }}
               >
-                Portez-le
+                {t("mockup.tshirt.tag")}
               </span>
               {children}
             </div>

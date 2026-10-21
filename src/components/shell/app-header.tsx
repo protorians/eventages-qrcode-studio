@@ -6,6 +6,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {useSettings} from "@/hooks/use-settings";
+import {useT} from "@/lib/i18n";
 
 /**
  * Barre d'outils de l'atelier, affichée sous la barre de titre sur un onglet
@@ -24,6 +25,7 @@ export function AppHeader(
         showLibraryButton: boolean;
     }) {
     const {hud} = useSettings();
+    const t = useT();
 
     return (
         <header
@@ -73,9 +75,9 @@ export function AppHeader(
                             }
                         >
                             <Library/>
-                            <span className="hidden sm:inline">Bibliothèque</span>
+                            <span className="hidden sm:inline">{t("header.bibliotheque")}</span>
                         </TooltipTrigger>
-                        <TooltipContent>Types, mockups et modèles</TooltipContent>
+                        <TooltipContent>{t("header.bibliothequeTooltip")}</TooltipContent>
                     </Tooltip>
                 ) : null}
 
@@ -87,14 +89,14 @@ export function AppHeader(
                                 variant="ghost"
                                 size="icon-sm"
                                 onClick={onOpenModules}
-                                aria-label="Options de création"
+                                aria-label={t("header.optionsCreation")}
                                 className="rounded-sm text-muted-foreground md:hidden"
                             />
                         }
                     >
                         <SlidersHorizontal/>
                     </TooltipTrigger>
-                    <TooltipContent>Options de création</TooltipContent>
+                    <TooltipContent>{t("header.optionsCreation")}</TooltipContent>
                 </Tooltip>
             </div>
         </header>

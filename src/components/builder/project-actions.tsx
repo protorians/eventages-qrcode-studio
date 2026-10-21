@@ -6,6 +6,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {useProjectSave} from "@/hooks/use-project-save";
+import {useT} from "@/lib/i18n";
 import {cn} from "@/lib/utils";
 
 /**
@@ -16,6 +17,7 @@ import {cn} from "@/lib/utils";
  */
 export function ProjectActions({onExport}: {onExport: () => void}) {
     const {dirty, busy, flash, error, runSave} = useProjectSave({shortcuts: true});
+    const t = useT();
 
     return (
         <>
@@ -28,7 +30,7 @@ export function ProjectActions({onExport}: {onExport: () => void}) {
                             size="icon-sm"
                             onClick={() => void runSave("save")}
                             disabled={busy}
-                            aria-label="Enregistrer le projet courant"
+                            aria-label={t("actions.enregistrerAria")}
                             className={cn(
                                 "rounded-sm",
                                 error ? "text-destructive" : dirty ? "text-foreground" : "text-muted-foreground",
@@ -50,8 +52,8 @@ export function ProjectActions({onExport}: {onExport: () => void}) {
                     {error
                         ? error
                         : dirty
-                            ? "Enregistrer le projet · ⌘S"
-                            : "Projet enregistré · ⌘S pour réenregistrer"}
+                            ? t("actions.enregistrerTooltip")
+                            : t("actions.projetEnregistreTooltip")}
                 </TooltipContent>
             </Tooltip>
 
@@ -62,7 +64,7 @@ export function ProjectActions({onExport}: {onExport: () => void}) {
                 onClick={onExport}
             >
                 <Download/>
-                <span className="hidden sm:inline">Exporter</span>
+                <span className="hidden sm:inline">{t("actions.exporter")}</span>
             </Button>
         </>
     );

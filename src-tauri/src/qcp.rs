@@ -3,6 +3,7 @@
 //! reconstruire le projet) et un dossier `assets/` avec les fichiers média
 //! associés (logo, visuels, documents…). Les archives `.qcp` antérieures
 //! restent lisibles. Tout est traité localement, aucun réseau.
+use crate::i18n;
 
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
@@ -45,7 +46,7 @@ pub struct QcpContents {
 fn sanitize_asset_path(raw: &str) -> Result<String, String> {
     let path = raw.trim();
     if !path.starts_with(ASSETS_PREFIX) || path == ASSETS_PREFIX {
-        return Err(format!("Chemin d'actif invalide : {raw:?}"));
+        return Err(i18n::tr("qcp.save.badAssetPath", &[("raw", raw)]));
     }
     let name = &path[ASSETS_PREFIX.len()..];
     let valid = !name.is_empty()
@@ -56,7 +57,7 @@ fn sanitize_asset_path(raw: &str) -> Result<String, String> {
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | ' '));
     if !valid {
-        return Err(format!("Chemin d'actif invalide : {raw:?}"));
+        return Err(i18n::tr("qcp.save.badAssetPath", &[("raw", raw)]));
     }
     Ok(path.to_string())
 }
@@ -65,15 +66,18 @@ fn sanitize_asset_path(raw: &str) -> Result<String, String> {
 /// Renvoie le chemin réel cible (extension `.qrd` imposée).
 pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result<String, String> {
     if assets.len() > MAX_ASSETS {
-        return Err(format!(
-            "Trop de fichiers média ({}) : la limite est de {MAX_ASSETS}.",
-            assets.len()
+        return Err(i18n::tr(
+            "qcp.save.tooManyAssets",
+            &[
+                ("count", &assets.len().to_string()),
+                ("max", &MAX_ASSETS.to_string()),
+            ],
         ));
     }
     // Le manifeste doit être du JSON valide : on refuse d'écrire une archive
     // que l'application ne saurait pas rouvrir.
     serde_json::from_str::<serde_json::Value>(manifest)
-        .map_err(|_| "Manifeste du projet invalide (JSON illisible).".to_string())?;
+        .map_err(|_| i18n::tr("qcp.save.manifestInvalid", &[]))?;
 
     // Extension imposée, même si la boîte de dialogue a été contournée.
     let mut target = std::path::PathBuf::from(path);
@@ -84,16 +88,16 @@ pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result
     }
 
     let file = std::fs::File::create(&target)
-        .map_err(|error| format!("Création du fichier projet impossible : {error}"))?;
+        .map_err(|error| i18n::tr("qcp.save.createFailed", &[("error", &error.to_string())]))?;
     let mut zip = zip::ZipWriter::new(std::io::BufWriter::new(file));
     let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
 
     let mut write_entry = |name: &str, data: &[u8]| -> Result<(), String> {
         zip.start_file(name, options.clone())
-            .map_err(|error| format!("Écriture de l'archive impossible : {error}"))?;
+            .map_err(|error| i18n::tr("qcp.save.writeFailed", &[("error", &error.to_string())]))?;
         zip.write_all(data)
-            .map_err(|error| format!("Écriture de l'archive impossible : {error}"))
+            .map_err(|error| i18n::tr("qcp.save.writeFailed", &[("error", &error.to_string())]))
     };
 
     write_entry(MANIFEST_NAME, manifest.as_bytes())?;
@@ -103,9 +107,12 @@ pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result
         let asset_path = sanitize_asset_path(&asset.path)?;
         let data = base64::engine::general_purpose::STANDARD
             .decode(asset.data_base64.trim())
-            .map_err(|_| format!("Fichier média illisible (base64 invalide) : {asset_path}"))?;
+            .map_err(|_| i18n::tr("qcp.save.assetUnreadableB64", &[("path", &asset_path)]))?;
         if seen.insert(asset_path.clone(), data).is_some() {
-            return Err(format!("Fichier média dupliqué dans l'archive : {asset_path}"));
+            return Err(i18n::tr(
+                "qcp.save.duplicateAsset",
+                &[("path", &asset_path)],
+            ));
         }
     }
     for (asset_path, data) in &seen {
@@ -113,7 +120,7 @@ pub fn save_project(path: &str, manifest: &str, assets: &[AssetInput]) -> Result
     }
 
     zip.finish()
-        .map_err(|error| format!("Fermeture de l'archive impossible : {error}"))?;
+        .map_err(|error| i18n::tr("qcp.save.finishFailed", &[("error", &error.to_string())]))?;
     Ok(target.to_string_lossy().to_string())
 }
 
@@ -199,44 +206,44 @@ mod tests {
 /// Lit une archive `.qrd` (ou `.qcp` historique) et renvoie le manifeste plus les fichiers média.
 pub fn open_project(path: &str) -> Result<QcpContents, String> {
     let file = std::fs::File::open(path)
-        .map_err(|error| format!("Ouverture du fichier impossible : {error}"))?;
+        .map_err(|error| i18n::tr("qcp.open.readFailed", &[("error", &error.to_string())]))?;
     let mut archive = zip::ZipArchive::new(std::io::BufReader::new(file))
-        .map_err(|_| "Ce fichier n'est pas une archive projet (.qrd) lisible.".to_string())?;
+        .map_err(|_| i18n::tr("qcp.open.notArchive", &[]))?;
 
     let mut manifest: Option<String> = None;
     let mut assets: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     for index in 0..archive.len() {
         let mut entry = archive
             .by_index(index)
-            .map_err(|error| format!("Archive corrompue : {error}"))?;
+            .map_err(|error| i18n::tr("qcp.open.corrupt", &[("error", &error.to_string())]))?;
         if !entry.is_file() {
             continue;
         }
         let name = entry
             .name()
-            .map_err(|error| format!("Archive corrompue : {error}"))?
+            .map_err(|error| i18n::tr("qcp.open.corrupt", &[("error", &error.to_string())]))?
             .to_string();
         if name == MANIFEST_NAME {
             let mut text = String::new();
             entry
                 .read_to_string(&mut text)
-                .map_err(|error| format!("Manifeste illisible : {error}"))?;
+                .map_err(|error| i18n::tr("qcp.open.manifestUnreadable", &[("error", &error.to_string())]))?;
             manifest = Some(text);
         } else if let Ok(asset_path) = sanitize_asset_path(&name) {
             if entry.size() > MAX_ASSET_BYTES {
-                return Err(format!("Fichier média trop volumineux : {asset_path}"));
+                return Err(i18n::tr("qcp.open.assetTooLarge", &[("path", &asset_path)]));
             }
             let mut data = Vec::new();
             entry
                 .read_to_end(&mut data)
-                .map_err(|error| format!("Fichier média illisible : {error}"))?;
+                .map_err(|error| i18n::tr("qcp.open.assetUnreadable", &[("error", &error.to_string())]))?;
             assets.insert(asset_path, data);
         }
         // Les autres entrées (dossiers, métadonnées macOS…) sont ignorées.
     }
 
     let manifest = manifest
-        .ok_or_else(|| "Archive projet invalide : manifest.json est manquant.".to_string())?;
+        .ok_or_else(|| i18n::tr("qcp.open.manifestMissing", &[]))?;
     Ok(QcpContents {
         manifest,
         assets: assets

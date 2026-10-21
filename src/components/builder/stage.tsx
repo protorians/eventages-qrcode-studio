@@ -31,6 +31,7 @@ import { FRAMES_BY_ID, MOCKUPS_BY_ID } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
 import { useElementSize } from "@/hooks/use-element-size";
 import { useSettings } from "@/hooks/use-settings";
+import { useT } from "@/lib/i18n";
 import { payloadSize } from "@/lib/qr-payload";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,7 @@ export function Stage({ dock }: { dock?: ReactNode }) {
   const { state, type, values, payload, debouncedPayload } = useBuilder();
   const { ref, size } = useElementSize<HTMLDivElement>();
   const { hud } = useSettings();
+  const t = useT();
   const [zoom, setZoom] = useState(100);
   const [showGrid, setShowGrid] = useState(false);
 
@@ -177,10 +179,10 @@ export function Stage({ dock }: { dock?: ReactNode }) {
           </span>
           <div className="min-w-0">
             <p className="hud-heading truncate text-[0.8rem] leading-tight font-medium">
-              {mockup.name}
+              {t(mockup.name)}
             </p>
             <p className="truncate text-[0.68rem] leading-tight text-muted-foreground">
-              {mockup.detail}
+              {t(mockup.detail)}
             </p>
           </div>
         </div>
@@ -201,14 +203,14 @@ export function Stage({ dock }: { dock?: ReactNode }) {
               <ScanLine className="opacity-60" />
             )}
             <span className="text-hud">SIG</span>
-            {bytes} o
+            {bytes} {t("stage.bytes.unit")}
           </Badge>
 
           <Separator orientation="vertical" className="mx-0.5 hidden h-5 sm:block" />
 
           <div className="flex items-center gap-0.5 rounded-sm border border-border/70 bg-background/60 p-0.5">
             <ZoomButton
-              label="Réduire"
+              label={t("stage.zoomOut")}
               disabled={zoom <= ZOOM_MIN}
               onClick={() => setZoom((value) => Math.max(ZOOM_MIN, value - 10))}
             >
@@ -216,7 +218,7 @@ export function Stage({ dock }: { dock?: ReactNode }) {
             </ZoomButton>
             <HudReadout label="ZM" value={`${zoom}%`} className="w-16 justify-center" />
             <ZoomButton
-              label="Agrandir"
+              label={t("stage.zoomIn")}
               disabled={zoom >= ZOOM_MAX}
               onClick={() => setZoom((value) => Math.min(ZOOM_MAX, value + 10))}
             >
@@ -224,11 +226,11 @@ export function Stage({ dock }: { dock?: ReactNode }) {
             </ZoomButton>
           </div>
 
-          <ZoomButton label="Ajuster" active={zoom === 100} onClick={() => setZoom(100)}>
+          <ZoomButton label={t("stage.zoomFit")} active={zoom === 100} onClick={() => setZoom(100)}>
             <Maximize />
           </ZoomButton>
           <ZoomButton
-            label="Grille"
+            label={t("stage.grid")}
             active={showGrid}
             onClick={() => setShowGrid((value) => !value)}
           >

@@ -28,10 +28,12 @@ import {
 } from "@/lib/qr-design";
 import type { BarcodeDesign } from "@/lib/barcode";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 
 /** Onglet « Style » : forme des modules, couleurs, fond, robustesse. */
 export function ModuleStyle() {
   const { state, patchDesign, type } = useBuilder();
+  const t = useT();
   const { design } = state;
 
   if (type.id === "barcode") {
@@ -41,8 +43,8 @@ export function ModuleStyle() {
   return (
     <div className="space-y-5">
       <ControlStack
-        label="Forme des modules"
-        hint="Chaque forme reste lisible : le moteur conserve les zones de silence et les marqueurs."
+        label={t("style.dotShape.title")}
+        hint={t("style.dotShape.hint")}
       >
         <div className="grid grid-cols-3 gap-2">
           {DOT_STYLES.map((style) => (
@@ -50,7 +52,7 @@ export function ModuleStyle() {
               key={style.id}
               selected={design.dotsType === style.id}
               onSelect={() => patchDesign({ dotsType: style.id })}
-              title={style.label}
+              title={t(style.label)}
             >
               <span className="flex size-9 items-center justify-center rounded-lg bg-muted/60 p-1.5 text-foreground/80">
                 <ModulePatternPreview dotType={style.id} />
@@ -62,19 +64,19 @@ export function ModuleStyle() {
 
       <Separator />
 
-      <ControlStack label="Couleur du corps">
+      <ControlStack label={t("style.bodyColor.title")}>
         <SegmentedControl
           value={design.dotsColorMode}
           onChange={(mode) => patchDesign({ dotsColorMode: mode })}
           options={[
-            { value: "solid", label: "Uni" },
-            { value: "gradient", label: "Dégradé" },
+            { value: "solid", label: t("style.colorMode.solid") },
+            { value: "gradient", label: t("style.colorMode.gradient") },
           ]}
         />
         {design.dotsColorMode === "solid" ? (
           <div className="space-y-3 animate-fade-in">
             <ColorControl
-              label="Couleur des modules"
+              label={t("style.dotsColor.title")}
               value={design.dotsColor}
               onChange={(color) => patchDesign({ dotsColor: color })}
               swatches={QR_SWATCHES}
@@ -104,14 +106,14 @@ export function ModuleStyle() {
 
       <Separator />
 
-      <ControlStack label="Fond">
+      <ControlStack label={t("style.background.title")}>
         <div className="flex flex-wrap gap-2">
           {QR_BACKGROUNDS.map((background) => (
             <button
               key={background.value}
               type="button"
-              title={background.name}
-              aria-label={background.name}
+              title={t(background.name)}
+              aria-label={t(background.name)}
               aria-pressed={
                 !design.transparentBackground && design.background === background.value
               }
@@ -123,7 +125,7 @@ export function ModuleStyle() {
             />
           ))}
           <ColorControl
-            label="Fond personnalisé"
+            label={t("style.background.custom")}
             compact
             value={design.background}
             onChange={(color) => patchDesign({ background: color, transparentBackground: false })}
@@ -132,8 +134,8 @@ export function ModuleStyle() {
           />
         </div>
         <SwitchControl
-          label="Fond transparent"
-          hint="Le QR sans fond s'adapte au support, mais le contraste dépend alors de l'impression."
+          label={t("style.background.transparent")}
+          hint={t("style.background.transparent.hint")}
           checked={design.transparentBackground}
           onChange={(checked) => patchDesign({ transparentBackground: checked })}
         />
@@ -142,13 +144,13 @@ export function ModuleStyle() {
       <Separator />
 
       <ControlStack
-        label="Robustesse"
-        hint="Le niveau de correction détermine la part de modules récupérables si le code est abîmé."
+        label={t("style.errorCorrection.title")}
+        hint={t("style.errorCorrection.hint")}
       >
         <Select
           items={ERROR_CORRECTION_LEVELS.map((level) => ({
             value: level.id,
-            label: `${level.label} — ${level.detail}`,
+            label: `${t(level.label)} — ${t(level.detail)}`,
           }))}
           value={design.errorCorrection}
           onValueChange={(next) =>
@@ -170,15 +172,15 @@ export function ModuleStyle() {
                   <span className="font-mono text-[0.65rem] text-muted-foreground">
                     {level.id}
                   </span>
-                  {level.label} — {level.detail}
+                  {t(level.label)} — {t(level.detail)}
                 </span>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <SliderControl
-          label="Zone de silence"
-          hint="Marge blanche autour du code : indispensable pour un scan fiable en impression."
+          label={t("style.quietZone.title")}
+          hint={t("style.quietZone.hint")}
           value={design.margin}
           min={0}
           max={40}
@@ -190,8 +192,7 @@ export function ModuleStyle() {
       <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-2.5 text-[0.68rem] text-muted-foreground">
         <Palette className="mt-0.5 size-3.5 shrink-0" />
         <p>
-          Les couleurs appliquées ici restent dans la palette du studio ; ajustez-les au
-          besoin depuis le sélecteur hexadécimal.
+          {t("style.paletteNote")}
         </p>
       </div>
     </div>
@@ -207,13 +208,14 @@ function BarcodeStyle({
   design: QrDesign;
 }) {
   const { patchBarcode, patchDesign } = useBuilder();
+  const t = useT();
 
   return (
     <div className="space-y-5">
-      <ControlStack label="Couleur des barres">
+      <ControlStack label={t("style.barColor.title")}>
         <div className="space-y-3">
           <ColorControl
-            label="Couleur des barres"
+            label={t("style.barColor.title")}
             value={barcode.barColor}
             onChange={(color) => patchBarcode({ barColor: color })}
             swatches={QR_SWATCHES}
@@ -229,14 +231,14 @@ function BarcodeStyle({
 
       <Separator />
 
-      <ControlStack label="Fond">
+      <ControlStack label={t("style.background.title")}>
         <div className="flex flex-wrap gap-2">
           {QR_BACKGROUNDS.map((background) => (
             <button
               key={background.value}
               type="button"
-              title={background.name}
-              aria-label={background.name}
+              title={t(background.name)}
+              aria-label={t(background.name)}
               aria-pressed={
                 !design.transparentBackground && design.background === background.value
               }
@@ -248,7 +250,7 @@ function BarcodeStyle({
             />
           ))}
           <ColorControl
-            label="Fond personnalisé"
+            label={t("style.background.custom")}
             compact
             value={design.background}
             onChange={(color) => patchDesign({ background: color, transparentBackground: false })}
@@ -257,8 +259,8 @@ function BarcodeStyle({
           />
         </div>
         <SwitchControl
-          label="Fond transparent"
-          hint="Sans fond opaque, le contraste dépend du support d'impression."
+          label={t("style.background.transparent")}
+          hint={t("style.background.transparent.hintBarcode")}
           checked={design.transparentBackground}
           onChange={(checked) => patchDesign({ transparentBackground: checked })}
         />
@@ -267,11 +269,11 @@ function BarcodeStyle({
       <Separator />
 
       <ControlStack
-        label="Géométrie"
-        hint="Des barres larges et hautes se scannent de plus loin, au laser comme à la caméra."
+        label={t("style.geometry.title")}
+        hint={t("style.geometry.hint")}
       >
         <SliderControl
-          label="Largeur des barres"
+          label={t("style.barWidth.title")}
           value={barcode.barWidth}
           min={1}
           max={6}
@@ -279,7 +281,7 @@ function BarcodeStyle({
           onChange={(barWidth) => patchBarcode({ barWidth })}
         />
         <SliderControl
-          label="Hauteur des barres"
+          label={t("style.barHeight.title")}
           value={barcode.barHeight}
           min={60}
           max={240}
@@ -288,8 +290,8 @@ function BarcodeStyle({
           onChange={(barHeight) => patchBarcode({ barHeight })}
         />
         <SliderControl
-          label="Zone de silence"
-          hint="Marge autour des barres : indispensable à la lecture par les lecteurs."
+          label={t("style.quietZone.title")}
+          hint={t("style.quietZone.hintBarcode")}
           value={barcode.margin}
           min={0}
           max={40}
@@ -300,17 +302,17 @@ function BarcodeStyle({
 
       <Separator />
 
-      <ControlStack label="Texte lisible">
+      <ControlStack label={t("style.text.title")}>
         <SwitchControl
-          label="Afficher la valeur"
-          hint="Chiffres sous les barres — la saisie manuelle de secours en caisse."
+          label={t("style.showValue.title")}
+          hint={t("style.showValue.hint")}
           checked={barcode.showValue}
           onChange={(showValue) => patchBarcode({ showValue })}
         />
         {barcode.showValue ? (
           <div className="space-y-4 animate-fade-in">
             <SliderControl
-              label="Taille du texte"
+              label={t("style.textSize.title")}
               value={barcode.fontSize}
               min={10}
               max={32}
@@ -318,7 +320,7 @@ function BarcodeStyle({
               onChange={(fontSize) => patchBarcode({ fontSize })}
             />
             <SliderControl
-              label="Marge du texte"
+              label={t("style.textMargin.title")}
               value={barcode.textMargin}
               min={0}
               max={20}
@@ -332,8 +334,7 @@ function BarcodeStyle({
       <div className="flex items-start gap-2 rounded-xl border border-border/60 bg-muted/30 p-2.5 text-[0.68rem] text-muted-foreground">
         <Palette className="mt-0.5 size-3.5 shrink-0" />
         <p>
-          Pour l'impression, gardez des barres sombres sur fond clair : les lecteurs
-          laser ne voient que le contraste.
+          {t("style.printNote")}
         </p>
       </div>
     </div>

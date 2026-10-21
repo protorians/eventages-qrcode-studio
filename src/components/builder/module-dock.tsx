@@ -2,6 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import { Crop, Download, Frame, Image as ImageIcon, Shapes, Type } from "lucide-react";
 import { HudCorners } from "@/components/shell/hud";
 import { BUILDER_MODULES, type BuilderModule } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 import { cn } from "@/lib/utils";
 
 const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
@@ -22,14 +24,19 @@ export function ModuleDock({
 }: {
   activeModule: BuilderModule;
   onSelect: (module: BuilderModule) => void;
-  /** Sous-ensemble de modules affichés (selon le type de code). */
+  /**
+   * Sous-ensemble de modules affichés (selon le type de code). Les libellés
+   * portent des clés `store.*` (builder-store) ; les résultats sont traduits
+   * au rendu via t().
+   */
   modules?: { id: BuilderModule; label: string }[];
   className?: string;
 }) {
+  const t = useT();
   return (
     <div
       role="tablist"
-      aria-label="Modules de création"
+      aria-label={t("dock.aria")}
       className={cn(
         "no-scrollbar relative flex max-w-[calc(100vw-1.5rem)] items-stretch gap-1 overflow-x-auto rounded-sm border border-border/70 bg-popover/90 p-1.5 shadow-xl shadow-black/25 backdrop-blur-md",
         className,
@@ -62,7 +69,8 @@ export function ModuleDock({
                 active ? "text-primary" : "group-hover/dock:scale-110",
               )}
             />
-            <span className="leading-none">{module.label}</span>
+            {/* Libellé porté par builder-store (clé `store.*` après extraction) : traduit au rendu. */}
+            <span className="leading-none">{t(module.label as TranslationKey)}</span>
             {active ? (
               <span className="pointer-events-none absolute inset-0.5">
                 <HudCorners inset="0" size="0.35rem" thickness={1} />

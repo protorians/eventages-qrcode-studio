@@ -14,6 +14,7 @@ import {
   WORKSPACE_TABS_STORAGE_KEY,
 } from "@/lib/builder-store";
 import { describeError } from "@/lib/qcp";
+import { translate } from "@/lib/i18n";
 import { ImportCancelled, type ImportStage } from "@/lib/qr-import";
 
 /** Onglet « Accueil » : toujours présent, non fermable. */
@@ -172,7 +173,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           patchTask(task.id, {
             status: "error",
             percent: 100,
-            error: describeError(cause, "Import du QR code impossible."),
+            error: describeError(cause, translate("workspace.erreurImport")),
           });
         }
       })();
@@ -356,7 +357,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 export function useWorkspace(): WorkspaceContextValue {
   const context = useContext(WorkspaceContext);
   if (!context) {
-    throw new Error("useWorkspace doit être utilisé dans un WorkspaceProvider");
+    throw new Error(translate("workspace.erreurHorsProvider"));
   }
   return context;
 }

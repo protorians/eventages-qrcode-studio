@@ -4,6 +4,7 @@
 //! aucune copie de binaire : désinstaller revient à supprimer les liens. Le
 //! reste de la machine est inchangé — un fichier réel déjà en place est refusé,
 //! jamais écrasé.
+use crate::i18n;
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -37,21 +38,24 @@ pub fn status() -> CliStatus {
         .as_ref()
         .is_some_and(|dir| COMMANDS.iter().all(|name| is_linked(&dir.join(name))));
 
-    let message = if bin.is_none() {
-        "La mise à disposition du CLI n'est pas prise en charge sur ce système.".to_string()
+    let bin_text = bin.as_ref().map(|path| path.to_string_lossy().into_owned());
+
+    let message = if bin_text.is_none() {
+        i18n::tr("cli.status.unsupported", &[])
     } else if script.is_none() && installed {
-        "Commandes posées, mais le script source est introuvable : lancez l'app depuis le dépôt du projet.".to_string()
+        i18n::tr("cli.status.scriptMissingInstalled", &[])
     } else if script.is_none() {
-        "CLI indisponible : lancez l'app depuis le dépôt du projet pour installer les commandes."
-            .to_string()
+        i18n::tr("cli.status.unavailable", &[])
     } else if installed {
-        format!(
-            "Commandes disponibles dans {} : {}",
-            bin.as_ref().unwrap().to_string_lossy(),
-            COMMANDS.join(", ")
+        i18n::tr(
+            "cli.status.installed",
+            &[
+                ("binDir", bin_text.as_deref().unwrap_or_default()),
+                ("commands", &COMMANDS.join(", ")),
+            ],
         )
     } else {
-        "Commandes absentes du PATH : activez la disponibilité pour les installer.".to_string()
+        i18n::tr("cli.status.notInstalled", &[])
     };
 
     CliStatus {
@@ -66,10 +70,8 @@ pub fn status() -> CliStatus {
 
 /// Crée les liens de commande (remplace un lien existant, refuse un fichier réel).
 pub fn install() -> Result<CliStatus, String> {
-    let script = script_path()
-        .ok_or_else(|| "Script CLI introuvable : lancez l'app depuis le dépôt du projet.".to_string())?;
-    let dir = bin_dir()
-        .ok_or_else(|| "La mise à disposition du CLI n'est pas prise en charge sur ce système.".to_string())?;
+    let script = script_path().ok_or_else(|| i18n::tr("cli.install.scriptMissing", &[]))?;
+    let dir = bin_dir().ok_or_else(|| i18n::tr("cli.status.unsupported", &[]))?;
     std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
     make_executable(&script)?;
     place_links(&dir, &script)?;
@@ -148,9 +150,9 @@ fn place_links(dir: &Path, script: &Path) -> Result<(), String> {
         match std::fs::symlink_metadata(&link) {
             Ok(metadata) => {
                 if !metadata.file_type().is_symlink() {
-                    return Err(format!(
-                        "« {} » existe déjà et n'est pas un lien : laissez-le en place.",
-                        link.to_string_lossy()
+                    return Err(i18n::tr(
+                        "cli.link.notALink",
+                        &[("path", &link.to_string_lossy())],
                     ));
                 }
                 std::fs::remove_file(&link).map_err(|error| error.to_string())?;
@@ -183,12 +185,12 @@ fn make_executable(_script: &Path) -> Result<(), String> {
 
 #[cfg(windows)]
 fn place_links(_dir: &Path, _script: &Path) -> Result<(), String> {
-    Err("La mise à disposition du CLI n'est pas prise en charge sur ce système.".to_string())
+    Err(i18n::tr("cli.status.unsupported", &[]))
 }
 
 #[cfg(windows)]
 fn remove_links(_dir: &Path) -> Result<(), String> {
-    Err("La mise à disposition du CLI n'est pas prise en charge sur ce système.".to_string())
+    Err(i18n::tr("cli.status.unsupported", &[]))
 }
 
 #[cfg(all(test, unix))]

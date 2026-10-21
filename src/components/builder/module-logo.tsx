@@ -11,26 +11,28 @@ import {
 } from "@/components/ui/controls";
 import { LOGO_PRESETS } from "@/lib/logo-presets";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Onglet « Logo » : téléversement local ou logo prédéfini (spec 004, FR-6). */
 export function ModuleLogo() {
   const { state, patchDesign } = useBuilder();
+  const t = useT();
   const { design } = state;
   const weakProtection = Boolean(design.logo) && design.errorCorrection === "L";
 
   return (
     <div className="space-y-5">
       <ControlStack
-        label="Logo central"
-        hint="Un fichier JPG, PNG ou SVG reste stocké localement dans le projet."
+        label={t("logo.title")}
+        hint={t("logo.title.hint")}
       >
         <FileControl
           value={design.logo ?? ""}
           accept="image/png,image/jpeg,image/svg+xml,image/webp"
-          label="Ajouter un logo"
+          label={t("logo.add")}
           preview
-          hint="Format carré recommandé, 512 px minimum. Taille conseillée : moins de 2 Mo."
+          hint={t("logo.add.hint")}
           onChange={(value) => patchDesign({ logo: value || null })}
         />
       </ControlStack>
@@ -40,15 +42,15 @@ export function ModuleLogo() {
           {weakProtection ? <TriangleAlert className="text-destructive" /> : <BadgeCheck />}
           <AlertDescription>
             {weakProtection
-              ? "Correction d'erreur trop basse avec un logo : passez au niveau « Élevé » ou « Maximal »."
-              : "Le logo est inséré avec une marge de protection ; les modules masqués sont compensés par la correction d'erreur."}
+              ? t("logo.weakProtection")
+              : t("logo.protected")}
           </AlertDescription>
         </Alert>
       ) : null}
 
       <Separator />
 
-      <ControlStack label="Bibliothèque de logos" hint="Préréglages vectoriels, sans dépendance externe.">
+      <ControlStack label={t("logo.library.title")} hint={t("logo.library.hint")}>
         <div className="grid grid-cols-4 gap-2">
           <button
             type="button"
@@ -58,7 +60,7 @@ export function ModuleLogo() {
               "flex aspect-square items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 text-muted-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-border hover:bg-accent/60",
               "aria-pressed:border-primary/50 aria-pressed:bg-primary/10 aria-pressed:text-primary",
             )}
-            title="Aucun logo"
+            title={t("logo.none")}
           >
             <ImageOff className="size-4" />
           </button>
@@ -68,8 +70,8 @@ export function ModuleLogo() {
               <button
                 key={preset.id}
                 type="button"
-                title={preset.name}
-                aria-label={preset.name}
+                title={t(preset.name)}
+                aria-label={t(preset.name)}
                 aria-pressed={active}
                 onClick={() => patchDesign({ logo: preset.dataUrl })}
                 className={cn(
@@ -87,20 +89,20 @@ export function ModuleLogo() {
       <Separator />
 
       <div className="space-y-4">
-        <SectionTitle hint="Ces réglages n'ont d'effet qu'avec un logo actif.">
-          Réglages de protection
+        <SectionTitle hint={t("logo.protection.hint")}>
+          {t("logo.protection.title")}
         </SectionTitle>
         <SliderControl
-          label="Taille du logo"
+          label={t("logo.size.title")}
           value={Math.round(design.logoSize * 100)}
           min={20}
           max={50}
           suffix=" %"
-          hint="Au-delà de 42 %, le logo empiète sur les repères de synchronisation."
+          hint={t("logo.size.hint")}
           onChange={(value) => patchDesign({ logoSize: value / 100 })}
         />
         <SliderControl
-          label="Marge de protection"
+          label={t("logo.margin.title")}
           value={design.logoMargin}
           min={0}
           max={16}
@@ -108,8 +110,8 @@ export function ModuleLogo() {
           onChange={(logoMargin) => patchDesign({ logoMargin })}
         />
         <SwitchControl
-          label="Masquer les modules derrière le logo"
-          hint="Dégage un espace propre autour du logo pour un rendu plus net."
+          label={t("logo.hideDots.title")}
+          hint={t("logo.hideDots.hint")}
           checked={design.hideBackgroundDots}
           onChange={(checked) => patchDesign({ hideBackgroundDots: checked })}
           disabled={!design.logo}
@@ -123,7 +125,7 @@ export function ModuleLogo() {
         disabled={!design.logo}
         onClick={() => patchDesign({ logo: null })}
       >
-        Retirer le logo
+        {t("logo.remove")}
       </Button>
     </div>
   );

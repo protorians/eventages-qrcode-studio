@@ -36,12 +36,14 @@ import { useBuilder } from "@/lib/builder-store";
 import { payloadSize } from "@/lib/qr-payload";
 import { scanLabel } from "@/lib/qr-analysis";
 import { describeError } from "@/lib/qcp";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Onglet « Export » : formats, résolution et téléchargement local (spec 005). */
 export function ModuleExport() {
   const { state, dispatch, type, values, debouncedPayload, missingField, progress, saveProjectAsQcp } =
     useBuilder();
+  const t = useT();
   const [busy, setBusy] = useState<ExportFormat | "clipboard" | "share" | "qcp" | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,11 +62,11 @@ export function ModuleExport() {
 
   const run = async (format: ExportFormat) => {
     if (type.comingSoon) {
-      setError("Ce type sera actif dès la prise en charge de la publication de pages.");
+      setError(t("exportUi.error.typeComingSoon"));
       return;
     }
     if (missingField) {
-      setError(`Contenu incomplet : « ${missingField.label} » est requis.`);
+      setError(t("exportUi.error.missingField", { field: t(missingField.label) }));
       return;
     }
     setBusy(format);
@@ -85,7 +87,7 @@ export function ModuleExport() {
       setError(
         cause instanceof Error && cause.message
           ? cause.message
-          : "Le téléchargement a échoué. Réessayez ou changez de format.",
+          : t("exportUi.error.downloadFailed"),
       );
     } finally {
       setBusy(null);
@@ -97,9 +99,9 @@ export function ModuleExport() {
     setError(null);
     try {
       await navigator.clipboard.writeText(debouncedPayload);
-      setDone("Contenu copié dans le presse-papiers");
+      setDone(t("exportUi.done.clipboardCopied"));
     } catch {
-      setError("Copie impossible : accès au presse-papiers refusé.");
+      setError(t("exportUi.error.clipboardDenied"));
     } finally {
       setBusy(null);
     }
@@ -108,11 +110,11 @@ export function ModuleExport() {
   /** Partage natif : menu de partage de l'OS sur l'image rendue, sans serveur. */
   const shareNative = async () => {
     if (type.comingSoon) {
-      setError("Ce type sera actif dès la prise en charge de la publication de pages.");
+      setError(t("exportUi.error.typeComingSoon"));
       return;
     }
     if (missingField) {
-      setError(`Contenu incomplet : « ${missingField.label} » est requis.`);
+      setError(t("exportUi.error.missingField", { field: t(missingField.label) }));
       return;
     }
     setBusy("share");
@@ -131,7 +133,7 @@ export function ModuleExport() {
       setError(
         shareError instanceof ShareError
           ? shareError.message
-          : "Le partage a échoué. Exportez le fichier puis partagez-le manuellement.",
+          : t("exportUi.error.shareFailed"),
       );
     } finally {
       setBusy(null);
@@ -145,9 +147,9 @@ export function ModuleExport() {
     setDone(null);
     try {
       const path = await saveProjectAsQcp();
-      if (path) setDone(`Projet exporté : ${path}`);
+      if (path) setDone(t("exportUi.done.projectExported", { path }));
     } catch (cause) {
-      setError(describeError(cause, "Enregistrement du projet impossible."));
+      setError(describeError(cause, t("exportUi.error.projectSaveFailed")));
     } finally {
       setBusy(null);
     }
@@ -166,16 +168,16 @@ export function ModuleExport() {
           {quality.label}
         </Badge>
         <Badge variant="outline" className="font-mono text-[0.62rem]">
-          {payloadSize(debouncedPayload)} o
+          {payloadSize(debouncedPayload)} {t("exportUi.sizeUnit")}
         </Badge>
         <Badge variant="outline" className="text-[0.62rem]">
-          {type.label}
+          {t(type.label)}
         </Badge>
       </div>
 
       <ControlStack
-        label="Format"
-        hint="PNG et SVG pour l'impression, JPEG et WebP pour le web."
+        label={t("exportUi.format.label")}
+        hint={t("exportUi.format.description")}
       >
         <div className="grid grid-cols-2 gap-2">
           {EXPORT_FORMATS.map((format) => (
@@ -186,7 +188,7 @@ export function ModuleExport() {
               disabled={busy !== null}
               onClick={() => run(format.id)}
               className={cn(
-                "group/tile flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card/50 p-2.5 text-left transition-all duration-300 ease-out",
+                "group/tile flex flex-col items-start gap-2 rounded-xl border border-border/70 bg-card/50 p-2.5 text-start transition-all duration-300 ease-out",
                 "hover:-translate-y-0.5 hover:border-border hover:bg-accent/60 hover:shadow-sm",
                 "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                 "disabled:pointer-events-none disabled:opacity-60",
@@ -215,7 +217,7 @@ export function ModuleExport() {
                   data-slot="export-format-detail"
                   className="block text-[0.62rem] text-muted-foreground"
                 >
-                  {format.detail}
+                  {t(format.detail)}
                 </span>
               </span>
             </button>
@@ -226,8 +228,8 @@ export function ModuleExport() {
       <Separator />
 
       <ControlStack
-        label="Résolution d'export"
-        hint="La résolution du QR hors cadre. 2048 px suffit pour un tirage A3."
+        label={t("exportUi.resolution.label")}
+        hint={t("exportUi.resolution.description")}
       >
         <Select
           items={EXPORT_SIZES.map((size) => ({
@@ -253,9 +255,9 @@ export function ModuleExport() {
       <div className="space-y-1.5">
         <div className="flex items-center gap-1.5">
           <Label htmlFor="export-name" className="text-[0.8rem]">
-            Nom du fichier
+            {t("exportUi.file.label")}
           </Label>
-          <InfoTip>Le nom du projet sert aussi de titre par défaut à l&apos;export.</InfoTip>
+          <InfoTip>{t("exportUi.file.hint")}</InfoTip>
         </div>
         <Input
           id="export-name"
@@ -266,8 +268,8 @@ export function ModuleExport() {
       </div>
 
       <div className="space-y-2">
-        <SectionTitle hint="Aucune donnée ne quitte l'appareil : tout est généré localement.">
-          Exports rapides
+        <SectionTitle hint={t("exportUi.quick.description")}>
+          {t("exportUi.quick.title")}
         </SectionTitle>
         <Button
           type="button"
@@ -276,7 +278,7 @@ export function ModuleExport() {
           onClick={() => run("png")}
         >
           {busy === "png" ? <Loader2 className="animate-spin" /> : <HardDriveDownload />}
-          Télécharger en PNG
+          {t("exportUi.action.downloadPng")}
         </Button>
         <div className="grid grid-cols-2 gap-2">
           <Button
@@ -286,7 +288,7 @@ export function ModuleExport() {
             onClick={() => run("svg")}
           >
             {busy === "svg" ? <Loader2 className="animate-spin" /> : <Printer />}
-            Vectoriel
+            {t("exportUi.action.svg")}
           </Button>
           <Button
             type="button"
@@ -295,7 +297,7 @@ export function ModuleExport() {
             onClick={() => run("jpeg")}
           >
             {busy === "jpeg" ? <Loader2 className="animate-spin" /> : <Share />}
-            Réseaux
+            {t("exportUi.action.jpeg")}
           </Button>
         </div>
         <Button
@@ -306,7 +308,7 @@ export function ModuleExport() {
           onClick={exportProjectQcp}
         >
           {busy === "qcp" ? <Loader2 className="animate-spin" /> : <FileArchive />}
-          Exporter le projet (.qrd)
+          {t("exportUi.action.project")}
         </Button>
         <Button
           type="button"
@@ -316,11 +318,11 @@ export function ModuleExport() {
           onClick={shareNative}
         >
           {busy === "share" ? <Loader2 className="animate-spin" /> : <Share2 />}
-          Partager
+          {t("exportUi.action.share")}
         </Button>
         {!shareSupported ? (
           <p className="text-[0.62rem] leading-relaxed text-muted-foreground">
-            Le partage système n&apos;est pas pris en charge par ce navigateur.
+            {t("exportUi.shareUnsupported")}
           </p>
         ) : null}
         <Button
@@ -331,7 +333,7 @@ export function ModuleExport() {
           onClick={copyPayload}
         >
           {busy === "clipboard" ? <Loader2 className="animate-spin" /> : <ClipboardCopy />}
-          Copier le contenu encodé
+          {t("exportUi.action.copyContent")}
         </Button>
       </div>
 
@@ -354,8 +356,8 @@ export function ModuleExport() {
       <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
         <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
           {progress === 100
-            ? "Le contenu est complet : le fichier exporté est directement exploitable."
-            : "Certains champs obligatoires restent vides ; l'export utilisera le contenu saisi."}
+            ? t("exportUi.status.contentComplete")
+            : t("exportUi.status.contentIncomplete")}
         </p>
       </div>
     </div>

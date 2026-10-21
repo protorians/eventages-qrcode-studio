@@ -29,9 +29,16 @@ import {
 import { SettingsDialog } from "@/components/shell/settings-dialog";
 import { useIsDesktop, useIsTablet } from "@/hooks/use-media-query";
 import { SettingsProvider, useSettings } from "@/hooks/use-settings";
+import { I18nProvider, useLocale, useT } from "@/lib/i18n";
+import { isRtlLocale } from "@/lib/i18n/locales";
 
 function WorkspaceShell() {
   const { mode, toggleMode, hud } = useSettings();
+  const t = useT();
+  const locale = useLocale();
+  // Feuilles latérales : le côté (physique) suit le sens de lecture pour que
+  // la bibliothèque glisse toujours depuis le côté « début ».
+  const rtl = isRtlLocale(locale);
   const { state, dispatch } = useBuilder();
   const { activeTabId, openHome } = useWorkspace();
   const isTablet = useIsTablet();
@@ -116,27 +123,27 @@ function WorkspaceShell() {
 
           <Sheet open={libraryOpen} onOpenChange={setLibraryOpen}>
             <SheetContent
-              side="left"
-              className="w-full max-w-[min(22rem,92vw)] gap-0 border-r border-border/70 bg-sidebar/95 p-0 backdrop-blur-xl"
+              side={rtl ? "right" : "left"}
+              className="w-full max-w-[min(22rem,92vw)] gap-0 border-e border-border/70 bg-sidebar/95 p-0 backdrop-blur-xl"
             >
               <SheetHeader className="sr-only">
-                <SheetTitle>Bibliothèque</SheetTitle>
-                <SheetDescription>Types de QR, mises en situation et modèles.</SheetDescription>
+                <SheetTitle>{t("header.bibliotheque")}</SheetTitle>
+                <SheetDescription>{t("header.bibliothequeTooltip")}</SheetDescription>
               </SheetHeader>
-              <LibraryPanel className="h-full border-r-0 bg-transparent" />
+              <LibraryPanel className="h-full border-e-0 bg-transparent" />
             </SheetContent>
           </Sheet>
 
           <Sheet open={modulesOpen} onOpenChange={setModulesOpen}>
             <SheetContent
-              side="right"
-              className="w-full max-w-[min(24rem,94vw)] gap-0 border-l border-border/70 bg-sidebar/95 p-0 backdrop-blur-xl md:hidden"
+              side={rtl ? "left" : "right"}
+              className="w-full max-w-[min(24rem,94vw)] gap-0 border-s border-border/70 bg-sidebar/95 p-0 backdrop-blur-xl md:hidden"
             >
               <SheetHeader className="sr-only">
-                <SheetTitle>Options de création</SheetTitle>
-                <SheetDescription>Contenu, style, logo, cadre et export.</SheetDescription>
+                <SheetTitle>{t("header.optionsCreation")}</SheetTitle>
+                <SheetDescription>{t("app.optionsCreationDetail")}</SheetDescription>
               </SheetHeader>
-              <OptionsPanel className="h-full border-l-0 bg-transparent" showRail />
+              <OptionsPanel className="h-full border-s-0 bg-transparent" showRail />
             </SheetContent>
           </Sheet>
         </>
@@ -153,13 +160,15 @@ function WorkspaceShell() {
 function App() {
   return (
     <SettingsProvider>
-      <TooltipProvider delay={200}>
-        <BuilderProvider>
-          <WorkspaceProvider>
-            <WorkspaceShell />
-          </WorkspaceProvider>
-        </BuilderProvider>
-      </TooltipProvider>
+      <I18nProvider>
+        <TooltipProvider delay={200}>
+          <BuilderProvider>
+            <WorkspaceProvider>
+              <WorkspaceShell />
+            </WorkspaceProvider>
+          </BuilderProvider>
+        </TooltipProvider>
+      </I18nProvider>
     </SettingsProvider>
   );
 }

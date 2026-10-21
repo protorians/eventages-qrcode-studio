@@ -29,6 +29,7 @@ import { useSettings } from "@/hooks/use-settings";import {
 } from "@/lib/qr-catalog";
 import { DESIGN_TEMPLATES, MOCKUPS } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type LibraryTab = "types" | "mockups" | "templates";
@@ -45,6 +46,7 @@ function fileName(path: string): string {
 export function LibraryPanel({ className }: { className?: string }) {
   const { state, dispatch, type, values, savedLabel, dirty } = useBuilder();
   const { hud, autoSaveFile } = useSettings();
+  const t = useT();
   const [tab, setTab] = useState<LibraryTab>("types");
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<QrFamily | null>(null);
@@ -55,26 +57,26 @@ export function LibraryPanel({ className }: { className?: string }) {
       if (family && candidate.family !== family) return false;
       if (!term) return true;
       return (
-        candidate.label.toLowerCase().includes(term) ||
-        candidate.tagline.toLowerCase().includes(term)
+        t(candidate.label).toLowerCase().includes(term) ||
+        t(candidate.tagline).toLowerCase().includes(term)
       );
     });
     // Types actifs d'abord, désactivés (« bientôt ») regroupés à la fin.
     return matched.sort((a, b) => Number(Boolean(a.comingSoon)) - Number(Boolean(b.comingSoon)));
-  }, [query, family]);
+  }, [query, family, t]);
 
   const completion = formProgress(type, values);
 
   return (
     <aside
       className={cn(
-        "flex min-h-0 flex-col border-r border-border/60 bg-sidebar/60 backdrop-blur",
+        "flex min-h-0 flex-col border-e border-border/60 bg-sidebar/60 backdrop-blur",
         className,
       )}
-      aria-label="Bibliothèque"
+      aria-label={t("library.aria")}
     >
       <header className="space-y-3 border-b border-border/60 p-3.5">
-        <HudLabel className="block">BIBLIO — PROJET</HudLabel>
+        <HudLabel className="block">{t("library.hudProject")}</HudLabel>
         <div className="flex items-start gap-2.5">
           <span className="hud-clip-tr relative flex size-9 shrink-0 items-center justify-center bg-linear-to-br from-primary/30 to-primary/5 text-primary ring-1 ring-primary/25">
             <Library className="size-4" />
@@ -82,7 +84,7 @@ export function LibraryPanel({ className }: { className?: string }) {
           <div className="min-w-0 flex-1">
             <Input
               value={state.projectName}
-              aria-label="Nom du projet"
+              aria-label={t("library.projectNameAria")}
               onChange={(event) =>
                 dispatch({ type: "setProjectName", name: event.currentTarget.value })
               }
@@ -91,8 +93,8 @@ export function LibraryPanel({ className }: { className?: string }) {
             <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground">
               <CloudOff className="size-3" />
               {savedLabel
-                ? `Brouillon local · enregistré à ${savedLabel}`
-                : "Enregistrement local en cours…"}
+                ? t("library.draftSaved", { saved: savedLabel })
+                : t("library.saving")}
             </p>
             {state.filePath ? (
               <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground">
@@ -100,17 +102,17 @@ export function LibraryPanel({ className }: { className?: string }) {
                 <span className="truncate">
                   {dirty
                     ? autoSaveFile
-                      ? `Fichier .qrd : enregistrement auto… (${fileName(state.filePath)})`
-                      : `Fichier .qrd : non enregistré (${fileName(state.filePath)})`
+                      ? t("library.fileAutoSaving", { file: fileName(state.filePath) })
+                      : t("library.fileUnsaved", { file: fileName(state.filePath) })
                     : autoSaveFile
-                      ? `Fichier .qrd lié · auto-enregistré (${fileName(state.filePath)})`
-                      : `Fichier .qrd lié (${fileName(state.filePath)})`}
+                      ? t("library.fileLinkedAuto", { file: fileName(state.filePath) })
+                      : t("library.fileLinked", { file: fileName(state.filePath) })}
                 </span>
               </p>
             ) : (
               <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground/70">
                 <Save className="size-3 shrink-0 opacity-60" />
-                <span className="truncate">Aucun fichier lié · « Enregistrer » lie un .qrd</span>
+                <span className="truncate">{t("library.noFile")}</span>
               </p>
             )}
           </div>
@@ -119,7 +121,7 @@ export function LibraryPanel({ className }: { className?: string }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="outline" className="rounded-none text-[0.6rem]">
             <Shapes className="size-3" />
-            {type.label}
+            {t(type.label)}
           </Badge>
           <span className="ml-auto font-mono text-[0.62rem] text-muted-foreground">
             {completion}%
@@ -142,15 +144,15 @@ export function LibraryPanel({ className }: { className?: string }) {
           <TabsList className="h-8 w-full">
             <TabsTrigger value="types" className="gap-1 text-[0.7rem]">
               <LayoutGrid className="size-3.5" />
-              Types
+              {t("library.tabTypes")}
             </TabsTrigger>
             <TabsTrigger value="mockups" className="gap-1 text-[0.7rem]">
               <Sparkles className="size-3.5" />
-              Mockups
+              {t("library.tabMockups")}
             </TabsTrigger>
             <TabsTrigger value="templates" className="gap-1 text-[0.7rem]">
               <Wand2 className="size-3.5" />
-              Modèles
+              {t("library.tabTemplates")}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -158,17 +160,17 @@ export function LibraryPanel({ className }: { className?: string }) {
         <TabsContent value="types" className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 space-y-2 px-3.5 pt-3">
             <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute top-1/2 start-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
-                placeholder="Rechercher un type de QR…"
+                placeholder={t("library.searchPlaceholder")}
                 onChange={(event) => setQuery(event.currentTarget.value)}
-                className="h-8 pl-8 text-xs"
+                className="h-8 ps-8 text-xs"
               />
             </div>
             <div className="no-scrollbar -mx-0.5 flex gap-1 overflow-x-auto px-0.5 pb-1">
               <FilterChip active={family === null} onClick={() => setFamily(null)}>
-                Tous
+                {t("library.all")}
               </FilterChip>
               {QR_FAMILIES.map((item) => (
                 <FilterChip
@@ -176,7 +178,7 @@ export function LibraryPanel({ className }: { className?: string }) {
                   active={family === item.id}
                   onClick={() => setFamily(item.id)}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </FilterChip>
               ))}
             </div>
@@ -198,7 +200,7 @@ export function LibraryPanel({ className }: { className?: string }) {
                       aria-current={active}
                       aria-disabled={candidate.comingSoon || undefined}
                       className={cn(
-                        "animate-rise group/row flex w-full items-center gap-2.5 rounded-sm border border-transparent p-2 text-left transition-all duration-300 ease-out",
+                        "animate-rise group/row flex w-full items-center gap-2.5 rounded-sm border border-transparent p-2 text-start transition-all duration-300 ease-out",
                         "hover:-translate-y-px hover:border-border/70 hover:bg-accent/50",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                         "disabled:pointer-events-none",
@@ -226,17 +228,17 @@ export function LibraryPanel({ className }: { className?: string }) {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[0.78rem] font-medium">
-                          {candidate.label}
+                          {t(candidate.label)}
                         </span>
                         <span className="block truncate text-[0.64rem] text-muted-foreground">
-                          {candidate.tagline}
+                          {t(candidate.tagline)}
                         </span>
                       </span>
                       {active ? (
                         <Check className="size-3.5 shrink-0 text-primary" />
                       ) : candidate.comingSoon ? (
                         <span className="shrink-0 font-mono text-[0.58rem] text-muted-foreground/70">
-                          bientôt
+                          {t("library.comingSoon")}
                         </span>
                       ) : (
                         <span className="shrink-0 font-mono text-[0.58rem] text-muted-foreground/70">
@@ -249,7 +251,7 @@ export function LibraryPanel({ className }: { className?: string }) {
               })}
               {filtered.length === 0 ? (
                 <li className="px-2 py-8 text-center text-xs text-muted-foreground">
-                  Aucun type ne correspond à cette recherche.
+                  {t("library.noMatch")}
                 </li>
               ) : null}
             </ul>
@@ -260,8 +262,7 @@ export function LibraryPanel({ className }: { className?: string }) {
           <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-2 px-3.5 py-3">
               <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-                Visualisez le rendu dans un contexte réel. Le décor est décoratif ; le code
-                reste identique.
+                {t("library.mockupsHint")}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {MOCKUPS.map((mockup) => {
@@ -273,7 +274,7 @@ export function LibraryPanel({ className }: { className?: string }) {
                       onClick={() => dispatch({ type: "setMockup", mockupId: mockup.id })}
                       aria-pressed={active}
                       className={cn(
-                        "group/mock animate-rise overflow-hidden rounded-sm border text-left transition-all duration-300 ease-out",
+                        "group/mock animate-rise overflow-hidden rounded-sm border text-start transition-all duration-300 ease-out",
                         "hover:-translate-y-0.5 hover:shadow-md",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                         active
@@ -294,10 +295,10 @@ export function LibraryPanel({ className }: { className?: string }) {
                       </span>
                       <span className="block space-y-0.5 bg-card/70 p-2">
                         <span className="block truncate text-[0.72rem] font-medium">
-                          {mockup.name}
+                          {t(mockup.name)}
                         </span>
                         <span className="block truncate text-[0.6rem] text-muted-foreground">
-                          {mockup.detail}
+                          {t(mockup.detail)}
                         </span>
                       </span>
                     </button>
@@ -312,8 +313,7 @@ export function LibraryPanel({ className }: { className?: string }) {
           <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-2 px-3.5 py-3">
               <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-                Appliquez un modèle complet (formes, couleurs, coins, cadre) puis ajustez-le
-                librement.
+                {t("library.templatesHint")}
               </p>
               {DESIGN_TEMPLATES.map((template) => {
                 const active =
@@ -328,7 +328,7 @@ export function LibraryPanel({ className }: { className?: string }) {
                       dispatch({ type: "setModule", module: "style" });
                     }}
                     className={cn(
-                      "group/tpl animate-rise flex w-full items-center gap-3 rounded-sm border p-2.5 text-left transition-all duration-300 ease-out",
+                      "group/tpl animate-rise flex w-full items-center gap-3 rounded-sm border p-2.5 text-start transition-all duration-300 ease-out",
                       "hover:-translate-y-0.5 hover:border-border hover:shadow-md",
                       "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                       active
@@ -351,7 +351,7 @@ export function LibraryPanel({ className }: { className?: string }) {
                         {template.name}
                       </span>
                       <span className="block truncate text-[0.64rem] text-muted-foreground">
-                        {template.hint}
+                        {t(template.hint)}
                       </span>
                     </span>
                   </button>
@@ -369,11 +369,13 @@ export function LibraryPanel({ className }: { className?: string }) {
             {hud ? (
               <span className="text-hud">OFFLINE:OK</span>
             ) : (
-              <span>Hors ligne</span>
+              <span>{t("library.offline")}</span>
             )}
           </span>
           <span>
-            {QR_TYPES.filter((candidate) => !candidate.comingSoon).length} types actifs
+            {t("library.activeTypes", {
+              count: QR_TYPES.filter((candidate) => !candidate.comingSoon).length,
+            })}
           </span>
         </div>
       </footer>

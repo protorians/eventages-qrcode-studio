@@ -17,6 +17,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 
 /**
  * Composants d'interface réutilisables (hors primitives shadcn) : ils ne
@@ -26,7 +28,7 @@ import { cn } from "@/lib/utils";
 
 const HEX_PATTERN = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
 
-export type ColorSwatch = { name: string; value: string };
+export type ColorSwatch = { name: TranslationKey; value: string };
 
 export function InfoTip({ children }: { children: ReactNode }) {
   return (
@@ -128,6 +130,7 @@ export function SwatchRail({
   columns?: number;
   className?: string;
 }) {
+  const t = useT();
   return (
     <div
       className={cn("grid gap-1.5", className)}
@@ -137,7 +140,7 @@ export function SwatchRail({
         <button
           key={`${swatch.value}-${index}`}
           type="button"
-          title={`${swatch.name} · ${swatch.value}`}
+          title={`${t(swatch.name)} · ${swatch.value}`}
           onClick={() => onChange(swatch.value)}
           style={{ background: swatch.value }}
           className={cn(
@@ -433,9 +436,10 @@ export function GradientEditor({
   onFromChange: (color: string) => void;
   onToChange: (color: string) => void;
   onRotationChange: (angle: number) => void;
-  presets: { id: string; name: string; from: string; to: string }[];
+  presets: { id: string; name: TranslationKey; from: string; to: string }[];
   swatches?: ColorSwatch[];
 }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div
@@ -444,13 +448,13 @@ export function GradientEditor({
       />
       <div className="grid grid-cols-2 gap-2">
         <ColorControl
-          label="Couleur de départ"
+          label={t("controls.gradient.from")}
           value={from}
           onChange={onFromChange}
           swatches={swatches}
         />
         <ColorControl
-          label="Couleur d'arrivée"
+          label={t("controls.gradient.to")}
           value={to}
           onChange={onToChange}
           swatches={swatches}
@@ -461,8 +465,8 @@ export function GradientEditor({
           <button
             key={preset.id}
             type="button"
-            title={preset.name}
-            aria-label={preset.name}
+            title={t(preset.name)}
+            aria-label={t(preset.name)}
             onClick={() => {
               onFromChange(preset.from);
               onToChange(preset.to);
@@ -509,6 +513,7 @@ export function FileControl({
   hint?: ReactNode;
   preview?: boolean;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -558,9 +563,8 @@ export function FileControl({
             {heading ?? label}
           </span>
           <span className="block text-[0.68rem] text-muted-foreground">
-            {heading ? "Cliquer pour remplacer" : "Déposer un fichier ou parcourir"}
-          </span>
-        </span>
+            {heading ? t("controls.file.replace") : t("controls.file.drop")}
+          </span>        </span>
         <input
           ref={inputRef}
           id={inputId}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Check,
+  Globe,
   Moon,
   Palette,
   RefreshCw,
@@ -23,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { HudLabel, HudReadout, HudStatusDot } from "@/components/shell/hud";
@@ -31,53 +39,68 @@ import {
   useSettings,
   type ColorThemePalette,
 } from "@/hooks/use-settings";
+import { useLocale, useT, type TranslationKey } from "@/lib/i18n";
+import { LOCALES, type LocaleId } from "@/lib/i18n/locales";
 import { useBuilder } from "@/lib/builder-store";
 import { fetchCliStatus, installCli, uninstallCli, type CliStatus } from "@/lib/cli-desktop";
 import { cn } from "@/lib/utils";
 
 /** Sections de la fenêtre de paramètres (rail à gauche, contenu à droite). */
-type SettingsSectionId = "appearance" | "interface" | "project" | "data" | "cli";
+type SettingsSectionId =
+  | "appearance"
+  | "interface"
+  | "language"
+  | "project"
+  | "data"
+  | "cli";
 
 const SETTINGS_SECTIONS: {
   id: SettingsSectionId;
-  label: string;
-  detail: string;
+  labelKey: TranslationKey;
+  detailKey: TranslationKey;
   code: string;
   icon: LucideIcon;
 }[] = [
   {
     id: "appearance",
-    label: "Apparence",
-    detail: "Thème sombre et couleurs de l'interface",
+    labelKey: "settings.section.appearance.label",
+    detailKey: "settings.section.appearance.detail",
     code: "MOD.01",
     icon: Palette,
   },
   {
     id: "interface",
-    label: "Interface",
-    detail: "Mode HUD et animations",
+    labelKey: "settings.section.interface.label",
+    detailKey: "settings.section.interface.detail",
     code: "MOD.02",
     icon: ScanLine,
   },
   {
-    id: "project",
-    label: "Projet",
-    detail: "Enregistrement du fichier lié",
+    id: "language",
+    labelKey: "settings.section.language.label",
+    detailKey: "settings.section.language.detail",
     code: "MOD.03",
+    icon: Globe,
+  },
+  {
+    id: "project",
+    labelKey: "settings.section.project.label",
+    detailKey: "settings.section.project.detail",
+    code: "MOD.04",
     icon: RefreshCw,
   },
   {
     id: "data",
-    label: "Données",
-    detail: "Registre local et confidentialité",
-    code: "MOD.04",
+    labelKey: "settings.section.data.label",
+    detailKey: "settings.section.data.detail",
+    code: "MOD.05",
     icon: ShieldCheck,
   },
   {
     id: "cli",
-    label: "CLI",
-    detail: "Commandes eventages-qr du terminal",
-    code: "MOD.05",
+    labelKey: "settings.section.cli.label",
+    detailKey: "settings.section.cli.detail",
+    code: "MOD.06",
     icon: Terminal,
   },
 ];
@@ -97,13 +120,14 @@ export function SettingsDialog({
 }) {
   const { hud } = useSettings();
   const { projects } = useBuilder();
+  const t = useT();
   const [section, setSection] = useState<SettingsSectionId>("appearance");
   const active = SETTINGS_SECTIONS.find((item) => item.id === section) ?? SETTINGS_SECTIONS[0];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex h-[min(85dvh,40rem)] w-full flex-col gap-0 overflow-hidden p-0 ring-primary/20 sm:max-w-2xl"
+        className="flex h-[min(85dvh,50rem)] w-full flex-col gap-0 overflow-hidden p-0 ring-primary/20 sm:max-w-4xl"
         showCloseButton={false}
       >
         <DialogHeader className="relative shrink-0 flex-row items-center justify-between gap-3 border-b border-border/60 bg-card/60 px-4 py-3">
@@ -113,9 +137,9 @@ export function SettingsDialog({
             </span>
             <div className="space-y-1">
               <HudLabel className="block">SYSTÈME — {active.code}</HudLabel>
-              <DialogTitle>Paramètres</DialogTitle>
+              <DialogTitle>{t("settings.title")}</DialogTitle>
               <DialogDescription className="text-xs">
-                {active.detail} — enregistré sur cet appareil.
+                {t("settings.header.description", { section: t(active.detailKey) })}
               </DialogDescription>
             </div>
           </div>
@@ -129,8 +153,8 @@ export function SettingsDialog({
         <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
           {/* Rail de navigation : sections verticales à gauche (≥ sm). */}
           <nav
-            aria-label="Sections des paramètres"
-            className="hidden w-48 shrink-0 flex-col gap-1 border-r border-border/60 bg-muted/20 p-2 sm:flex"
+            aria-label={t("settings.sections.aria")}
+            className="hidden w-48 shrink-0 flex-col gap-1 border-e border-border/60 bg-muted/20 p-2 sm:flex"
           >
             {SETTINGS_SECTIONS.map((item) => (
               <SectionButton
@@ -138,8 +162,8 @@ export function SettingsDialog({
                 active={item.id === section}
                 onClick={() => setSection(item.id)}
                 icon={item.icon}
-                label={item.label}
-                detail={item.detail}
+                labelKey={item.labelKey}
+                detailKey={item.detailKey}
               />
             ))}
           </nav>
@@ -161,7 +185,7 @@ export function SettingsDialog({
                 )}
               >
                 <item.icon className="size-3.5" />
-                {item.label}
+                {t(item.labelKey)}
               </button>
             ))}
           </div>
@@ -172,6 +196,7 @@ export function SettingsDialog({
           >
             {section === "appearance" ? <AppearanceSection /> : null}
             {section === "interface" ? <InterfaceSection /> : null}
+            {section === "language" ? <LanguageSection /> : null}
             {section === "project" ? <ProjectSection /> : null}
             {section === "data" ? <DataSection entries={projects.length} /> : null}
             {section === "cli" ? <CliSection /> : null}
@@ -187,12 +212,12 @@ export function SettingsDialog({
               </span>
             ) : (
               <span className="truncate text-[0.68rem] text-muted-foreground">
-                Préférences enregistrées localement
+                {t("settings.footer.saved")}
               </span>
             )}
           </span>
           <DialogClose render={<Button type="button" variant="ghost" size="sm" />}>
-            Fermer
+            {t("settings.footer.close")}
           </DialogClose>
         </footer>
       </DialogContent>
@@ -205,22 +230,24 @@ function SectionButton({
   active,
   onClick,
   icon: Icon,
-  label,
-  detail,
+  labelKey,
+  detailKey,
 }: {
   active: boolean;
   onClick: () => void;
   icon: LucideIcon;
-  label: string;
-  detail: string;
+  labelKey: TranslationKey;
+  detailKey: TranslationKey;
 }) {
+  const t = useT();
+
   return (
     <button
       type="button"
       onClick={onClick}
       aria-current={active || undefined}
       className={cn(
-        "group/rail relative flex items-start gap-2.5 rounded-sm px-2.5 py-2 text-left transition-all duration-200",
+        "group/rail relative flex items-start gap-2.5 rounded-sm px-2.5 py-2 text-start transition-all duration-200",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
         active
           ? "bg-primary/12 text-foreground"
@@ -237,9 +264,9 @@ function SectionButton({
         )}
       />
       <span className="min-w-0">
-        <span className="block text-[0.78rem] leading-tight font-medium">{label}</span>
+        <span className="block text-[0.78rem] leading-tight font-medium">{t(labelKey)}</span>
         <span className="block text-[0.62rem] leading-snug text-muted-foreground">
-          {detail}
+          {t(detailKey)}
         </span>
       </span>
     </button>
@@ -249,20 +276,21 @@ function SectionButton({
 /** Apparence : mode clair / sombre + thème de couleurs. */
 function AppearanceSection() {
   const { mode, setMode, colorTheme, setColorTheme } = useSettings();
+  const t = useT();
 
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <HudLabel className="block">APPARENCE — MODE</HudLabel>
+        <HudLabel className="block">{t("settings.appearance.mode.heading")}</HudLabel>
         <SettingRow
           icon={mode === "dark" ? Moon : Sun}
-          title="Thème sombre"
-          description="Coque anthracite et accents lumineux ; le thème clair joue la version « blueprint »."
+          title={t("settings.appearance.darkTheme.title")}
+          description={t("settings.appearance.darkTheme.description")}
         >
           <Switch
             checked={mode === "dark"}
             onCheckedChange={(checked) => setMode(checked ? "dark" : "light")}
-            aria-label="Thème sombre"
+            aria-label={t("settings.appearance.darkTheme.title")}
           />
         </SettingRow>
       </section>
@@ -270,9 +298,11 @@ function AppearanceSection() {
       <Separator />
 
       <section className="space-y-3">
-        <HudLabel className="block">APPARENCE — COULEURS</HudLabel>
+        <HudLabel className="block">{t("settings.appearance.colors.heading")}</HudLabel>
         <div className="space-y-2">
-          <p className="text-[0.78rem] leading-tight font-medium">Thème de couleurs</p>
+          <p className="text-[0.78rem] leading-tight font-medium">
+            {t("settings.appearance.colorTheme.title")}
+          </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {COLOR_THEMES.map((theme) => (
               <ThemeSwatch
@@ -290,33 +320,82 @@ function AppearanceSection() {
   );
 }
 
-/** Interface : ornements HUD et animations. */
-function InterfaceSection() {
-  const { hud, setHud, animations, setAnimations } = useSettings();
+/** Langue : sélecteur des langues de l'interface (noms d'origine). */
+function LanguageSection() {
+  const { language, setLanguage } = useSettings();
+  const t = useT();
 
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <HudLabel className="block">INTERFACE — EFFETS</HudLabel>
+        <HudLabel className="block">{t("settings.language.heading")}</HudLabel>
+        <SettingRow
+          icon={Globe}
+          title={t("settings.language.title")}
+          description={t("settings.language.description")}
+        >
+          <Select
+            items={LOCALES.map((locale) => ({ value: locale.id, label: locale.label }))}
+            value={language}
+            onValueChange={(next) => setLanguage(next as LocaleId)}
+          >
+            <SelectTrigger className="w-36" aria-label={t("settings.language.aria")}>
+              <span className="flex items-center gap-2">
+                <Globe className="size-3.5 text-muted-foreground" />
+                <SelectValue />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {LOCALES.map((locale) => (
+                <SelectItem key={locale.id} value={locale.id}>
+                  {locale.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingRow>
+      </section>
+
+      <Separator />
+
+      <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+        <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+          <span className="font-mono">en</span> · {LOCALES.length}{" "}
+          {t("settings.language.available", { count: LOCALES.length })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Interface : ornements HUD et animations. */
+function InterfaceSection() {
+  const { hud, setHud, animations, setAnimations } = useSettings();
+  const t = useT();
+
+  return (
+    <div className="space-y-5">
+      <section className="space-y-3">
+        <HudLabel className="block">{t("settings.interface.effects.heading")}</HudLabel>
         <SettingRow
           icon={ScanLine}
-          title="Mode HUD"
-          description="Ornements futuristes : coins coupés, brackets, scanlines et readouts mono — sur les panneaux comme sur les contrôles."
+          title={t("settings.interface.hud.title")}
+          description={t("settings.interface.hud.description")}
         >
-          <Switch checked={hud} onCheckedChange={setHud} aria-label="Mode HUD" />
+          <Switch checked={hud} onCheckedChange={setHud} aria-label={t("settings.interface.hud.aria")} />
         </SettingRow>
 
         <Separator className="bg-border/60" />
 
         <SettingRow
           icon={Zap}
-          title="Animations"
-          description="Déplacements doux, balayages de scan et pulsations des voyants."
+          title={t("settings.interface.animations.title")}
+          description={t("settings.interface.animations.description")}
         >
           <Switch
             checked={animations}
             onCheckedChange={setAnimations}
-            aria-label="Animations"
+            aria-label={t("settings.interface.animations.aria")}
           />
         </SettingRow>
       </section>
@@ -327,20 +406,21 @@ function InterfaceSection() {
 /** Projet : enregistrement automatique du fichier .qrd lié. */
 function ProjectSection() {
   const { autoSaveFile, setAutoSaveFile } = useSettings();
+  const t = useT();
 
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <HudLabel className="block">PROJET — ENREGISTREMENT</HudLabel>
+        <HudLabel className="block">{t("settings.project.saving.heading")}</HudLabel>
         <SettingRow
           icon={RefreshCw}
-          title="Enregistrement automatique"
-          description="Réécrit le fichier .qrd lié après chaque modification stabilisée. Désactivé, seul « Enregistrer » (⌘S) écrit le fichier."
+          title={t("settings.project.autoSave.title")}
+          description={t("settings.project.autoSave.description")}
         >
           <Switch
             checked={autoSaveFile}
             onCheckedChange={setAutoSaveFile}
-            aria-label="Enregistrement automatique du fichier lié"
+            aria-label={t("settings.project.autoSave.aria")}
           />
         </SettingRow>
       </section>
@@ -349,8 +429,7 @@ function ProjectSection() {
 
       <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
         <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-          Sans fichier lié, le projet reste un brouillon local : « Enregistrer »
-          (⌘S) propose alors un emplacement et lie l'archive .qrd au projet.
+          {t("settings.project.draftNote")}
         </p>
       </div>
     </div>
@@ -359,18 +438,19 @@ function ProjectSection() {
 
 /** Données : rappel du fonctionnement 100 % local. */
 function DataSection({ entries }: { entries: number }) {
+  const t = useT();
+
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <HudLabel className="block">DONNÉES — REGISTRE</HudLabel>
+        <HudLabel className="block">{t("settings.data.registry.heading")}</HudLabel>
         <div className="hud-clip-tr space-y-2 bg-muted/40 p-3 ring-1 ring-border/60">
           <p className="flex items-center gap-1.5 text-[0.72rem] font-medium">
             <ShieldCheck className="size-3.5 shrink-0 text-primary" />
-            100 % local, aucun réseau
+            {t("settings.data.local.title")}
           </p>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-            Projets, préférences et médias restent sur cet appareil. Le registre est
-            enregistré automatiquement, sans compte ni synchronisation.
+            {t("settings.data.local.description")}
           </p>
           <HudReadout label="N.ENTRY" value={String(entries).padStart(2, "0")} />
         </div>
@@ -389,7 +469,11 @@ function CliSection() {
   const [status, setStatus] = useState<CliStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
+  const locale = useLocale();
 
+  // Le message de l'état est traduit côté backend (src-tauri/src/i18n.rs) :
+  // relu quand la langue change, pour refléter l'interface immédiatement.
   useEffect(() => {
     let cancelled = false;
     fetchCliStatus()
@@ -402,7 +486,7 @@ function CliSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   const toggle = async (checked: boolean): Promise<void> => {
     setBusy(true);
@@ -413,7 +497,7 @@ function CliSection() {
       setError(
         failure instanceof Error && failure.message
           ? failure.message
-          : "La mise à disposition du CLI a échoué.",
+          : t("settings.cli.expose.failure"),
       );
     } finally {
       setBusy(false);
@@ -425,9 +509,7 @@ function CliSection() {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
         <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-          La section CLI n'est disponible que dans l'application desktop : elle pose
-          les commandes <span className="font-mono">eventages-qr</span> et{" "}
-          <span className="font-mono">eqr</span> dans le terminal.
+          {t("settings.cli.unavailable")}
         </p>
       </div>
     );
@@ -438,17 +520,20 @@ function CliSection() {
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <HudLabel className="block">CLI — TERMINAL</HudLabel>
+        <HudLabel className="block">{t("settings.cli.terminal.heading")}</HudLabel>
         <SettingRow
           icon={Terminal}
-          title="Disponible dans le terminal"
-          description="Pose les commandes eventages-qr et eqr dans le PATH — liens symboliques vers le script du dépôt, exécuté avec bun. Rien d'autre n'est modifié."
+          title={t("settings.cli.expose.title")}
+          description={t("settings.cli.expose.description", {
+            cmd1: "eventages-qr",
+            cmd2: "eqr",
+          })}
         >
           <Switch
             checked={status.installed}
             disabled={disabled}
             onCheckedChange={toggle}
-            aria-label="Commandes du CLI dans le terminal"
+            aria-label={t("settings.cli.expose.aria")}
           />
         </SettingRow>
       </section>
@@ -468,17 +553,17 @@ function CliSection() {
       <Separator />
 
       <section className="space-y-3">
-        <HudLabel className="block">CLI — DÉTAIL</HudLabel>
+        <HudLabel className="block">{t("settings.cli.detail.heading")}</HudLabel>
         <div className="hud-clip-tr space-y-2 bg-muted/40 p-3 ring-1 ring-border/60">
           <p className="flex items-center gap-1.5 text-[0.72rem] font-medium">
             <Terminal className="size-3.5 shrink-0 text-primary" />
-            Deux noms, un seul script
+            {t("settings.cli.twoNames.title")}
           </p>
           <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-            <span className="font-mono">eventages-qr</span> est le nom complet,{" "}
-            <span className="font-mono">eqr</span> l'alias court. Les deux pilotent
-            les mêmes projets que l'app : création, rendu SVG/PNG et échange .qrd,
-            sans interface ni réseau.
+            {t("settings.cli.twoNames.description", {
+              cmd1: "eventages-qr",
+              cmd2: "eqr",
+            })}
           </p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <HudReadout label="CMD" value={status.commands.join(" · ")} />
@@ -490,10 +575,7 @@ function CliSection() {
 
       <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
         <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-          L'espace de travail du CLI (un dossier, un fichier JSON par projet) se
-          règle par commande avec <span className="font-mono">--dir</span>, ou une
-          fois pour toutes avec la variable{" "}
-          <span className="font-mono">EVENTAGES_QR_DIR</span>.
+          {t("settings.cli.workspaceNote", { dir: "--dir", env: "EVENTAGES_QR_DIR" })}
         </p>
       </div>
     </div>
@@ -548,15 +630,16 @@ function ThemeSwatch({
   onSelect: () => void;
 }) {
   const { mode } = useSettings();
+  const t = useT();
 
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={active}
-      aria-label={`Thème ${label}`}
+      aria-label={t("settings.appearance.themeSwatch.aria", { label })}
       className={cn(
-        "group flex flex-col gap-1.5 rounded-sm border p-1.5 text-left transition-all duration-200",
+        "group flex flex-col gap-1.5 rounded-sm border p-1.5 text-start transition-all duration-200",
         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
         active
           ? "border-primary/60 bg-primary/8 ring-1 ring-primary/30"

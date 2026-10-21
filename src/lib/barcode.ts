@@ -7,6 +7,8 @@
  */
 
 import JsBarcode from "jsbarcode";
+import { translate } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -14,9 +16,9 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 export type BarcodeFormat = {
   /** Identifiant JsBarcode. */
   id: string;
-  label: string;
+  label: TranslationKey;
   /** Contenu attendu, affiché en aide du champ valeur. */
-  hint: string;
+  hint: TranslationKey;
   /** Jeu d'exemple valide (bouton « Exemple »). */
   sample: string;
 };
@@ -28,74 +30,74 @@ export type BarcodeFormat = {
 export const BARCODE_FORMATS: BarcodeFormat[] = [
   {
     id: "CODE128",
-    label: "Code 128",
-    hint: "Tout caractère ASCII — références internes, transport, suivi.",
+    label: "barcode.code128.label",
+    hint: "barcode.code128.hint",
     sample: "STUDIO-2026",
   },
   {
     id: "CODE39",
-    label: "Code 39",
-    hint: "A–Z, 0–9, espace et - . $ / + % — industrie et badges.",
+    label: "barcode.code39.label",
+    hint: "barcode.code39.hint",
     sample: "STUDIO 2026",
   },
   {
     id: "CODE93",
-    label: "Code 93",
-    hint: "A–Z, 0–9 et - . $ / + % — plus compact que le Code 39.",
+    label: "barcode.code93.label",
+    hint: "barcode.code93.hint",
     sample: "STUDIO-2026",
   },
   {
     id: "EAN13",
-    label: "EAN-13",
-    hint: "12 chiffres — la clé de contrôle est calculée (13 si déjà fournie).",
+    label: "barcode.ean13.label",
+    hint: "barcode.ean13.hint",
     sample: "400638133393",
   },
   {
     id: "EAN8",
-    label: "EAN-8",
-    hint: "7 chiffres — la clé de contrôle est calculée (8 si déjà fournie).",
+    label: "barcode.ean8.label",
+    hint: "barcode.ean8.hint",
     sample: "9638507",
   },
   {
     id: "UPC",
-    label: "UPC-A",
-    hint: "11 chiffres — la clé de contrôle est calculée (12 si déjà fournie).",
+    label: "barcode.upc.label",
+    hint: "barcode.upc.hint",
     sample: "03600029145",
   },
   {
     id: "UPCE",
-    label: "UPC-E",
-    hint: "UPC-A compressé : 6 à 8 chiffres selon la règle de suppression de zéros.",
+    label: "barcode.upce.label",
+    hint: "barcode.upce.hint",
     sample: "01234565",
   },
   {
     id: "ITF14",
-    label: "ITF-14",
-    hint: "14 chiffres, clé de contrôle incluse — cartons et palettes.",
+    label: "barcode.itf14.label",
+    hint: "barcode.itf14.hint",
     sample: "12345678901235",
   },
   {
     id: "ITF",
-    label: "ITF",
-    hint: "Chiffres uniquement, par paires (nombre pair).",
+    label: "barcode.itf.label",
+    hint: "barcode.itf.hint",
     sample: "1234567890",
   },
   {
     id: "MSI",
-    label: "MSI",
-    hint: "Chiffres uniquement — inventaires et rayons.",
+    label: "barcode.msi.label",
+    hint: "barcode.msi.hint",
     sample: "1234567",
   },
   {
     id: "codabar",
-    label: "Codabar",
-    hint: "Chiffres (et - $ : . + /) encadrés par A, B, C ou D.",
+    label: "barcode.codabar.label",
+    hint: "barcode.codabar.hint",
     sample: "A123456B",
   },
   {
     id: "pharmacode",
-    label: "Pharmacode",
-    hint: "Nombre entier de 3 à 131 070 — industrie pharmaceutique.",
+    label: "barcode.pharmacode.label",
+    hint: "barcode.pharmacode.hint",
     sample: "1234",
   },
 ];
@@ -224,5 +226,9 @@ export function renderBarcodeSvg({
 }
 
 function invalidMessage(value: string, format: BarcodeFormat): string {
-  return `« ${value} » n'est pas valide en ${format.label}. Attendu : ${format.hint}`;
+  return translate("barcode.valeurInvalide", {
+    value,
+    format: translate(format.label),
+    hint: translate(format.hint),
+  });
 }
