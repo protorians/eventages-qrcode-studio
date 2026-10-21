@@ -18,6 +18,26 @@ Tranche d'infrastructure : aucune évolution fonctionnelle, l'application est in
   tag `v*`.
 - Correctif CI : `tauri-action` épinglé sur `v1` (le tag `v2` n'existe pas).
 ## [0.7.0] — 2026-10-20 · Identité Eventages Lite : nommage technique et icônes
+## [0.12.1] — 2026-10-21 · HUD skin for dialog close buttons
+
+### Fixed
+
+- **HUD skin applied to dialog close buttons**: `DialogClose` now carries
+  a `hud-button` class on the rendered element, so every dialog's
+  cancel/close action — quit confirmation, file filters, etc. — receives
+  the HUD art direction like regular buttons: cut corners, mono uppercase
+  labelling, inset keyboard focus ring and destructive `aria-invalid`
+  state. The class is also honoured inside `[data-slot="list"]` rows
+  (square clip and inner focus ring)
+  (`src/components/ui/dialog.tsx`, `src/index.css`).
+
+### Changed
+
+- Versions aligned to 0.12.1 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`).
+
+---
+
 ## [0.12.0] — 2026-10-21 · Multilingual interface (11 languages, RTL)
 
 ### Added
