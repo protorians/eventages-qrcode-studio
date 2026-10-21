@@ -1,7 +1,7 @@
 {
   "name": "eventages-qr",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "bin": {
     "eventages-qr": "cli/eventages-qr.ts",
@@ -17,6 +17,9 @@
     "eqr": "bun cli/eventages-qr.ts",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
+    "desktop:build:signed": "tauri build && bash scripts/sign-macos.sh",
+    "macos:sign": "bash scripts/sign-macos.sh",
+    "macos:sign:dmg": "bash scripts/sign-macos.sh --dmg",
     "ios:init": "tauri ios init",
     "ios:dev": "tauri ios dev",
     "ios:build": "tauri ios build",
