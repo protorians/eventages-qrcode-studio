@@ -1,14 +1,12 @@
 # Specs Produit · QR Code Studio
 
-Spécifications des fonctionnalités de création de QR codes, générées selon la
-structure **SpecKit** (`spec.md` + `checklists/requirements.md` par fonctionnalité).
+Ce dossier rassemble les spécifications des fonctionnalités de création de QR
+codes. Chaque fonctionnalité vit dans son propre dossier, avec deux documents :
+une `spec.md` détaillée et une checklist d'exigences
+(`checklists/requirements.md`).
 
-> Note : la skill `speckit-specify` crée en principe une seule fonctionnalité par
-> invocation. Le présent lot traite l'ensemble des fonctionnalités de création en
-> une passe, en suivant intégralement la structure du template SpecKit
-> (User Scenarios, Functional Requirements, Success Criteria, Key Entities,
-> Assumptions). Aucun marqueur `[NEEDS CLARIFICATION]` n'a été laissé : les choix
-> ambigus sont documentés dans la section « Hypothèses » de chaque spec.
+Les choix ambigus sont documentés dans la section « Hypothèses » de chaque
+spec : aucune question ouverte n'a été laissée en suspens.
 
 ---
 
@@ -63,7 +61,6 @@ Chaque dossier contient `spec.md` et `checklists/requirements.md`.
 
 **Ordre de lecture suggéré** : 001 → 002/003 → 004 → 005 → 006/007 → 008/009/010.
 
-État : tous les specs ont été révisés le 2026-10-19 pour la bascule **100 % local**
-(aucun serveur, données locales, modèle par projets) et auto-validés contre leur
-checklist qualité. Prochaine étape recommandée : `/speckit-clarify` (si disponible)
-pour arbitrer les hypothèses résiduelles, puis `/speckit-plan`.
+État : l'ensemble des specs a été révisé le 2026-10-19 pour la bascule
+**100 % local** (aucun serveur, données locales, modèle par projets) et relu
+contre sa checklist qualité.

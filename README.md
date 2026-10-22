@@ -2,7 +2,7 @@
 
 **English** · [Français](./README.fr.md)
 
-Eventages QrCode Studio is a desktop app (Tauri 2) for designing QR codes — **100% local, offline, no account, no server**. Every generation, every export and every piece of data stays on your machine.
+Eventages QrCode Studio is a desktop app for designing QR codes — **100% local, offline, no account, no server**. Pick a type, fill in your content, style the code until it looks right, then export a print-ready file. Every generation, every export and every piece of data stays on your machine: nothing is uploaded, nothing is tracked, and your printed codes keep working forever.
 
 ![Atelier : aperçu du QR avec cadre, logo et contrôle de lisibilité](docs/images/builder-overview.png)
 
@@ -11,8 +11,8 @@ Eventages QrCode Studio is a desktop app (Tauri 2) for designing QR codes — **
 ## At a glance
 
 - **22 QR types** — URL, Wi-Fi, vCard, SMS, WhatsApp, email, events, barcodes… plus self-contained page types (menus, PDF, galleries…) prepared for the next release and visible in the gallery as *Bientôt* (coming soon);
-- **Project-based workflow** — drafts are editable indefinitely, publishing is a deliberate export step, and nothing is ever sent anywhere;
-- **Deep visual customization** — module shapes, colors and gradients, corner markers, logos, frames with labels, and full-blown design templates;
+- **Project-based workflow** — a draft stays editable forever, publishing is a deliberate export step, and nothing ever leaves your device;
+- **Deep visual customization** — module shapes, colors and gradients, corner markers, logos, frames with labels, and full design templates;
 - **Real-world mockups** — preview the code on an A3 poster, a business card, a table tent, packaging, a TV screen, a sticker or a T-shirt;
 - **Scan-quality control** — a 0–100 readability score with one-click fixes (contrast, error correction, logo protection);
 - **Local import** — open an existing QR/barcode image, SVG or PDF and it is decoded back into an editable project;
@@ -22,6 +22,8 @@ Eventages QrCode Studio is a desktop app (Tauri 2) for designing QR codes — **
 ## Projects & workspace tabs
 
 The home tab is a permanent project registry: create, open, duplicate, delete, search and filter by type. Opening a project gives it its own tab in the title bar — the home tab stays always available. Every draft is saved automatically in the local registry; linking a `.qrd` file (Quick Response Document) lets you back a project with a real file on disk (manual save ⌘S or auto-save).
+
+A project is either a **draft** or **published**. A draft can be reworked as long as you like — content, design, name. Publishing freezes the encoded content and the design for good, so what you printed always matches what you exported. Need a change on a published code? Duplicate it, edit the copy, publish again: that's the only path, and it's a deliberate one.
 
 ![Accueil : registre de projets avec recherche, filtres par type et progression](docs/images/home-projects.png)
 
@@ -43,7 +45,7 @@ Types are grouped in families (Essentials, Contact, Web & social, Commerce, Even
 | Code-barres (1D) | EAN-13, CODE-128, … dedicated 1D rendering | Direct |
 | Menu, Produit, Coupon, PDF, Vidéo, Images, MP3, Playlist, Landing, Business, Feedback, App, vCard Plus, Liste de liens, Réseaux sociaux | Self-contained HTML pages to host yourself | Page • *Bientôt* (coming soon) |
 
-All content is typed per type (URL validation, password fields, selects, switches, file upload…) with a completion progress and a **sample fill** button (*Exemple*) for quick demos.
+Each type comes with its own typed form — URL validation, password fields, selects, switches, file upload — with a completion progress so you can see at a glance what is still missing, and a **sample fill** button (*Exemple*) that drops in a realistic demo dataset.
 
 ## Customize the design
 
@@ -61,7 +63,7 @@ Corner squares and corner centers can be restyled independently of the body (squ
 
 ### Central logo
 
-Upload your own square logo (PNG/JPG/SVG stays local) or pick one from the built-in vector set. Logo size, protection margin and hidden-dot compensation are tuned automatically against the error-correction level.
+Upload your own square logo (PNG/JPG/SVG stays local) or pick one from the built-in vector set. Logo size, protection margin and hidden-dot compensation are tuned automatically against the error-correction level, so the code stays readable even under the artwork.
 
 ![Module logo : téléversement local et réglages de protection](docs/images/module-logo.png)
 
@@ -85,7 +87,7 @@ Apply a complete look in one click (forms, colors, corners, frame) from eight te
 
 ### Readability check (SYS.DIAG)
 
-Each edit updates a 0–100 scan score with concrete warnings (low contrast, weak error correction with a logo, dense payload…) and one-click fixes (*Renforcer*).
+Each edit updates a 0–100 scan score with concrete warnings (low contrast, weak error correction with a logo, dense payload…) and one-click fixes (*Renforcer*). It is a simple safety net: before you print five hundred flyers, you know whether the code will actually scan.
 
 ## Import an existing code
 
@@ -98,7 +100,7 @@ Breathe new life into an old code: pick an image, SVG or PDF containing a QR or 
 - **Formats**: PNG (transparency), JPEG, WEBP and SVG (fully vector) at 512 → 4096 px;
 - **Quick exports**: direct PNG download, vector version, and one-click access to the formats above;
 - **`.qrd` archive** — packs the whole project (content, design, logo) in one file, openable back in the desktop app and interchangeable with the CLI (legacy `.qcp` archives are still accepted);
-- **System share sheet** (native under Tauri, Web Share in the browser) and **clipboard copy** of the encoded content.
+- **System share sheet** and **clipboard copy** of the encoded content.
 
 ## Settings, themes & privacy
 
@@ -116,11 +118,10 @@ Breathe new life into an old code: pick an image, SVG or PDF containing a QR or 
 
 ## Headless CLI (`eventages-qr`)
 
-Create, manage and compose QR projects without any UI, from a terminal or a script — same modules as the app (`qr-catalog`, `qr-payload`, `qr-design`, `qr-frame`, `qcp`), same rendering path as the preview. The command ships under two names, `eventages-qr` and its short alias `eqr`.
+Create, manage and compose QR projects without opening the app, from a terminal or a script. The CLI uses the same engine and the same rendering path as the on-screen preview, so a code rendered from the command line matches exactly what you saw in the studio. The command ships under two names, `eventages-qr` and its short alias `eqr`.
 
 ```sh
 eventages-qr help                # full help (or `eqr`)
-bun run cli types                # equivalent while developing
 
 eventages-qr init                # prepare ./studio (or EVENTAGES_QR_DIR, or --dir …)
 eventages-qr create "Guest Wi-Fi" --type wifi \
@@ -139,33 +140,13 @@ eventages-qr delete "Guest Wi-Fi"
 
 Workspace: one JSON file per project (`./studio`, overridable with the `--dir`
 option or `EVENTAGES_QR_DIR` — the legacy `EVENTAGES_LITE_DIR` and
-`QRS_STUDIO_DIR` are still honoured). SVG composition without a DOM, PNG via
-`@resvg/resvg-js`; `--no-frame`, `--size` and `--design key=value` let you
+`QRS_STUDIO_DIR` are still honoured). SVG composition and PNG rendering happen
+entirely on your machine; `--no-frame`, `--size` and `--design key=value` let you
 compose a variant without modifying the project (`eventages-qr help <command>`
 for details on each command).
 
-## Development
-
-```sh
-bun install          # install dependencies (bun required)
-bun run tauri dev    # run the desktop app in development
-bun run build        # typecheck + production build (must pass before finishing any UI change)
-```
-
-### Stack
-
-- **Tauri 2** + **React 19** + **TypeScript**
-- **Tailwind CSS v4** (CSS-first config in `src/index.css`, `@theme inline`)
-- **shadcn/ui**, `base-nova` style (Base UI primitives)
-- **Icons: [lucide-react](https://lucide.dev/icons)** — the single icon set for the whole UI. No other icon library, no hand-written icon SVGs, no emoji used as icons. The only inline SVGs in the code are functional graphics (QR pattern previews, score gauge), not UI icons.
-- Fonts: Manrope Variable (sans) and JetBrains Mono Variable (mono), embedded as latin subsets in `src/index.css`
-
 ## Documentation
 
-- [`AGENTS.md`](./AGENTS.md) — conventions to follow when working on this repo (including the "lucide-react icons only" rule)
-- [`docs/`](./docs/README.md) — product specs (SpecKit) and per-feature checklists
+- [`AGENTS.md`](./AGENTS.md) — conventions to follow when working on this repo
+- [`docs/`](./docs/README.md) — product specs and per-feature checklists
 - [`docs/images/`](./docs/images) — the screenshots used in this README
-
-## Recommended IDE
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://rust-lang.github.io/rust-analyzer/)

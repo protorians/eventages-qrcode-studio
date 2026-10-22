@@ -2,7 +2,7 @@
 
 [English](./README.md) · **Français**
 
-Application desktop (Tauri 2) de création de QR codes — **100 % locale, hors ligne, sans compte, sans serveur**. Chaque génération, chaque export et chaque donnée restent sur votre machine.
+Eventages QrCode Studio est une application desktop de création de QR codes — **100 % locale, hors ligne, sans compte, sans serveur**. Choisissez un type, remplissez votre contenu, ajustez le design jusqu'à ce que le rendu vous plaise, puis exportez un fichier prêt à imprimer. Chaque génération, chaque export et chaque donnée restent sur votre machine : rien n'est envoyé, rien n'est pisté, et vos QR imprimés fonctionnent pour toujours.
 
 ![Atelier : aperçu du QR avec cadre, logo et contrôle de lisibilité](docs/images/builder-overview.png)
 
@@ -20,6 +20,8 @@ Application desktop (Tauri 2) de création de QR codes — **100 % locale, hors 
 ## Projets & onglets de l'espace de travail
 
 L'onglet Accueil est un registre permanent de projets : créer, ouvrir, dupliquer, supprimer, rechercher et filtrer par type. Ouvrir un projet lui dédie un onglet dans la barre de titre — l'accueil reste toujours à portée de clic. Chaque brouillon est enregistré automatiquement dans le registre local ; lier un fichier `.qrd` (*Quick Response Document*) adosse le projet à un vrai fichier sur disque (enregistrement manuel ⌘S ou auto-enregistré).
+
+Un projet est soit un **brouillon**, soit **publié**. Un brouillon peut être retravaillé autant que nécessaire — contenu, design, nom. La publication fige définitivement le contenu encodé et le design : ce que vous avez imprimé correspond toujours à ce que vous avez exporté. Besoin de modifier un code publié ? Dupliquez-le, modifiez la copie, publiez à nouveau : c'est le seul chemin, et c'est un choix délibéré.
 
 ![Accueil : registre de projets avec recherche, filtres par type et progression](docs/images/home-projects.png)
 
@@ -41,7 +43,7 @@ Les types sont regroupés par familles (Essentiels, Contact, Web & réseaux, Com
 | Code-barres (1D) | EAN-13, CODE-128, … rendu 1D dédié | Direct |
 | Menu, Produit, Coupon, PDF, Vidéo, Images, MP3, Playlist, Landing, Business, Feedback, App, vCard Plus, Liste de liens, Réseaux sociaux | Pages HTML autonomes à héberger soi-même | Page • *Bientôt* |
 
-Chaque type a son formulaire typé (validation d'URL, mot de passe, listes, interrupteurs, téléversement de fichier…) avec jauge de complétion et bouton **Exemple** pour remplir un jeu de démonstration réaliste.
+Chaque type a son formulaire typé — validation d'URL, mot de passe, listes, interrupteurs, téléversement de fichier — avec une jauge de complétion pour voir d'un coup d'œil ce qui manque, et un bouton **Exemple** qui insère un jeu de démonstration réaliste.
 
 ## Personnaliser le design
 
@@ -59,7 +61,7 @@ Les repères de position se restylent indépendamment du corps (carré, arrondi,
 
 ### Logo central
 
-Téléversez un logo carré (PNG/JPG/SVG, stocké localement) ou choisissez-en un dans la bibliothèque vectorielle intégrée. Taille du logo, marge de protection et compensation des modules masqués s'ajustent au niveau de correction d'erreur.
+Téléversez un logo carré (PNG/JPG/SVG, stocké localement) ou choisissez-en un dans la bibliothèque vectorielle intégrée. Taille du logo, marge de protection et compensation des modules masqués s'ajustent automatiquement au niveau de correction d'erreur, pour que le code reste lisible même sous l'illustration.
 
 ![Module logo : téléversement local et réglages de protection](docs/images/module-logo.png)
 
@@ -83,7 +85,7 @@ Appliquez un habillage complet en un clic (formes, couleurs, coins, cadre) depui
 
 ### Contrôle de lisibilité (SYS.DIAG)
 
-Chaque modification met à jour un score de scan de 0 à 100 avec des alertes concrètes (contraste faible, correction d'erreur insuffisante avec un logo, payload trop dense…) et des corrections en un clic (*Renforcer*).
+Chaque modification met à jour un score de scan de 0 à 100 avec des alertes concrètes (contraste faible, correction d'erreur insuffisante avec un logo, payload trop dense…) et des corrections en un clic (*Renforcer*). Un simple filet de sécurité : avant d'imprimer cinq cents flyers, vous savez si le code se scannera vraiment.
 
 ## Importer un code existant
 
@@ -96,7 +98,7 @@ Donnez une seconde vie à un ancien code : choisissez une image, un SVG ou un PD
 - **Formats** : PNG (transparence), JPEG, WEBP et SVG (totalement vectoriel) de 512 à 4096 px ;
 - **Exports rapides** : téléchargement direct, version vectorielle, accès en un clic aux formats ci-dessus ;
 - **Archive `.qrd`** — un fichier unique qui contient tout le projet (contenu, design, logo), rouvrable dans l'app desktop et interchangeable avec la CLI (les archives `.qcp` historiques restent acceptées) ;
-- **Feuille de partage système** (nativement sous Tauri, Web Share côté navigateur) et **copie du contenu encodé** dans le presse-papiers.
+- **Feuille de partage système** et **copie du contenu encodé** dans le presse-papiers.
 
 ## Paramètres, thèmes & confidentialité
 
@@ -105,7 +107,7 @@ Donnez une seconde vie à un ancien code : choisissez une image, un SVG ou un PD
 - **Apparence** — mode sombre/clair et 12 thèmes de couleurs (Eventages, Mono, Dracula, Tokyo Night…) ;
 - **Interface** — la direction artistique HUD (coins coupés, typo mono, crans) peut être désactivée entièrement (*mode HUD* off) ;
 - **Projet** — comportement du fichier `.qrd` lié et enregistrement automatique ;
-- **Données** — tout (projets, brouillons, designs, logos) reste sur cette machine : aucun compte, aucune synchronisation, aucune télémétrie, aucun appel réseau. Les QR imprimés fonctionnent hors ligne pour toujours ;
+- **Données** — tout (projets, brouillons, designs, logos, statistiques) reste sur cette machine : aucun compte, aucune synchronisation, aucune télémétrie, aucun appel réseau. Les QR imprimés fonctionnent hors ligne pour toujours ;
 - **CLI** — un interrupteur installe les commandes `eventages-qr` et `eqr` dans le PATH (liens symboliques dans `/usr/local/bin` sous macOS) ; le retirer les supprime.
 
 ![Paramètres : registre local et confidentialité](docs/images/settings-data.png)
@@ -114,14 +116,10 @@ Donnez une seconde vie à un ancien code : choisissez une image, un SVG ou un PD
 
 ## CLI headless (`eventages-qr`)
 
-Créer, gérer et composer des projets QR sans interface, depuis un terminal ou un
-script — mêmes modules que l'app (`qr-catalog`, `qr-payload`, `qr-design`,
-`qr-frame`, `qcp`), même tracé de rendu que l'aperçu. La commande existe sous
-deux noms : `eventages-qr` et son alias court `eqr`.
+Créez, gérez et composez des projets QR sans ouvrir l'application, depuis un terminal ou un script. La CLI emprunte le même moteur et le même tracé de rendu que l'aperçu à l'écran : un code généré en ligne de commande correspond exactement à ce que vous avez vu dans l'atelier. La commande existe sous deux noms : `eventages-qr` et son alias court `eqr`.
 
 ```sh
 eventages-qr help               # aide complète (ou `eqr`)
-bun run cli types               # équivalent en développement
 
 eventages-qr init               # préparer ./studio (ou EVENTAGES_QR_DIR, ou --dir …)
 eventages-qr create "Wi-Fi invité" --type wifi \
@@ -140,33 +138,13 @@ eventages-qr delete "Wi-Fi invité"
 
 Espace de travail : un fichier JSON par projet (`./studio`, substituable par
 l'option `--dir` ou `EVENTAGES_QR_DIR` — les anciens `EVENTAGES_LITE_DIR` et
-`QRS_STUDIO_DIR` restent acceptés). Composition SVG sans DOM, PNG via
-`@resvg/resvg-js` ; `--no-frame`, `--size` et `--design clé=valeur` permettent de
-composer une variante sans modifier le projet (`eventages-qr help <commande>`
-pour le détail de chaque commande).
-
-## Développement
-
-```sh
-bun install          # installer les dépendances (bun obligatoire)
-bun run tauri dev    # lancer l'app desktop en développement
-bun run build        # typecheck + build production (à valider avant toute fin de modification UI)
-```
-
-### Stack
-
-- **Tauri 2** + **React 19** + **TypeScript**
-- **Tailwind CSS v4** (config CSS-first dans `src/index.css`, `@theme inline`)
-- **shadcn/ui**, style `base-nova` (primitives Base UI)
-- **Icônes : [lucide-react](https://lucide.dev/icons)** — set unique pour toute l'interface. Aucune autre librairie d'icônes, aucun SVG d'icône écrit à la main, aucun emoji utilisé comme icône. Les seuls SVG inline du code sont des graphiques fonctionnels (aperçus de motifs QR, jauge de score), pas des icônes UI.
-- Polices : Manrope Variable (sans) et JetBrains Mono Variable (mono), embarquées en sous-ensembles latins dans `src/index.css`
+`QRS_STUDIO_DIR` restent acceptés). La composition SVG et le rendu PNG se font
+intégralement sur votre machine ; `--no-frame`, `--size` et
+`--design clé=valeur` permettent de composer une variante sans modifier le
+projet (`eventages-qr help <commande>` pour le détail de chaque commande).
 
 ## Documentation
 
-- [`AGENTS.md`](./AGENTS.md) — conventions à suivre pour travailler sur ce dépôt (dont la règle « icônes lucide-react uniquement »)
-- [`docs/`](./docs/README.md) — specs produit (SpecKit) et checklists par fonctionnalité
+- [`AGENTS.md`](./AGENTS.md) — conventions à suivre pour travailler sur ce dépôt
+- [`docs/`](./docs/README.md) — specs produit et checklists par fonctionnalité
 - [`docs/images/`](./docs/images) — les captures d'écran utilisées dans ce README
-
-## IDE recommandé
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://rust-lang.github.io/rust-analyzer/)
