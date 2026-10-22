@@ -4,6 +4,7 @@ import type {
   DotType,
   ErrorCorrectionLevel,
 } from "qr-code-styling";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 
 /** Modèle de design d'un QR (spec 004, entité QrDesign). */
 export type QrDesign = {
@@ -39,33 +40,33 @@ export type QrDesign = {
   margin: number;
 };
 
-export const DOT_STYLES: { id: DotType; label: string }[] = [
-  { id: "square", label: "Carré" },
-  { id: "rounded", label: "Arrondi" },
-  { id: "extra-rounded", label: "Extra arrondi" },
-  { id: "dots", label: "Points" },
-  { id: "classy", label: "Classy" },
-  { id: "classy-rounded", label: "Classy arrondi" },
+export const DOT_STYLES: { id: DotType; label: TranslationKey }[] = [
+  { id: "square", label: "design.label.square" },
+  { id: "rounded", label: "design.label.rounded" },
+  { id: "extra-rounded", label: "design.label.extraRounded" },
+  { id: "dots", label: "design.label.dots" },
+  { id: "classy", label: "design.label.classy" },
+  { id: "classy-rounded", label: "design.label.classyRounded" },
 ];
 
-export const CORNER_SQUARE_STYLES: { id: CornerSquareType; label: string }[] = [
-  { id: "square", label: "Carré" },
-  { id: "extra-rounded", label: "Arrondi" },
-  { id: "dot", label: "Cercle" },
-  { id: "rounded", label: "Doux" },
-  { id: "classy", label: "Classy" },
+export const CORNER_SQUARE_STYLES: { id: CornerSquareType; label: TranslationKey }[] = [
+  { id: "square", label: "design.label.square" },
+  { id: "extra-rounded", label: "design.label.rounded" },
+  { id: "dot", label: "design.label.circle" },
+  { id: "rounded", label: "design.label.soft" },
+  { id: "classy", label: "design.label.classy" },
 ];
 
-export const CORNER_DOT_STYLES: { id: CornerDotType; label: string }[] = [
-  { id: "square", label: "Carré" },
-  { id: "dot", label: "Point" },
-  { id: "rounded", label: "Arrondi" },
-  { id: "extra-rounded", label: "Extra arrondi" },
+export const CORNER_DOT_STYLES: { id: CornerDotType; label: TranslationKey }[] = [
+  { id: "square", label: "design.label.square" },
+  { id: "dot", label: "design.label.dot" },
+  { id: "rounded", label: "design.label.rounded" },
+  { id: "extra-rounded", label: "design.label.extraRounded" },
 ];
 
 export type QrFrame = {
   id: string;
-  name: string;
+  name: TranslationKey;
   radius: number;
   padding: number;
   borderWidth: number;
@@ -80,7 +81,7 @@ export type QrFrame = {
 export const FRAMES: QrFrame[] = [
   {
     id: "none",
-    name: "Sans cadre",
+    name: "design.frame.none.name",
     radius: 24,
     padding: 0,
     borderWidth: 0,
@@ -93,7 +94,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f0",
-    name: "Frame 0",
+    name: "design.frame.f0.name",
     radius: 20,
     padding: 18,
     borderWidth: 0,
@@ -106,7 +107,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f13",
-    name: "Frame 13",
+    name: "design.frame.f13.name",
     radius: 22,
     padding: 20,
     borderWidth: 1,
@@ -119,7 +120,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f18",
-    name: "Frame 18",
+    name: "design.frame.f18.name",
     radius: 16,
     padding: 18,
     borderWidth: 0,
@@ -132,7 +133,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f21",
-    name: "Frame 21",
+    name: "design.frame.f21.name",
     radius: 8,
     padding: 18,
     borderWidth: 2,
@@ -145,7 +146,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f22",
-    name: "Frame 22",
+    name: "design.frame.f22.name",
     radius: 28,
     padding: 22,
     borderWidth: 0,
@@ -158,7 +159,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f30",
-    name: "Frame 30",
+    name: "design.frame.f30.name",
     radius: 999,
     padding: 26,
     borderWidth: 2,
@@ -171,7 +172,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f32",
-    name: "Frame 32",
+    name: "design.frame.f32.name",
     radius: 14,
     padding: 16,
     borderWidth: 1,
@@ -184,7 +185,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f40",
-    name: "Frame 40",
+    name: "design.frame.f40.name",
     radius: 32,
     padding: 24,
     borderWidth: 0,
@@ -197,7 +198,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f45",
-    name: "Frame 45",
+    name: "design.frame.f45.name",
     radius: 12,
     padding: 20,
     borderWidth: 3,
@@ -210,7 +211,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f48",
-    name: "Frame 48",
+    name: "design.frame.f48.name",
     radius: 999,
     padding: 20,
     borderWidth: 1,
@@ -223,7 +224,7 @@ export const FRAMES: QrFrame[] = [
   },
   {
     id: "f51",
-    name: "Frame 51",
+    name: "design.frame.f51.name",
     radius: 18,
     padding: 22,
     borderWidth: 2,
@@ -240,79 +241,81 @@ export const FRAMES_BY_ID: Record<string, QrFrame> = Object.fromEntries(
   FRAMES.map((frame) => [frame.id, frame]),
 );
 
-export type ColorSwatch = { name: string; value: string };
+export type ColorSwatch = { name: TranslationKey; value: string };
 
 export const PALETTES: { id: string; name: string; colors: ColorSwatch[] }[] = [
   {
     id: "studio",
     name: "Studio",
     colors: [
-      { name: "Indigo", value: "#6366f1" },
-      { name: "Violet", value: "#8b5cf6" },
-      { name: "Fuchsia", value: "#d946ef" },
-      { name: "Rose", value: "#f43f5e" },
-      { name: "Ambre", value: "#f59e0b" },
-      { name: "Émeraude", value: "#10b981" },
-      { name: "Cyan", value: "#06b6d4" },
-      { name: "Ardoise", value: "#1e293b" },
+      { name: "design.color.indigo", value: "#6366f1" },
+      { name: "design.color.violet", value: "#8b5cf6" },
+      { name: "design.color.fuchsia", value: "#d946ef" },
+      { name: "design.color.rose", value: "#f43f5e" },
+      { name: "design.color.amber", value: "#f59e0b" },
+      { name: "design.color.emerald", value: "#10b981" },
+      { name: "design.color.cyan", value: "#06b6d4" },
+      { name: "design.color.slate", value: "#1e293b" },
     ],
   },
   {
     id: "pastel",
     name: "Pastel",
     colors: [
-      { name: "Lilas", value: "#c4b5fd" },
-      { name: "Ciel", value: "#bae6fd" },
-      { name: "Menthe", value: "#a7f3d0" },
-      { name: "Pêche", value: "#fed7aa" },
-      { name: "Rose", value: "#fecdd3" },
-      { name: "Citron", value: "#fef08a" },
-      { name: "Sable", value: "#e7e5e4" },
-      { name: "Encre", value: "#334155" },
+      { name: "design.color.lilac", value: "#c4b5fd" },
+      { name: "design.color.sky", value: "#bae6fd" },
+      { name: "design.color.mint", value: "#a7f3d0" },
+      { name: "design.color.peach", value: "#fed7aa" },
+      { name: "design.color.rose", value: "#fecdd3" },
+      { name: "design.color.lemon", value: "#fef08a" },
+      { name: "design.color.sand", value: "#e7e5e4" },
+      { name: "design.color.ink", value: "#334155" },
     ],
   },
   {
     id: "bold",
     name: "Bold",
     colors: [
-      { name: "Noir", value: "#0f172a" },
-      { name: "Rouge", value: "#dc2626" },
-      { name: "Orange", value: "#ea580c" },
-      { name: "Jaune", value: "#facc15" },
-      { name: "Vert", value: "#16a34a" },
-      { name: "Bleu", value: "#2563eb" },
-      { name: "Violet", value: "#7c3aed" },
-      { name: "Blanc", value: "#ffffff" },
+      { name: "design.color.black", value: "#0f172a" },
+      { name: "design.color.red", value: "#dc2626" },
+      { name: "design.color.orange", value: "#ea580c" },
+      { name: "design.color.yellow", value: "#facc15" },
+      { name: "design.color.green", value: "#16a34a" },
+      { name: "design.color.blue", value: "#2563eb" },
+      { name: "design.color.violet", value: "#7c3aed" },
+      { name: "design.color.white", value: "#ffffff" },
     ],
   },
 ];
 
-export const GRADIENT_PRESETS: { id: string; name: string; from: string; to: string }[] = [
-  { id: "sunset", name: "Coucher de soleil", from: "#f97316", to: "#db2777" },
-  { id: "ocean", name: "Océan", from: "#0ea5e9", to: "#4f46e5" },
-  { id: "candy", name: "Bonbon", from: "#a855f7", to: "#ec4899" },
-  { id: "forest", name: "Forêt", from: "#22c55e", to: "#0f766e" },
-  { id: "ember", name: "Braise", from: "#facc15", to: "#dc2626" },
-  { id: "ink", name: "Encre", from: "#334155", to: "#0f172a" },
+export const QR_SWATCHES: ColorSwatch[] = PALETTES.flatMap((palette) => palette.colors);
+
+export const GRADIENT_PRESETS: { id: string; name: TranslationKey; from: string; to: string }[] = [
+  { id: "sunset", name: "design.gradient.sunset", from: "#f97316", to: "#db2777" },
+  { id: "ocean", name: "design.gradient.ocean", from: "#0ea5e9", to: "#4f46e5" },
+  { id: "candy", name: "design.gradient.candy", from: "#a855f7", to: "#ec4899" },
+  { id: "forest", name: "design.gradient.forest", from: "#22c55e", to: "#0f766e" },
+  { id: "ember", name: "design.gradient.ember", from: "#facc15", to: "#dc2626" },
+  { id: "ink", name: "design.color.ink", from: "#334155", to: "#0f172a" },
 ];
 
 export const QR_BACKGROUNDS: ColorSwatch[] = [
-  { name: "Blanc", value: "#ffffff" },
-  { name: "Crème", value: "#faf6f0" },
-  { name: "Brume", value: "#f1f5f9" },
-  { name: "Encre", value: "#0f172a" },
-  { name: "Nuit", value: "#111827" },
+  { name: "design.color.white", value: "#ffffff" },
+  { name: "design.color.cream", value: "#faf6f0" },
+  { name: "design.color.mist", value: "#f1f5f9" },
+  { name: "design.color.ink", value: "#0f172a" },
+  { name: "design.color.night", value: "#111827" },
 ];
 
 export const ERROR_CORRECTION_LEVELS: {
   id: ErrorCorrectionLevel;
-  label: string;
-  detail: string;
+  label: TranslationKey;
+  detail: TranslationKey;
 }[] = [
-  { id: "L", label: "Faible", detail: "7 % de récupération" },
-  { id: "M", label: "Moyen", detail: "15 % de récupération" },
-  { id: "Q", label: "Élevé", detail: "25 % de récupération" },
-  { id: "H", label: "Maximal", detail: "30 % — recommandé avec logo" },
+  { id: "L", label: "design.ecc.l.label", detail: "design.ecc.l.detail" },
+  { id: "M", label: "design.ecc.m.label", detail: "design.ecc.m.detail" },
+  { id: "Q", label: "design.ecc.q.label", detail: "design.ecc.q.detail" },
+  { id: "H", label: "design.ecc.h.label", detail: "design.ecc.h.detail" },
 ];
 
 export const DEFAULT_DESIGN: QrDesign = {
@@ -351,7 +354,7 @@ export const DEFAULT_DESIGN: QrDesign = {
 export type DesignTemplate = {
   id: string;
   name: string;
-  hint: string;
+  hint: TranslationKey;
   preview: [string, string];
   design: Partial<QrDesign>;
 };
@@ -360,7 +363,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "aurora",
     name: "Aurora",
-    hint: "Dégradé indigo · modules arrondis",
+    hint: "design.template.aurora.hint",
     preview: ["#6366f1", "#d946ef"],
     design: {
       dotsType: "rounded",
@@ -379,7 +382,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "mono",
     name: "Mono",
-    hint: "Encre · carré net",
+    hint: "design.template.mono.hint",
     preview: ["#0f172a", "#475569"],
     design: {
       dotsType: "square",
@@ -396,7 +399,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "bubble",
     name: "Bubble",
-    hint: "Points · cadre circulaire",
+    hint: "design.template.bubble.hint",
     preview: ["#06b6d4", "#10b981"],
     design: {
       dotsType: "dots",
@@ -416,7 +419,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "classy",
     name: "Classy",
-    hint: "Classy · carte de visite",
+    hint: "design.template.classy.hint",
     preview: ["#8b5cf6", "#f43f5e"],
     design: {
       dotsType: "classy-rounded",
@@ -435,7 +438,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "citrus",
     name: "Citrus",
-    hint: "Ambre → rouge · sticker",
+    hint: "design.template.citrus.hint",
     preview: ["#facc15", "#dc2626"],
     design: {
       dotsType: "extra-rounded",
@@ -453,7 +456,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "inklight",
     name: "Nightfall",
-    hint: "Fond sombre · contraste inversé",
+    hint: "design.template.inklight.hint",
     preview: ["#0f172a", "#38bdf8"],
     design: {
       dotsType: "rounded",
@@ -475,7 +478,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "mint",
     name: "Mint",
-    hint: "Émeraude douce · produit",
+    hint: "design.template.mint.hint",
     preview: ["#10b981", "#0ea5e9"],
     design: {
       dotsType: "classy",
@@ -493,7 +496,7 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
   {
     id: "ticket",
     name: "Ticket",
-    hint: "Ticket · coupon",
+    hint: "design.template.ticket.hint",
     preview: ["#f97316", "#8b5cf6"],
     design: {
       dotsType: "dots",
@@ -514,8 +517,8 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
 /** Contextes de mise en situation de l'aperçu (spec 004, illustr. « mockup »). */
 export type Mockup = {
   id: string;
-  name: string;
-  detail: string;
+  name: TranslationKey;
+  detail: TranslationKey;
   /** Palette du décor, appliquée en CSS. */
   surface: string;
   accent: string;
@@ -527,8 +530,8 @@ export type Mockup = {
 export const MOCKUPS: Mockup[] = [
   {
     id: "plain",
-    name: "Aperçu neutre",
-    detail: "Fond damier, sans habillage",
+    name: "design.mockup.plain.name",
+    detail: "design.mockup.plain.detail",
     surface: "#ffffff",
     accent: "#94a3b8",
     qrScale: 1,
@@ -536,8 +539,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "poster",
-    name: "Affiche A3",
-    detail: "Affichage vitrine ou couloir",
+    name: "design.mockup.poster.name",
+    detail: "design.mockup.poster.detail",
     surface: "#0b1020",
     accent: "#6366f1",
     qrScale: 0.62,
@@ -545,8 +548,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "card",
-    name: "Carte de visite",
-    detail: "Format 85 × 55 mm",
+    name: "design.mockup.card.name",
+    detail: "design.mockup.card.detail",
     surface: "#f8fafc",
     accent: "#0f172a",
     qrScale: 0.42,
@@ -554,8 +557,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "table",
-    name: "Chevalet de table",
-    detail: "Restaurant & hôtellerie",
+    name: "design.mockup.table.name",
+    detail: "design.mockup.table.detail",
     surface: "#1c1917",
     accent: "#f59e0b",
     qrScale: 0.5,
@@ -563,8 +566,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "packaging",
-    name: "Packaging",
-    detail: "Étiquette produit",
+    name: "design.mockup.packaging.name",
+    detail: "design.mockup.packaging.detail",
     surface: "#ecfdf5",
     accent: "#059669",
     qrScale: 0.45,
@@ -572,8 +575,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "screen",
-    name: "Écran / TV",
-    detail: "Présentation en salle",
+    name: "design.mockup.screen.name",
+    detail: "design.mockup.screen.detail",
     surface: "#111827",
     accent: "#22d3ee",
     qrScale: 0.58,
@@ -581,8 +584,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "sticker",
-    name: "Sticker",
-    detail: "Vitrine, véhicule, flyer",
+    name: "design.mockup.sticker.name",
+    detail: "design.mockup.sticker.detail",
     surface: "#fef2f2",
     accent: "#ef4444",
     qrScale: 0.55,
@@ -590,8 +593,8 @@ export const MOCKUPS: Mockup[] = [
   },
   {
     id: "tshirt",
-    name: "T-shirt",
-    detail: "Textile personnalisé",
+    name: "design.mockup.tshirt.name",
+    detail: "design.mockup.tshirt.detail",
     surface: "#e2e8f0",
     accent: "#1d4ed8",
     qrScale: 0.47,
@@ -605,11 +608,11 @@ export const MOCKUPS_BY_ID: Record<string, Mockup> = Object.fromEntries(
 
 export type ExportFormat = "png" | "jpeg" | "webp" | "svg";
 
-export const EXPORT_FORMATS: { id: ExportFormat; label: string; detail: string }[] = [
-  { id: "png", label: "PNG", detail: "Transparence, impression" },
-  { id: "svg", label: "SVG", detail: "Vectoriel, redimensionnable" },
-  { id: "jpeg", label: "JPEG", detail: "Léger, réseaux sociaux" },
-  { id: "webp", label: "WebP", detail: "Compression moderne" },
+export const EXPORT_FORMATS: { id: ExportFormat; label: string; detail: TranslationKey }[] = [
+  { id: "png", label: "PNG", detail: "design.format.png.detail" },
+  { id: "svg", label: "SVG", detail: "design.format.svg.detail" },
+  { id: "jpeg", label: "JPEG", detail: "design.format.jpeg.detail" },
+  { id: "webp", label: "WebP", detail: "design.format.webp.detail" },
 ];
 
 export const EXPORT_SIZES = [512, 1024, 2048, 4096];

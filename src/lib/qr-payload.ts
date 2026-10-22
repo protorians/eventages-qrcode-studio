@@ -15,9 +15,9 @@ function esc(value: string | undefined): string {
 
 /**
  * Construit la chaîne réellement encodée dans le QR depuis les valeurs du
- * formulaire (spec 001/002). Les types riches (`page`) produisent une courte
- * URL de contenu ; elle est simulée ici en attendant le générateur de pages
- * autonomes (spec 009), sans aucune dépendance réseau.
+ * formulaire (spec 001/002). Seuls les protocoles compris par les téléphones
+ * sont produits (https, vCard, WIFI:, VEVENT…) ; les types « page » (spec
+ * 009) attendent la publication et ne produisent pas encore de payload.
  */
 export function buildPayload(type: QrType, values: QrValues): string {
   const v = values;
@@ -59,8 +59,7 @@ export function buildPayload(type: QrType, values: QrValues): string {
         ";",
       ].join("");
 
-    case "vcard":
-    case "vcard-plus": {
+    case "vcard": {
       const rows = [
         "BEGIN:VCARD",
         "VERSION:3.0",
@@ -78,29 +77,78 @@ export function buildPayload(type: QrType, values: QrValues): string {
       return rows.filter(Boolean).join("\n");
     }
 
-    case "barcode2d":
+    case "event":
+      return buildVEvent(v);
+
+    case "barcode":
+      // Le code-barres 1D encode la valeur telle quelle ; la validité vis-à-vis
+      // de la symbologie est contrôlée au rendu (src/lib/barcode.ts).
       return v.data ?? "";
 
-    default: {
-      // Types « page autonome » (spec 009) : le QR pointe vers un document
-      // HTML local. L'URL est déterministe à partir du contenu saisi.
-      const seed = Object.entries(v)
-        .filter(([, value]) => value?.trim())
-        .map(([key, value]) => `${key}:${value}`)
-        .join("|");
-      const id = hash(seed || type.id);
-      return `local://${type.id}/${id}`;
-    }
+    default:
+      // Types « page autonome » (spec 009) : en attente de la publication
+      // (Netlify, FTP…), aucun payload scannable n'est produit.
+      return "";
   }
 }
 
-function hash(input: string): string {
-  let h = 2166136261;
-  for (let i = 0; i < input.length; i += 1) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36).padStart(7, "0");
+/** « 2026-11-14 » → « 20261114 », ou `null` si la date est absente. */
+function icalDate(date: string | undefined): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec((date ?? "").trim());
+  return match ? `${match[1]}${match[2]}${match[3]}` : null;
+}
+
+/** Date + heure locales (temps flottant) au format iCalendar. */
+function icalDateTime(date: string | undefined, time: string | undefined): string | null {
+  const day = icalDate(date);
+  if (!day) return null;
+  const match = /^(\d{2}):(\d{2})/.exec((time ?? "").trim());
+  return `${day}T${match ? `${match[1]}${match[2]}00` : "000000"}`;
+}
+
+/**
+ * Échappe une valeur TEXT iCalendar (RFC 5545) : barres obliques, points-
+ * virgules, virgules et retours à la ligne.
+ */
+function icalEscape(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+/**
+ * Événement iCalendar (spec « événement natif ») : au scan, le téléphone
+ * propose d'ajouter l'événement à son calendrier — aucun hébergement requis.
+ * L'événement est enveloppé dans VCALENDAR pour la compatibilité la plus
+ * large (iOS, Android, lecteurs dédiés).
+ */
+function buildVEvent(v: QrValues): string {
+  const start = icalDateTime(v.startDate, v.startTime);
+  const title = line(v.title);
+  if (!title || !start) return "";
+
+  // La fin ne s'applique qu'avec une heure de fin ; la date de début sert
+  // de repli pour un événement qui se termine le même jour.
+  const end = v.endTime?.trim()
+    ? icalDateTime(v.endDate || v.startDate, v.endTime)
+    : null;
+
+  const rows = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Eventages QrCode Studio//FR",
+    "BEGIN:VEVENT",
+    `SUMMARY:${icalEscape(title)}`,
+    line(v.location) ? `LOCATION:${icalEscape(v.location)}` : null,
+    line(v.description) ? `DESCRIPTION:${icalEscape(v.description)}` : null,
+    `DTSTART:${start}`,
+    end ? `DTEND:${end}` : null,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+  return rows.filter(Boolean).join("\n");
 }
 
 /** Longueur du payload encodé, en octets UTF-8. */

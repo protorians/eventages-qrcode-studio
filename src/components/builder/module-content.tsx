@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Check,
   ChevronsUpDown,
+  Clock,
   RotateCcw,
   Search,
   WandSparkles,
@@ -26,7 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { FileControl, SectionTitle, SwitchControl } from "@/components/builder/controls";
+import { FileControl, SectionTitle, SwitchControl } from "@/components/ui/controls";
+import { barcodeFormat } from "@/lib/barcode";
 import {
   QR_FAMILIES,
   QR_TYPES,
@@ -35,32 +37,51 @@ import {
   type QrField,
 } from "@/lib/qr-catalog";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Onglet « Contenu » : galerie + formulaire du type courant (spec 001). */
 export function ModuleContent() {
   const { state, dispatch, type, values, missingField, progress, setValue } = useBuilder();
+  const t = useT();
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<string | null>(null);
 
+  // Aide du champ « valeur » du code-barres : adaptée à la symbologie choisie.
+  const fields = useMemo<QrField[]>(() => {
+    if (type.id !== "barcode") return type.fields;
+    return type.fields.map((field) =>
+      field.name === "data"
+        ? {
+            ...field,
+            // Hint et exemple de la symbologie : valeurs neutres non traduites.
+            helpRaw: barcodeFormat(values.symbology).hint,
+            placeholder: barcodeFormat(values.symbology).sample,
+          }
+        : field,
+    );
+  }, [type, values.symbology]);
+
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return QR_TYPES.filter((candidate) => {
+    const matched = QR_TYPES.filter((candidate) => {
       if (family && candidate.family !== family) return false;
       if (!term) return true;
       return (
-        candidate.label.toLowerCase().includes(term) ||
-        candidate.tagline.toLowerCase().includes(term) ||
+        t(candidate.label).toLowerCase().includes(term) ||
+        t(candidate.tagline).toLowerCase().includes(term) ||
         candidate.id.includes(term)
       );
     });
-  }, [query, family]);
+    // Types actifs d'abord, désactivés (« bientôt ») regroupés à la fin.
+    return matched.sort((a, b) => Number(Boolean(a.comingSoon)) - Number(Boolean(b.comingSoon)));
+  }, [query, family, t]);
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <SectionTitle hint="Le type détermine les champs de contenu et le mode d'encodage.">
-          Type de QR
+        <SectionTitle hint={t("content.typeHint")}>
+          {t("content.typeHeading")}
         </SectionTitle>
         <Popover>
           <PopoverTrigger
@@ -75,12 +96,12 @@ export function ModuleContent() {
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
                 <type.icon className="size-4" />
               </span>
-              <span className="min-w-0 text-left">
+              <span className="min-w-0 text-start">
                 <span className="block truncate text-[0.8rem] font-medium">
-                  {type.label}
+                  {t(type.label)}
                 </span>
                 <span className="block truncate text-[0.68rem] font-normal text-muted-foreground">
-                  {type.tagline}
+                  {t(type.tagline)}
                 </span>
               </span>
             </span>
@@ -88,18 +109,18 @@ export function ModuleContent() {
           </PopoverTrigger>
           <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] gap-2 p-2">
             <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute top-1/2 start-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.currentTarget.value)}
-                placeholder="Rechercher un type…"
-                className="h-8 pl-8 text-xs"
+                placeholder={t("content.searchPlaceholder")}
+                className="h-8 ps-8 text-xs"
               />
             </div>
             <div className="no-scrollbar flex gap-1 overflow-x-auto pb-1">
               <FilterChip active={family === null} onClick={() => setFamily(null)}>
-                Tous
+                {t("content.all")}
               </FilterChip>
               {QR_FAMILIES.map((item) => (
                 <FilterChip
@@ -107,43 +128,50 @@ export function ModuleContent() {
                   active={family === item.id}
                   onClick={() => setFamily(item.id)}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </FilterChip>
               ))}
             </div>
             <ScrollArea className="h-64">
-              <div className="space-y-0.5 pr-2">
+              <div className="space-y-0.5 pe-2">
                 {filtered.map((candidate) => (
                   <button
                     key={candidate.id}
                     type="button"
+                    disabled={candidate.comingSoon}
                     onClick={() => {
                       dispatch({ type: "setType", typeId: candidate.id });
                       setQuery("");
                     }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start transition-colors",
                       "hover:bg-accent focus-visible:bg-accent focus-visible:outline-none",
                       candidate.id === state.typeId && "bg-primary/10",
+                      candidate.comingSoon &&
+                        "cursor-not-allowed opacity-[0.43] grayscale hover:bg-transparent",
                     )}
                   >
                     <candidate.icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-xs font-medium">
-                        {candidate.label}
+                        {t(candidate.label)}
                       </span>
                       <span className="block truncate text-[0.65rem] text-muted-foreground">
-                        {candidate.tagline}
+                        {t(candidate.tagline)}
                       </span>
                     </span>
-                    {candidate.id === state.typeId ? (
+                    {candidate.comingSoon ? (
+                      <span className="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[0.55rem] font-medium tracking-wide text-muted-foreground uppercase">
+                        {t("content.comingSoon")}
+                      </span>
+                    ) : candidate.id === state.typeId ? (
                       <Check className="size-3.5 text-primary" />
                     ) : null}
                   </button>
                 ))}
                 {filtered.length === 0 ? (
                   <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                    Aucun type ne correspond.
+                    {t("content.noMatch")}
                   </p>
                 ) : null}
               </div>
@@ -153,10 +181,15 @@ export function ModuleContent() {
 
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="secondary" className="text-[0.62rem]">
-            {type.encoding === "direct" ? "Encodage direct" : "Page autonome"}
+            {type.encoding === "direct" ? t("content.encoding.direct") : t("content.encoding.page")}
           </Badge>
+          {type.comingSoon ? (
+            <Badge variant="outline" className="text-[0.62rem]">
+              {t("content.comingSoon")}
+            </Badge>
+          ) : null}
           <Badge variant="outline" className="text-[0.62rem]">
-            {type.fields.length} champs
+            {t("content.fieldCount", { count: type.fields.length })}
           </Badge>
           <span className="ml-auto font-mono text-[0.62rem] text-muted-foreground">
             {progress}%
@@ -170,12 +203,20 @@ export function ModuleContent() {
         </div>
       </div>
 
-      {missingField ? (
+      {type.comingSoon ? (
+        <Alert className="animate-fade-in">
+          <Clock />
+          <AlertTitle>{t("content.comingSoonTitle")}</AlertTitle>
+          <AlertDescription>
+            {t("content.comingSoonDescription", { label: t(type.label) })}
+          </AlertDescription>
+        </Alert>
+      ) : missingField ? (
         <Alert variant="destructive" className="animate-fade-in">
           <AlertCircle />
-          <AlertTitle>Champ obligatoire manquant</AlertTitle>
+          <AlertTitle>{t("content.missingFieldTitle")}</AlertTitle>
           <AlertDescription>
-            « {missingField.label} » est nécessaire pour générer ce QR code.
+            {t("content.missingFieldDescription", { label: t(missingField.label) })}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -186,7 +227,7 @@ export function ModuleContent() {
           event.preventDefault();
         }}
       >
-        {type.fields.map((field) => (
+        {fields.map((field) => (
           <FieldInput
             key={field.name}
             field={field}
@@ -209,7 +250,7 @@ export function ModuleContent() {
           }}
         >
           <WandSparkles />
-          Exemple
+          {t("content.sample")}
         </Button>
         <Button
           type="button"
@@ -222,7 +263,7 @@ export function ModuleContent() {
           }}
         >
           <RotateCcw />
-          Vider
+          {t("content.reset")}
         </Button>
       </div>
     </div>
@@ -266,14 +307,15 @@ function FieldInput({
   invalid: boolean;
   onChange: (value: string) => void;
 }) {
+  const t = useT();
   const id = `field-${field.name}`;
 
   if (field.type === "switch") {
     return (
       <div className="rounded-xl border border-border/60 bg-card/40 px-3 py-2.5">
         <SwitchControl
-          label={field.label}
-          hint={field.help}
+          label={t(field.label)}
+          hint={field.helpRaw ?? (field.help ? t(field.help) : undefined)}
           checked={value === "true"}
           onChange={(next) => onChange(String(next))}
         />
@@ -285,14 +327,14 @@ function FieldInput({
     return (
       <div className="space-y-1.5">
         <Label htmlFor={id} className="text-[0.8rem]">
-          {field.label}
+          {t(field.label)}
         </Label>
         <FileControl
           id={id}
           value={value}
           accept={field.accept ?? "*/*"}
-          label={field.label}
-          hint={field.help}
+          label={t(field.label)}
+          hint={field.helpRaw ?? (field.help ? t(field.help) : undefined)}
           preview={field.accept?.startsWith("image")}
           onChange={onChange}
         />
@@ -302,13 +344,18 @@ function FieldInput({
 
   if (field.type === "select") {
     const options = field.options ?? [];
+    // Étiquettes traduites pour le rendu (valeur sélectionnée incluse).
+    const items = options.map((option) => ({
+      value: option.value,
+      label: t(option.label),
+    }));
     return (
       <div className="space-y-1.5">
         <Label htmlFor={id} className="text-[0.8rem]">
-          {field.label}
+          {t(field.label)}
         </Label>
         <Select
-          items={options}
+          items={items}
           value={value}
           onValueChange={(next) => onChange(String(next ?? ""))}
         >
@@ -316,15 +363,17 @@ function FieldInput({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {options.map((option) => (
+            {items.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {field.help ? (
-          <p className="text-[0.68rem] text-muted-foreground">{field.help}</p>
+        {field.helpRaw ? (
+          <p className="text-[0.68rem] text-muted-foreground">{field.helpRaw}</p>
+        ) : field.help ? (
+          <p className="text-[0.68rem] text-muted-foreground">{t(field.help)}</p>
         ) : null}
       </div>
     );
@@ -334,7 +383,7 @@ function FieldInput({
     return (
       <div className="space-y-1.5">
         <Label htmlFor={id} className="text-[0.8rem]">
-          {field.label}
+          {t(field.label)}
           {field.required ? <span className="text-destructive">*</span> : null}
         </Label>
         <Textarea
@@ -342,12 +391,14 @@ function FieldInput({
           value={value}
           required={field.required}
           aria-invalid={invalid}
-          placeholder={field.placeholder}
+          placeholder={field.placeholderKey ? t(field.placeholderKey) : field.placeholder}
           onChange={(event) => onChange(event.currentTarget.value)}
           className="min-h-20 text-[0.8rem]"
         />
-        {field.help ? (
-          <p className="text-[0.68rem] text-muted-foreground">{field.help}</p>
+        {field.helpRaw ? (
+          <p className="text-[0.68rem] text-muted-foreground">{field.helpRaw}</p>
+        ) : field.help ? (
+          <p className="text-[0.68rem] text-muted-foreground">{t(field.help)}</p>
         ) : null}
       </div>
     );
@@ -373,7 +424,7 @@ function FieldInput({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-[0.8rem]">
-        {field.label}
+        {t(field.label)}
         {field.required ? <span className="text-destructive">*</span> : null}
       </Label>
       <Input
@@ -382,7 +433,7 @@ function FieldInput({
         value={value}
         required={field.required}
         aria-invalid={invalid}
-        placeholder={field.placeholder}
+        placeholder={field.placeholderKey ? t(field.placeholderKey) : field.placeholder}
         onChange={(event) => onChange(event.currentTarget.value)}
         className={cn(
           "text-[0.8rem]",
@@ -390,8 +441,10 @@ function FieldInput({
             "font-mono text-[0.75rem]",
         )}
       />
-      {field.help ? (
-        <p className="text-[0.68rem] text-muted-foreground">{field.help}</p>
+      {field.helpRaw ? (
+        <p className="text-[0.68rem] text-muted-foreground">{field.helpRaw}</p>
+      ) : field.help ? (
+        <p className="text-[0.68rem] text-muted-foreground">{t(field.help)}</p>
       ) : null}
     </div>
   );

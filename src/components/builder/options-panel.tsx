@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Crop, Download, Frame, Image as ImageIcon, Shapes, Type } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HudCorners, HudLabel } from "@/components/shell/hud";
 import { ModuleContent } from "@/components/builder/module-content";
 import { ModuleCorners } from "@/components/builder/module-corners";
 import { ModuleExport } from "@/components/builder/module-export";
@@ -9,7 +10,8 @@ import { ModuleFrame } from "@/components/builder/module-frame";
 import { ModuleLogo } from "@/components/builder/module-logo";
 import { ModuleStyle } from "@/components/builder/module-style";
 import { TipsCard } from "@/components/builder/tips-card";
-import { BUILDER_MODULES, useBuilder, type BuilderModule } from "@/lib/builder-store";
+import { BUILDER_MODULES, modulesForType, useBuilder, type BuilderModule } from "@/lib/builder-store";
+import { useT, type TranslationKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
@@ -21,13 +23,13 @@ const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
   export: Download,
 };
 
-const MODULE_TITLES: Record<BuilderModule, { title: string; detail: string }> = {
-  content: { title: "Contenu", detail: "Type de QR et données encodées" },
-  style: { title: "Style du code", detail: "Modules, couleurs et robustesse" },
-  corners: { title: "Coins", detail: "Marqueurs de position" },
-  logo: { title: "Logo", detail: "Image centrale et protection" },
-  frame: { title: "Cadre", detail: "Habillage et libellé" },
-  export: { title: "Export", detail: "Formats et téléchargement local" },
+const MODULE_TITLES: Record<BuilderModule, { title: TranslationKey; detail: TranslationKey }> = {
+  content: { title: "options.content.title", detail: "options.content.detail" },
+  style: { title: "options.style.title", detail: "options.style.detail" },
+  corners: { title: "options.corners.title", detail: "options.corners.detail" },
+  logo: { title: "options.logo.title", detail: "options.logo.detail" },
+  frame: { title: "options.frame.title", detail: "options.frame.detail" },
+  export: { title: "options.export.title", detail: "options.export.detail" },
 };
 
 const RENDERERS: Record<BuilderModule, () => React.JSX.Element> = {
@@ -50,24 +52,45 @@ export function OptionsPanel({
   showRail?: boolean;
   className?: string;
 }) {
-  const { state, dispatch } = useBuilder();
-  const active = state.activeModule;
+  const { state, dispatch, type } = useBuilder();
+  const t = useT();
+  const modules = modulesForType(state.typeId);
+  const active = modules.some((module) => module.id === state.activeModule)
+    ? state.activeModule
+    : "content";
   const Module = RENDERERS[active];
   const meta = MODULE_TITLES[active];
+  const moduleCode = `0${BUILDER_MODULES.findIndex((m) => m.id === active) + 1}`;
 
   return (
     <aside
       className={cn(
-        "flex min-h-0 flex-col border-l border-border/60 bg-sidebar/60 backdrop-blur",
+        "flex min-h-0 flex-col border-s border-border/60 bg-sidebar/60 backdrop-blur",
         className,
       )}
-      aria-label="Options de création"
+      aria-label={t("options.panel.aria")}
     >
-      <header className="space-y-3 border-b border-border/60 px-3.5 py-3">
-        <div className="flex items-baseline justify-between gap-2">
+      <header className="relative space-y-3 border-b border-border/60 px-3.5 py-3">
+        <HudCorners
+          inset="0.4rem"
+          size="0.4rem"
+          thickness={1}
+          className="text-primary/50"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-linear-to-r from-primary/60 via-primary/15 to-transparent"
+        />
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="hud-clip-tr flex size-7 shrink-0 items-center justify-center bg-primary/15 font-mono text-[0.58rem] text-primary"
+          >
+            {moduleCode}
+          </span>
           <div className="min-w-0">
-            <h2 className="font-heading truncate text-sm font-semibold">{meta.title}</h2>
-            <p className="truncate text-[0.68rem] text-muted-foreground">{meta.detail}</p>
+            <HudLabel className="block">MOD — {t(meta.title)}</HudLabel>
+            <h2 className="truncate text-[0.68rem] text-muted-foreground">{t(meta.detail)}</h2>
           </div>
         </div>
 
@@ -78,12 +101,12 @@ export function OptionsPanel({
             className="gap-0"
           >
             <TabsList className="no-scrollbar h-auto w-full justify-start gap-0.5 overflow-x-auto bg-muted/60 p-0.5">
-              {BUILDER_MODULES.map((module) => {
+              {modules.map((module) => {
                 const Icon = MODULE_ICONS[module.id];
                 return (
                   <TabsTrigger key={module.id} value={module.id} className="gap-1 px-2 py-1 text-[0.68rem]">
                     <Icon className="size-3.5" />
-                    <span className="hidden sm:inline">{module.label}</span>
+                    <span className="hidden sm:inline">{t(module.label)}</span>
                   </TabsTrigger>
                 );
               })}
@@ -95,7 +118,8 @@ export function OptionsPanel({
       <ScrollArea className="min-h-0 flex-1">
         <div key={active} className="animate-module-in space-y-4 p-3.5 pb-6">
           <Module />
-          <TipsCard />
+          {/* Les conseils de scan QR ne s'appliquent pas au code-barres 1D. */}
+          {type.id !== "barcode" ? <TipsCard /> : null}
         </div>
       </ScrollArea>
     </aside>

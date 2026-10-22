@@ -4,18 +4,21 @@ import {
   SectionTitle,
   SelectableTile,
   SwitchControl,
-} from "@/components/builder/controls";
+} from "@/components/ui/controls";
 import { CornerPreview } from "@/components/builder/previews";
 import { Separator } from "@/components/ui/separator";
 import {
   CORNER_DOT_STYLES,
   CORNER_SQUARE_STYLES,
+  QR_SWATCHES,
 } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 
 /** Onglet « Coins » : marqueurs de position extérieurs et centraux. */
 export function ModuleCorners() {
   const { state, patchDesign } = useBuilder();
+  const t = useT();
   const { design } = state;
 
   const previewColor = design.cornersMatchBody
@@ -27,8 +30,8 @@ export function ModuleCorners() {
   return (
     <div className="space-y-5">
       <SwitchControl
-        label="Coins assortis au corps"
-        hint="Reprend automatiquement la forme et les couleurs des modules du QR."
+        label={t("corners.match.label")}
+        hint={t("corners.match.description")}
         checked={design.cornersMatchBody}
         onChange={(checked) => patchDesign({ cornersMatchBody: checked })}
       />
@@ -39,15 +42,15 @@ export function ModuleCorners() {
       >
         {design.cornersMatchBody ? (
           <>
-            <CornerSwatch label="Coin extérieur" color={previewColor} />
-            <CornerSwatch label="Centre" color={previewColor} />
-            <CornerSwatch label="Fond" color={design.background} />
+            <CornerSwatch label={t("corners.outerCorner")} color={previewColor} />
+            <CornerSwatch label={t("corners.center")} color={previewColor} />
+            <CornerSwatch label={t("corners.background")} color={design.background} />
           </>
         ) : (
           <>
-            <CornerSwatch label="Coin extérieur" color={design.cornerSquareColor} />
-            <CornerSwatch label="Centre" color={design.cornerDotColor} />
-            <CornerSwatch label="Fond" color={design.background} />
+            <CornerSwatch label={t("corners.outerCorner")} color={design.cornerSquareColor} />
+            <CornerSwatch label={t("corners.center")} color={design.cornerDotColor} />
+            <CornerSwatch label={t("corners.background")} color={design.background} />
           </>
         )}
       </div>
@@ -55,8 +58,8 @@ export function ModuleCorners() {
       <Separator />
 
       <ControlStack
-        label="Forme du coin extérieur"
-        hint="Le marqueur extérieur encadre les trois repères de détection."
+        label={t("corners.outerShape.label")}
+        hint={t("corners.outerShape.description")}
       >
         <div className="grid grid-cols-3 gap-2">
           {CORNER_SQUARE_STYLES.map((style) => (
@@ -66,7 +69,7 @@ export function ModuleCorners() {
               onSelect={() =>
                 patchDesign({ cornerSquareType: style.id, cornersMatchBody: false })
               }
-              title={style.label}
+              title={t(style.label)}
             >
               <span className="flex size-9 items-center justify-center rounded-lg bg-muted/60 p-1.5 text-foreground/80">
                 <CornerPreview
@@ -79,7 +82,10 @@ export function ModuleCorners() {
         </div>
       </ControlStack>
 
-      <ControlStack label="Forme du centre" hint="Le point central du repère de détection.">
+      <ControlStack
+        label={t("corners.centerShape.label")}
+        hint={t("corners.centerShape.description")}
+      >
         <div className="grid grid-cols-4 gap-2">
           {CORNER_DOT_STYLES.map((style) => (
             <SelectableTile
@@ -88,7 +94,7 @@ export function ModuleCorners() {
               onSelect={() =>
                 patchDesign({ cornerDotType: style.id, cornersMatchBody: false })
               }
-              title={style.label}
+              title={t(style.label)}
             >
               <span className="flex size-8 items-center justify-center rounded-lg bg-muted/60 p-1 text-foreground/80">
                 <CornerPreview
@@ -104,20 +110,22 @@ export function ModuleCorners() {
       {!design.cornersMatchBody ? (
         <div className="space-y-3 animate-fade-in">
           <Separator />
-          <SectionTitle>Couleurs personnalisées</SectionTitle>
-          <ControlStack label="Coin extérieur">
+          <SectionTitle>{t("corners.customColors.title")}</SectionTitle>
+          <ControlStack label={t("corners.outerCorner")}>
             <ColorControl
-              label="Couleur du coin extérieur"
+              label={t("corners.outerColor.label")}
               value={design.cornerSquareColor}
               onChange={(color) => patchDesign({ cornerSquareColor: color })}
+              swatches={QR_SWATCHES}
               className="w-full justify-between"
             />
           </ControlStack>
-          <ControlStack label="Centre">
+          <ControlStack label={t("corners.center")}>
             <ColorControl
-              label="Couleur du centre"
+              label={t("corners.centerColor.label")}
               value={design.cornerDotColor}
               onChange={(color) => patchDesign({ cornerDotColor: color })}
+              swatches={QR_SWATCHES}
               className="w-full justify-between"
             />
           </ControlStack>

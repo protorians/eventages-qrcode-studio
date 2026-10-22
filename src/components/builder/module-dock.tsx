@@ -1,6 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 import { Crop, Download, Frame, Image as ImageIcon, Shapes, Type } from "lucide-react";
+import { HudCorners } from "@/components/shell/hud";
 import { BUILDER_MODULES, type BuilderModule } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 import { cn } from "@/lib/utils";
 
 const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
@@ -16,22 +19,34 @@ const MODULE_ICONS: Record<BuilderModule, LucideIcon> = {
 export function ModuleDock({
   activeModule,
   onSelect,
+  modules = BUILDER_MODULES,
   className,
 }: {
   activeModule: BuilderModule;
   onSelect: (module: BuilderModule) => void;
+  /**
+   * Sous-ensemble de modules affichés (selon le type de code). Les libellés
+   * portent des clés `store.*` (builder-store) ; les résultats sont traduits
+   * au rendu via t().
+   */
+  modules?: { id: BuilderModule; label: string }[];
   className?: string;
 }) {
+  const t = useT();
   return (
     <div
       role="tablist"
-      aria-label="Modules de création"
+      aria-label={t("dock.aria")}
       className={cn(
-        "no-scrollbar flex max-w-[calc(100vw-1.5rem)] items-stretch gap-1 overflow-x-auto rounded-2xl border border-border/70 bg-popover/85 p-1.5 shadow-xl shadow-black/10 backdrop-blur-md",
+        "no-scrollbar relative flex max-w-[calc(100vw-1.5rem)] items-stretch gap-1 overflow-x-auto rounded-sm border border-border/70 bg-popover/90 p-1.5 shadow-xl shadow-black/25 backdrop-blur-md",
         className,
       )}
     >
-      {BUILDER_MODULES.map((module) => {
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-2 top-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent"
+      />
+      {modules.map((module) => {
         const Icon = MODULE_ICONS[module.id];
         const active = module.id === activeModule;
         return (
@@ -43,7 +58,7 @@ export function ModuleDock({
             data-active={active}
             onClick={() => onSelect(module.id)}
             className={cn(
-              "group/dock relative flex min-w-14 shrink-0 flex-col items-center gap-1 rounded-xl px-2.5 py-1.5 text-[0.62rem] font-medium text-muted-foreground transition-all duration-300 ease-out",
+              "group/dock relative flex min-w-14 shrink-0 flex-col items-center gap-1 rounded-sm px-2.5 py-1.5 text-[0.62rem] font-medium text-muted-foreground transition-all duration-300 ease-out",
               "hover:bg-accent/70 hover:text-foreground",
               "data-[active=true]:bg-primary/12 data-[active=true]:text-foreground",
             )}
@@ -54,10 +69,16 @@ export function ModuleDock({
                 active ? "text-primary" : "group-hover/dock:scale-110",
               )}
             />
-            <span className="leading-none">{module.label}</span>
+            {/* Libellé porté par builder-store (clé `store.*` après extraction) : traduit au rendu. */}
+            <span className="leading-none">{t(module.label as TranslationKey)}</span>
+            {active ? (
+              <span className="pointer-events-none absolute inset-0.5">
+                <HudCorners inset="0" size="0.35rem" thickness={1} />
+              </span>
+            ) : null}
             <span
               className={cn(
-                "absolute -bottom-0.5 h-0.5 rounded-full bg-primary transition-all duration-300 ease-out",
+                "absolute -bottom-0.5 h-0.5 bg-primary transition-all duration-300 ease-out",
                 active ? "w-5 opacity-100" : "w-0 opacity-0",
               )}
             />

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   AppWindow,
+  Barcode,
   Briefcase,
   CalendarDays,
   Contact,
@@ -16,7 +17,6 @@ import {
   MessageSquare,
   Music,
   Package,
-  QrCode,
   Share2,
   ShieldCheck,
   Star,
@@ -25,6 +25,9 @@ import {
   Video,
   Wifi,
 } from "lucide-react";
+import { BARCODE_FORMATS } from "@/lib/barcode";
+import { translate } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
 
 /** Comment le contenu est porté par le QR (spec 001, FR-3). */
 export type QrEncoding = "direct" | "page";
@@ -55,44 +58,61 @@ export type QrFieldType =
 
 export type QrField = {
   name: string;
-  label: string;
+  label: TranslationKey;
   type: QrFieldType;
+  /**
+   * Placeholder neutre non traduit (URL, numéro, exemple technique) :
+   * rendu tel quel, il ne porte pas de clé.
+   */
   placeholder?: string;
-  help?: string;
+  /** Placeholder localisé, rendu via t() ; prioritaire sur `placeholder`. */
+  placeholderKey?: TranslationKey;
+  /** Aide localisée, rendue via t() ; ignorée si `helpRaw` est présent. */
+  help?: TranslationKey;
+  /** Aide neutre non traduite (ex. : hint dynamique de symbologie barcode). */
+  helpRaw?: string;
   required?: boolean;
   /** Occupe les deux colonnes de la grille de formulaire. */
   wide?: boolean;
-  options?: { value: string; label: string }[];
+  options?: { value: string; label: TranslationKey }[];
   accept?: string;
 };
 
 export type QrType = {
   id: string;
-  label: string;
-  tagline: string;
+  label: TranslationKey;
+  tagline: TranslationKey;
   family: QrFamily;
   encoding: QrEncoding;
   icon: LucideIcon;
   /** Teinte d'accent (degrés oklch) utilisée par la vignette. */
   hue: number;
   fields: QrField[];
+  /**
+   * Type en attente de la publication de pages (spec 009) : il produit une
+   * page à héberger et les connecteurs (Netlify, FTP…) ne sont pas encore
+   * intégrés. Le type reste visible dans la galerie, marqué « Bientôt », et
+   * ne génère pas de QR scannable.
+   */
+  comingSoon?: boolean;
 };
 
-export const QR_FAMILIES: { id: QrFamily; label: string }[] = [
-  { id: "essentials", label: "Essentiels" },
-  { id: "contact", label: "Contact" },
-  { id: "web", label: "Web & réseaux" },
-  { id: "commerce", label: "Commerce" },
-  { id: "event", label: "Événements" },
-  { id: "media", label: "Média" },
-  { id: "advanced", label: "Avancé" },
+export const QR_FAMILIES: { id: QrFamily; label: TranslationKey }[] = [
+  { id: "essentials", label: "catalog.family.essentials.label" },
+  { id: "contact", label: "catalog.family.contact.label" },
+  { id: "web", label: "catalog.family.web.label" },
+  { id: "commerce", label: "catalog.family.commerce.label" },
+  { id: "event", label: "catalog.family.event.label" },
+  { id: "media", label: "catalog.family.media.label" },
+  { id: "advanced", label: "catalog.family.advanced.label" },
 ];
 
-const SECURITY_OPTIONS = [
-  { value: "WPA", label: "WPA / WPA2" },
-  { value: "WPA3", label: "WPA3" },
-  { value: "WEP", label: "WEP" },
-  { value: "nopass", label: "Aucune" },
+/** Options du champ security : les `value` restent des identifiants techniques. */
+const SECURITY_OPTIONS: { value: string; label: TranslationKey }[] = [
+  { value: "WPA", label: "catalog.wifi.security.opt.WPA" },
+  { value: "WPA3", label: "catalog.wifi.security.opt.WPA3" },
+  { value: "WEP", label: "catalog.wifi.security.opt.WEP" },
+  { value: "nopass", label: "catalog.wifi.security.opt.nopass" },
 ];
 
 /**
@@ -103,8 +123,8 @@ const SECURITY_OPTIONS = [
 export const QR_TYPES: QrType[] = [
   {
     id: "url",
-    label: "URL",
-    tagline: "Ouvrir une page web",
+    label: "catalog.url.label",
+    tagline: "catalog.url.tagline",
     family: "essentials",
     encoding: "direct",
     icon: Link,
@@ -112,30 +132,30 @@ export const QR_TYPES: QrType[] = [
     fields: [
       {
         name: "url",
-        label: "Adresse de destination",
+        label: "catalog.url.url.label",
         type: "url",
         placeholder: "https://exemple.com",
         required: true,
         wide: true,
-        help: "Toujours inclure https:// pour éviter les avertissements de sécurité.",
+        help: "catalog.url.url.help",
       },
     ],
   },
   {
     id: "text",
-    label: "Texte",
-    tagline: "Afficher un texte libre",
+    label: "catalog.text.label",
+    tagline: "catalog.text.tagline",
     family: "essentials",
     encoding: "direct",
     icon: Type,
     hue: 275,
     fields: [
-      { name: "title", label: "Titre", type: "text", placeholder: "Note rapide" },
+      { name: "title", label: "catalog.text.title.label", type: "text", placeholderKey: "catalog.text.title.placeholder" },
       {
         name: "content",
-        label: "Contenu",
+        label: "catalog.text.content.label",
         type: "textarea",
-        placeholder: "Le message à scanner…",
+        placeholderKey: "catalog.text.content.placeholder",
         required: true,
         wide: true,
       },
@@ -143,8 +163,8 @@ export const QR_TYPES: QrType[] = [
   },
   {
     id: "email",
-    label: "Email",
-    tagline: "Écrire un message pré-rempli",
+    label: "catalog.email.label",
+    tagline: "catalog.email.tagline",
     family: "contact",
     encoding: "direct",
     icon: Mail,
@@ -152,19 +172,19 @@ export const QR_TYPES: QrType[] = [
     fields: [
       {
         name: "to",
-        label: "Destinataire",
+        label: "catalog.email.to.label",
         type: "email",
         placeholder: "bonjour@exemple.com",
         required: true,
       },
-      { name: "subject", label: "Objet", type: "text", placeholder: "Demande d'information" },
-      { name: "body", label: "Message", type: "textarea", wide: true },
+      { name: "subject", label: "catalog.email.subject.label", type: "text", placeholderKey: "catalog.email.subject.placeholder" },
+      { name: "body", label: "catalog.email.body.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "sms",
-    label: "SMS",
-    tagline: "Envoyer un texto pré-rempli",
+    label: "catalog.sms.label",
+    tagline: "catalog.sms.tagline",
     family: "contact",
     encoding: "direct",
     icon: MessageSquare,
@@ -172,18 +192,18 @@ export const QR_TYPES: QrType[] = [
     fields: [
       {
         name: "number",
-        label: "Numéro",
+        label: "catalog.sms.number.label",
         type: "tel",
         placeholder: "+33 6 12 34 56 78",
         required: true,
       },
-      { name: "message", label: "Message", type: "textarea", wide: true },
+      { name: "message", label: "catalog.sms.message.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "whatsapp",
-    label: "WhatsApp",
-    tagline: "Démarrer une conversation",
+    label: "catalog.whatsapp.label",
+    tagline: "catalog.whatsapp.tagline",
     family: "contact",
     encoding: "direct",
     icon: MessageCircle,
@@ -191,342 +211,372 @@ export const QR_TYPES: QrType[] = [
     fields: [
       {
         name: "number",
-        label: "Numéro international",
+        label: "catalog.whatsapp.number.label",
         type: "tel",
         placeholder: "+33612345678",
         required: true,
-        help: "Indicatif pays obligatoire, sans espaces ni tirets.",
+        help: "catalog.whatsapp.number.help",
       },
-      { name: "message", label: "Message pré-rédigé", type: "textarea", wide: true },
+      { name: "message", label: "catalog.whatsapp.message.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "wifi",
-    label: "Wi-Fi",
-    tagline: "Rejoindre un réseau",
+    label: "catalog.wifi.label",
+    tagline: "catalog.wifi.tagline",
     family: "essentials",
     encoding: "direct",
     icon: Wifi,
     hue: 190,
     fields: [
-      { name: "ssid", label: "Nom du réseau (SSID)", type: "text", required: true },
-      { name: "security", label: "Sécurité", type: "select", options: SECURITY_OPTIONS },
-      { name: "password", label: "Mot de passe", type: "password" },
-      { name: "hidden", label: "Réseau masqué", type: "switch" },
+      { name: "ssid", label: "catalog.wifi.ssid.label", type: "text", required: true },
+      { name: "security", label: "catalog.wifi.security.label", type: "select", options: SECURITY_OPTIONS },
+      { name: "password", label: "catalog.wifi.password.label", type: "password" },
+      { name: "hidden", label: "catalog.wifi.hidden.label", type: "switch" },
     ],
   },
   {
     id: "vcard",
-    label: "vCard",
-    tagline: "Partager une fiche contact",
+    label: "catalog.vcard.label",
+    tagline: "catalog.vcard.tagline",
     family: "contact",
     encoding: "direct",
     icon: Contact,
     hue: 235,
     fields: [
-      { name: "firstName", label: "Prénom", type: "text", required: true },
-      { name: "lastName", label: "Nom", type: "text", required: true },
-      { name: "company", label: "Société", type: "text" },
-      { name: "jobTitle", label: "Fonction", type: "text" },
-      { name: "phone", label: "Téléphone", type: "tel", placeholder: "+33 6 12 34 56 78" },
-      { name: "email", label: "Email", type: "email" },
-      { name: "website", label: "Site web", type: "url" },
-      { name: "address", label: "Adresse", type: "text" },
-      { name: "note", label: "Note", type: "textarea", wide: true },
+      { name: "firstName", label: "catalog.vcard.firstName.label", type: "text", required: true },
+      { name: "lastName", label: "catalog.vcard.lastName.label", type: "text", required: true },
+      { name: "company", label: "catalog.vcard.company.label", type: "text" },
+      { name: "jobTitle", label: "catalog.vcard.jobTitle.label", type: "text" },
+      { name: "phone", label: "catalog.vcard.phone.label", type: "tel", placeholder: "+33 6 12 34 56 78" },
+      { name: "email", label: "catalog.vcard.email.label", type: "email" },
+      { name: "website", label: "catalog.vcard.website.label", type: "url" },
+      { name: "address", label: "catalog.vcard.address.label", type: "text" },
+      { name: "note", label: "catalog.vcard.note.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "vcard-plus",
-    label: "vCard Plus",
-    tagline: "Page contact autonome",
+    label: "catalog.vcard-plus.label",
+    tagline: "catalog.vcard-plus.tagline",
     family: "contact",
     encoding: "page",
+    comingSoon: true,
     icon: ShieldCheck,
     hue: 245,
     fields: [
-      { name: "firstName", label: "Prénom", type: "text", required: true },
-      { name: "lastName", label: "Nom", type: "text", required: true },
-      { name: "company", label: "Société", type: "text" },
-      { name: "jobTitle", label: "Fonction", type: "text" },
-      { name: "phone", label: "Téléphone", type: "tel" },
-      { name: "email", label: "Email", type: "email" },
-      { name: "bio", label: "Présentation", type: "textarea", wide: true },
-      { name: "avatar", label: "Photo", type: "file", accept: "image/*", wide: true },
+      { name: "firstName", label: "catalog.vcard-plus.firstName.label", type: "text", required: true },
+      { name: "lastName", label: "catalog.vcard-plus.lastName.label", type: "text", required: true },
+      { name: "company", label: "catalog.vcard-plus.company.label", type: "text" },
+      { name: "jobTitle", label: "catalog.vcard-plus.jobTitle.label", type: "text" },
+      { name: "phone", label: "catalog.vcard-plus.phone.label", type: "tel" },
+      { name: "email", label: "catalog.vcard-plus.email.label", type: "email" },
+      { name: "bio", label: "catalog.vcard-plus.bio.label", type: "textarea", wide: true },
+      { name: "avatar", label: "catalog.vcard-plus.avatar.label", type: "file", accept: "image/*", wide: true },
     ],
   },
   {
     id: "link-list",
-    label: "Liste de liens",
-    tagline: "Regrouper plusieurs liens",
+    label: "catalog.link-list.label",
+    tagline: "catalog.link-list.tagline",
     family: "web",
     encoding: "page",
+    comingSoon: true,
     icon: ListTree,
     hue: 265,
     fields: [
-      { name: "title", label: "Titre de la page", type: "text", required: true },
-      { name: "subtitle", label: "Sous-titre", type: "text" },
+      { name: "title", label: "catalog.link-list.title.label", type: "text", required: true },
+      { name: "subtitle", label: "catalog.link-list.subtitle.label", type: "text" },
       {
         name: "links",
-        label: "Liens",
+        label: "catalog.link-list.links.label",
         type: "textarea",
-        placeholder: "Boutique | https://…\nNewsletter | https://…",
-        help: "Un lien par ligne, au format « Titre | URL ».",
+        placeholderKey: "catalog.link-list.links.placeholder",
+        help: "catalog.link-list.links.help",
         wide: true,
       },
     ],
   },
   {
     id: "social",
-    label: "Réseaux sociaux",
-    tagline: "Tous vos profils sur une page",
+    label: "catalog.social.label",
+    tagline: "catalog.social.tagline",
     family: "web",
     encoding: "page",
+    comingSoon: true,
     icon: Share2,
     hue: 320,
     fields: [
-      { name: "title", label: "Titre", type: "text", placeholder: "@votrecompte" },
-      { name: "instagram", label: "Instagram", type: "url" },
-      { name: "facebook", label: "Facebook", type: "url" },
-      { name: "x", label: "X / Twitter", type: "url" },
-      { name: "linkedin", label: "LinkedIn", type: "url" },
-      { name: "tiktok", label: "TikTok", type: "url" },
+      { name: "title", label: "catalog.social.title.label", type: "text", placeholderKey: "catalog.social.title.placeholder" },
+      { name: "instagram", label: "catalog.social.instagram.label", type: "url" },
+      { name: "facebook", label: "catalog.social.facebook.label", type: "url" },
+      { name: "x", label: "catalog.social.x.label", type: "url" },
+      { name: "linkedin", label: "catalog.social.linkedin.label", type: "url" },
+      { name: "tiktok", label: "catalog.social.tiktok.label", type: "url" },
     ],
   },
   {
     id: "landing",
-    label: "Landing Page",
-    tagline: "Page d'accueil autonome",
+    label: "catalog.landing.label",
+    tagline: "catalog.landing.tagline",
     family: "web",
     encoding: "page",
+    comingSoon: true,
     icon: LayoutTemplate,
     hue: 285,
     fields: [
-      { name: "title", label: "Titre", type: "text", required: true },
-      { name: "subtitle", label: "Accroche", type: "text" },
-      { name: "body", label: "Contenu", type: "textarea", wide: true },
-      { name: "ctaLabel", label: "Texte du bouton", type: "text", placeholder: "Nous contacter" },
-      { name: "ctaUrl", label: "Lien du bouton", type: "url" },
+      { name: "title", label: "catalog.landing.title.label", type: "text", required: true },
+      { name: "subtitle", label: "catalog.landing.subtitle.label", type: "text" },
+      { name: "body", label: "catalog.landing.body.label", type: "textarea", wide: true },
+      { name: "ctaLabel", label: "catalog.landing.ctaLabel.label", type: "text", placeholderKey: "catalog.landing.ctaLabel.placeholder" },
+      { name: "ctaUrl", label: "catalog.landing.ctaUrl.label", type: "url" },
     ],
   },
   {
     id: "menu",
-    label: "Menu",
-    tagline: "Carte de restaurant en ligne",
+    label: "catalog.menu.label",
+    tagline: "catalog.menu.tagline",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: MenuIcon,
     hue: 30,
     fields: [
-      { name: "title", label: "Nom de l'établissement", type: "text", required: true },
-      { name: "subtitle", label: "Sous-titre", type: "text" },
+      { name: "title", label: "catalog.menu.title.label", type: "text", required: true },
+      { name: "subtitle", label: "catalog.menu.subtitle.label", type: "text" },
       {
         name: "items",
-        label: "Articles",
+        label: "catalog.menu.items.label",
         type: "textarea",
-        placeholder: "Entrées | Burrata, tomates | 9 €",
-        help: "Un article par ligne : Catégorie | Nom | Prix.",
+        placeholderKey: "catalog.menu.items.placeholder",
+        help: "catalog.menu.items.help",
         wide: true,
       },
     ],
   },
   {
     id: "business",
-    label: "Business",
-    tagline: "Fiche entreprise complète",
+    label: "catalog.business.label",
+    tagline: "catalog.business.tagline",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: Briefcase,
     hue: 210,
     fields: [
-      { name: "name", label: "Nom", type: "text", required: true },
-      { name: "category", label: "Catégorie", type: "text" },
-      { name: "address", label: "Adresse", type: "text", wide: true },
-      { name: "phone", label: "Téléphone", type: "tel" },
-      { name: "hours", label: "Horaires", type: "text", placeholder: "Lun–Ven 9h–18h" },
-      { name: "description", label: "Description", type: "textarea", wide: true },
+      { name: "name", label: "catalog.business.name.label", type: "text", required: true },
+      { name: "category", label: "catalog.business.category.label", type: "text" },
+      { name: "address", label: "catalog.business.address.label", type: "text", wide: true },
+      { name: "phone", label: "catalog.business.phone.label", type: "tel" },
+      { name: "hours", label: "catalog.business.hours.label", type: "text", placeholderKey: "catalog.business.hours.placeholder" },
+      { name: "description", label: "catalog.business.description.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "product",
-    label: "Produit",
-    tagline: "Fiche produit détaillée",
+    label: "catalog.product.label",
+    tagline: "catalog.product.tagline",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: Package,
     hue: 45,
     fields: [
-      { name: "name", label: "Produit", type: "text", required: true },
-      { name: "price", label: "Prix", type: "text", placeholder: "12,90 €" },
-      { name: "description", label: "Description", type: "textarea", wide: true },
-      { name: "allergens", label: "Allergènes", type: "text" },
-      { name: "certifications", label: "Certifications", type: "text" },
-      { name: "image", label: "Visuel", type: "file", accept: "image/*", wide: true },
+      { name: "name", label: "catalog.product.name.label", type: "text", required: true },
+      { name: "price", label: "catalog.product.price.label", type: "text", placeholderKey: "catalog.product.price.placeholder" },
+      { name: "description", label: "catalog.product.description.label", type: "textarea", wide: true },
+      { name: "allergens", label: "catalog.product.allergens.label", type: "text" },
+      { name: "certifications", label: "catalog.product.certifications.label", type: "text" },
+      { name: "image", label: "catalog.product.image.label", type: "file", accept: "image/*", wide: true },
     ],
   },
   {
     id: "coupon",
-    label: "Coupon",
-    tagline: "Code promo à présenter en caisse",
+    label: "catalog.coupon.label",
+    tagline: "catalog.coupon.tagline",
     family: "commerce",
     encoding: "page",
+    comingSoon: true,
     icon: Ticket,
     hue: 15,
     fields: [
-      { name: "title", label: "Titre", type: "text", placeholder: "−20 % sur votre prochaine visite", required: true },
-      { name: "code", label: "Code promo", type: "text", placeholder: "STUDIO20" },
-      { name: "terms", label: "Conditions", type: "textarea", wide: true },
+      { name: "title", label: "catalog.coupon.title.label", type: "text", placeholderKey: "catalog.coupon.title.placeholder", required: true },
+      { name: "code", label: "catalog.coupon.code.label", type: "text", placeholder: "STUDIO20" },
+      { name: "terms", label: "catalog.coupon.terms.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "event",
-    label: "Événement",
-    tagline: "Inviter à un événement",
+    label: "catalog.event.label",
+    tagline: "catalog.event.tagline",
     family: "event",
-    encoding: "page",
+    encoding: "direct",
     icon: CalendarDays,
     hue: 340,
     fields: [
-      { name: "title", label: "Titre", type: "text", required: true },
-      { name: "location", label: "Lieu", type: "text", wide: true },
-      { name: "startDate", label: "Date de début", type: "date" },
-      { name: "startTime", label: "Heure de début", type: "time" },
-      { name: "description", label: "Description", type: "textarea", wide: true },
+      { name: "title", label: "catalog.event.title.label", type: "text", required: true },
+      { name: "location", label: "catalog.event.location.label", type: "text", wide: true },
+      {
+        name: "startDate",
+        label: "catalog.event.startDate.label",
+        type: "date",
+        required: true,
+        help: "catalog.event.startDate.help",
+      },
+      { name: "startTime", label: "catalog.event.startTime.label", type: "time" },
+      {
+        name: "endDate",
+        label: "catalog.event.endDate.label",
+        type: "date",
+        help: "catalog.event.endDate.help",
+      },
+      { name: "endTime", label: "catalog.event.endTime.label", type: "time" },
+      { name: "description", label: "catalog.event.description.label", type: "textarea", wide: true },
     ],
   },
   {
     id: "feedback",
-    label: "Feedback",
-    tagline: "Collecter un avis client",
+    label: "catalog.feedback.label",
+    tagline: "catalog.feedback.tagline",
     family: "event",
     encoding: "page",
+    comingSoon: true,
     icon: Star,
     hue: 90,
     fields: [
-      { name: "title", label: "Titre", type: "text", placeholder: "Votre avis nous intéresse" },
-      { name: "question", label: "Question", type: "text", wide: true },
+      { name: "title", label: "catalog.feedback.title.label", type: "text", placeholderKey: "catalog.feedback.title.placeholder" },
+      { name: "question", label: "catalog.feedback.question.label", type: "text", wide: true },
       {
         name: "scale",
-        label: "Échelle",
+        label: "catalog.feedback.scale.label",
         type: "select",
         options: [
-          { value: "stars", label: "Étoiles (1–5)" },
-          { value: "nps", label: "NPS (0–10)" },
-          { value: "emoji", label: "Émojis" },
+          { value: "stars", label: "catalog.feedback.scale.opt.stars" },
+          { value: "nps", label: "catalog.feedback.scale.opt.nps" },
+          { value: "emoji", label: "catalog.feedback.scale.opt.emoji" },
         ],
       },
     ],
   },
   {
     id: "pdf",
-    label: "PDF",
-    tagline: "Diffuser un document",
+    label: "catalog.pdf.label",
+    tagline: "catalog.pdf.tagline",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: FileText,
     hue: 5,
     fields: [
-      { name: "title", label: "Titre du document", type: "text", required: true },
-      { name: "file", label: "Fichier PDF", type: "file", accept: "application/pdf", wide: true },
-      { name: "actionLabel", label: "Texte du bouton", type: "text", placeholder: "Télécharger" },
+      { name: "title", label: "catalog.pdf.title.label", type: "text", required: true },
+      { name: "file", label: "catalog.pdf.file.label", type: "file", accept: "application/pdf", wide: true },
+      { name: "actionLabel", label: "catalog.pdf.actionLabel.label", type: "text", placeholderKey: "catalog.pdf.actionLabel.placeholder" },
     ],
   },
   {
     id: "video",
-    label: "Vidéo",
-    tagline: "Lire une vidéo",
+    label: "catalog.video.label",
+    tagline: "catalog.video.tagline",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: Video,
     hue: 355,
     fields: [
-      { name: "title", label: "Titre", type: "text", required: true },
-      { name: "url", label: "Lien de la vidéo", type: "url", wide: true },
-      { name: "caption", label: "Légende", type: "text" },
+      { name: "title", label: "catalog.video.title.label", type: "text", required: true },
+      { name: "url", label: "catalog.video.url.label", type: "url", wide: true },
+      { name: "caption", label: "catalog.video.caption.label", type: "text" },
     ],
   },
   {
     id: "images",
-    label: "Images",
-    tagline: "Partager une galerie",
+    label: "catalog.images.label",
+    tagline: "catalog.images.tagline",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: Images,
     hue: 300,
     fields: [
-      { name: "title", label: "Titre de la galerie", type: "text", required: true },
-      { name: "caption", label: "Légende", type: "text" },
-      { name: "files", label: "Images", type: "file", accept: "image/*", wide: true },
+      { name: "title", label: "catalog.images.title.label", type: "text", required: true },
+      { name: "caption", label: "catalog.images.caption.label", type: "text" },
+      { name: "files", label: "catalog.images.files.label", type: "file", accept: "image/*", wide: true },
     ],
   },
   {
     id: "mp3",
-    label: "MP3",
-    tagline: "Diffuser un fichier audio",
+    label: "catalog.mp3.label",
+    tagline: "catalog.mp3.tagline",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: Music,
     hue: 170,
     fields: [
-      { name: "title", label: "Titre", type: "text", required: true },
-      { name: "artist", label: "Artiste", type: "text" },
-      { name: "file", label: "Fichier audio", type: "file", accept: "audio/*", wide: true },
+      { name: "title", label: "catalog.mp3.title.label", type: "text", required: true },
+      { name: "artist", label: "catalog.mp3.artist.label", type: "text" },
+      { name: "file", label: "catalog.mp3.file.label", type: "file", accept: "audio/*", wide: true },
     ],
   },
   {
     id: "playlist",
-    label: "Playlist",
-    tagline: "Partager une playlist musicale",
+    label: "catalog.playlist.label",
+    tagline: "catalog.playlist.tagline",
     family: "media",
     encoding: "page",
+    comingSoon: true,
     icon: ListMusic,
     hue: 130,
     fields: [
-      { name: "title", label: "Titre", type: "text", required: true },
-      { name: "url", label: "Lien de la playlist", type: "url", wide: true },
+      { name: "title", label: "catalog.playlist.title.label", type: "text", required: true },
+      { name: "url", label: "catalog.playlist.url.label", type: "url", wide: true },
     ],
   },
   {
     id: "app",
-    label: "App",
-    tagline: "Installer votre application",
+    label: "catalog.app.label",
+    tagline: "catalog.app.tagline",
     family: "advanced",
     encoding: "page",
+    comingSoon: true,
     icon: AppWindow,
     hue: 260,
     fields: [
-      { name: "title", label: "Nom de l'application", type: "text", required: true },
-      { name: "iosUrl", label: "App Store", type: "url" },
-      { name: "androidUrl", label: "Google Play", type: "url" },
-      { name: "fallbackUrl", label: "Lien de secours", type: "url", wide: true },
+      { name: "title", label: "catalog.app.title.label", type: "text", required: true },
+      { name: "iosUrl", label: "catalog.app.iosUrl.label", type: "url" },
+      { name: "androidUrl", label: "catalog.app.androidUrl.label", type: "url" },
+      { name: "fallbackUrl", label: "catalog.app.fallbackUrl.label", type: "url", wide: true },
     ],
   },
   {
-    id: "barcode2d",
-    label: "Code-barres 2D",
-    tagline: "Encoder des données brutes",
+    id: "barcode",
+    label: "catalog.barcode.label",
+    tagline: "catalog.barcode.tagline",
     family: "advanced",
     encoding: "direct",
-    icon: QrCode,
+    icon: Barcode,
     hue: 0,
     fields: [
       {
-        name: "format",
-        label: "Format",
+        name: "symbology",
+        label: "catalog.barcode.symbology.label",
         type: "select",
-        options: [
-          { value: "text", label: "Texte brut" },
-          { value: "json", label: "JSON" },
-          { value: "hex", label: "Hexadécimal" },
-        ],
+        options: BARCODE_FORMATS.map((format) => ({
+          value: format.id,
+          // Étiquette technique (nom de norme, identique en fr et en) :
+          // le traducteur retombe sur la chaîne brute via son repli.
+          label: format.label as TranslationKey,
+        })),
+        help: "catalog.barcode.symbology.help",
       },
       {
         name: "data",
-        label: "Données",
-        type: "textarea",
-        placeholder: '{"id":"A-1029"}',
+        label: "catalog.barcode.data.label",
+        type: "text",
+        placeholder: "400638133393",
         required: true,
         wide: true,
-        help: "Les données sont encodées telles quelles, sans transformation.",
+        help: "catalog.barcode.data.help",
       },
     ],
   },
@@ -536,8 +586,21 @@ export const QR_TYPES_BY_ID: Record<string, QrType> = Object.fromEntries(
   QR_TYPES.map((type) => [type.id, type]),
 );
 
+/** Identifiants d'anciens types, migrés silencieusement au chargement. */
+const LEGACY_TYPE_IDS: Record<string, string> = {
+  // « barcode2d » encodait des données brutes en QR ; remplacé par le
+  // code-barres 1D dédié (les valeurs saisies sont conservées).
+  barcode2d: "barcode",
+};
+
+/** Résout un identifiant de type, alias legacy inclus ; `null` si inconnu. */
+export function resolveTypeId(id: string): string | null {
+  if (QR_TYPES_BY_ID[id]) return id;
+  return LEGACY_TYPE_IDS[id] ?? null;
+}
+
 export function getQrType(id: string): QrType {
-  return QR_TYPES_BY_ID[id] ?? QR_TYPES[0];
+  return QR_TYPES_BY_ID[resolveTypeId(id) ?? ""] ?? QR_TYPES[0];
 }
 
 export type QrValues = Record<string, string>;
@@ -608,6 +671,8 @@ const SAMPLE_BY_NAME: Record<string, string> = {
   location: "Le Lieu Unique, Nantes",
   startDate: "2026-11-14",
   startTime: "19:30",
+  endDate: "2026-11-14",
+  endTime: "22:00",
   question: "Recommanderiez-vous notre atelier ?",
   links: "Boutique | https://studio-qr.local/boutique\nNewsletter | https://studio-qr.local/newsletter",
   instagram: "https://instagram.com/studio",
@@ -620,8 +685,8 @@ const SAMPLE_BY_NAME: Record<string, string> = {
   artist: "Studio Sessions",
   actionLabel: "Télécharger le catalogue",
   scale: "stars",
-  format: "json",
-  data: '{"atelier":"A-1029","lot":"2026-04"}',
+  symbology: "EAN13",
+  data: "400638133393",
   iosUrl: "https://apps.apple.com/app/id123456789",
   androidUrl: "https://play.google.com/store/apps/details?id=local.studio",
   fallbackUrl: "https://studio-qr.local/app",
@@ -638,7 +703,7 @@ export function sampleValuesFor(type: QrType): QrValues {
     else if (field.type === "time") values[field.name] = "19:30";
     else if (field.type === "select") values[field.name] = field.options?.[0]?.value ?? "";
     else if (field.type === "file") values[field.name] = "";
-    else values[field.name] = `${type.label} — exemple`;
+    else values[field.name] = translate("catalog.sampleValue", { label: translate(type.label) });
   }
   return values;
 }

@@ -4,6 +4,7 @@ import {
   CloudOff,
   LayoutGrid,
   Library,
+  Save,
   Search,
   Shapes,
   Sparkles,
@@ -19,7 +20,8 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { QrGlyph } from "@/components/builder/previews";
-import {
+import { HudLabel, HudStatusDot } from "@/components/shell/hud";
+import { useSettings } from "@/hooks/use-settings";import {
   QR_FAMILIES,
   QR_TYPES,
   formProgress,
@@ -27,77 +29,107 @@ import {
 } from "@/lib/qr-catalog";
 import { DESIGN_TEMPLATES, MOCKUPS } from "@/lib/qr-design";
 import { useBuilder } from "@/lib/builder-store";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type LibraryTab = "types" | "mockups" | "templates";
+
+/** Dernier segment d'un chemin de fichier, pour un affichage compact. */
+function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
 
 /**
  * Panneau de gauche (colonne de référence) : projet courant, galerie de types,
  * mises en situation et modèles de design.
  */
 export function LibraryPanel({ className }: { className?: string }) {
-  const { state, dispatch, type, values, savedLabel } = useBuilder();
+  const { state, dispatch, type, values, savedLabel, dirty } = useBuilder();
+  const { hud, autoSaveFile } = useSettings();
+  const t = useT();
   const [tab, setTab] = useState<LibraryTab>("types");
   const [query, setQuery] = useState("");
   const [family, setFamily] = useState<QrFamily | null>(null);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return QR_TYPES.filter((candidate) => {
+    const matched = QR_TYPES.filter((candidate) => {
       if (family && candidate.family !== family) return false;
       if (!term) return true;
       return (
-        candidate.label.toLowerCase().includes(term) ||
-        candidate.tagline.toLowerCase().includes(term)
+        t(candidate.label).toLowerCase().includes(term) ||
+        t(candidate.tagline).toLowerCase().includes(term)
       );
     });
-  }, [query, family]);
+    // Types actifs d'abord, désactivés (« bientôt ») regroupés à la fin.
+    return matched.sort((a, b) => Number(Boolean(a.comingSoon)) - Number(Boolean(b.comingSoon)));
+  }, [query, family, t]);
 
   const completion = formProgress(type, values);
 
   return (
     <aside
       className={cn(
-        "flex min-h-0 flex-col border-r border-border/60 bg-sidebar/60 backdrop-blur",
+        "flex min-h-0 flex-col border-e border-border/60 bg-sidebar/60 backdrop-blur",
         className,
       )}
-      aria-label="Bibliothèque"
+      aria-label={t("library.aria")}
     >
       <header className="space-y-3 border-b border-border/60 p-3.5">
+        <HudLabel className="block">{t("library.hudProject")}</HudLabel>
         <div className="flex items-start gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/25 to-primary/5 text-primary ring-1 ring-primary/20">
+          <span className="hud-clip-tr relative flex size-9 shrink-0 items-center justify-center bg-linear-to-br from-primary/30 to-primary/5 text-primary ring-1 ring-primary/25">
             <Library className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
             <Input
               value={state.projectName}
-              aria-label="Nom du projet"
+              aria-label={t("library.projectNameAria")}
               onChange={(event) =>
                 dispatch({ type: "setProjectName", name: event.currentTarget.value })
               }
-              className="h-7 border-transparent bg-transparent px-1.5 text-[0.8rem] font-medium focus-visible:border-input"
+              className="h-7 border-transparent bg-transparent px-1.5 font-mono text-[0.8rem] font-medium focus-visible:border-input"
             />
             <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground">
               <CloudOff className="size-3" />
               {savedLabel
-                ? `Brouillon local · enregistré à ${savedLabel}`
-                : "Enregistrement local en cours…"}
+                ? t("library.draftSaved", { saved: savedLabel })
+                : t("library.saving")}
             </p>
+            {state.filePath ? (
+              <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground">
+                <Save className={cn("size-3 shrink-0", dirty && autoSaveFile ? "animate-pulse" : "")} />
+                <span className="truncate">
+                  {dirty
+                    ? autoSaveFile
+                      ? t("library.fileAutoSaving", { file: fileName(state.filePath) })
+                      : t("library.fileUnsaved", { file: fileName(state.filePath) })
+                    : autoSaveFile
+                      ? t("library.fileLinkedAuto", { file: fileName(state.filePath) })
+                      : t("library.fileLinked", { file: fileName(state.filePath) })}
+                </span>
+              </p>
+            ) : (
+              <p className="mt-0.5 flex items-center gap-1.5 px-1.5 text-[0.64rem] text-muted-foreground/70">
+                <Save className="size-3 shrink-0 opacity-60" />
+                <span className="truncate">{t("library.noFile")}</span>
+              </p>
+            )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className="text-[0.6rem]">
+          <Badge variant="outline" className="rounded-none text-[0.6rem]">
             <Shapes className="size-3" />
-            {type.label}
+            {t(type.label)}
           </Badge>
           <span className="ml-auto font-mono text-[0.62rem] text-muted-foreground">
             {completion}%
           </span>
         </div>
-        <div className="h-1 overflow-hidden rounded-full bg-muted">
+        <div className="h-1 overflow-hidden bg-muted">
           <div
-            className="h-full rounded-full bg-linear-to-r from-primary to-primary/60 transition-[width] duration-500 ease-out"
+            className="progress-ticks h-full bg-primary transition-[width] duration-500 ease-out"
             style={{ width: `${completion}%` }}
           />
         </div>
@@ -112,15 +144,15 @@ export function LibraryPanel({ className }: { className?: string }) {
           <TabsList className="h-8 w-full">
             <TabsTrigger value="types" className="gap-1 text-[0.7rem]">
               <LayoutGrid className="size-3.5" />
-              Types
+              {t("library.tabTypes")}
             </TabsTrigger>
             <TabsTrigger value="mockups" className="gap-1 text-[0.7rem]">
               <Sparkles className="size-3.5" />
-              Mockups
+              {t("library.tabMockups")}
             </TabsTrigger>
             <TabsTrigger value="templates" className="gap-1 text-[0.7rem]">
               <Wand2 className="size-3.5" />
-              Modèles
+              {t("library.tabTemplates")}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -128,17 +160,17 @@ export function LibraryPanel({ className }: { className?: string }) {
         <TabsContent value="types" className="flex min-h-0 flex-1 flex-col">
           <div className="shrink-0 space-y-2 px-3.5 pt-3">
             <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute top-1/2 start-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
-                placeholder="Rechercher un type de QR…"
+                placeholder={t("library.searchPlaceholder")}
                 onChange={(event) => setQuery(event.currentTarget.value)}
-                className="h-8 pl-8 text-xs"
+                className="h-8 ps-8 text-xs"
               />
             </div>
             <div className="no-scrollbar -mx-0.5 flex gap-1 overflow-x-auto px-0.5 pb-1">
               <FilterChip active={family === null} onClick={() => setFamily(null)}>
-                Tous
+                {t("library.all")}
               </FilterChip>
               {QR_FAMILIES.map((item) => (
                 <FilterChip
@@ -146,37 +178,47 @@ export function LibraryPanel({ className }: { className?: string }) {
                   active={family === item.id}
                   onClick={() => setFamily(item.id)}
                 >
-                  {item.label}
+                  {t(item.label)}
                 </FilterChip>
               ))}
             </div>
           </div>
 
           <ScrollArea className="mt-2 min-h-0 flex-1">
-            <ul className="space-y-1 px-3.5 pb-6">
+            <ul data-slot="list" className="space-y-1 px-3.5 pb-6">
               {filtered.map((candidate, index) => {
                 const active = candidate.id === state.typeId;
                 return (
                   <li key={candidate.id} style={{ animationDelay: `${Math.min(index, 12) * 18}ms` }}>
                     <button
                       type="button"
+                      disabled={candidate.comingSoon}
                       onClick={() => {
                         dispatch({ type: "setType", typeId: candidate.id });
                         dispatch({ type: "setModule", module: "content" });
                       }}
                       aria-current={active}
+                      aria-disabled={candidate.comingSoon || undefined}
                       className={cn(
-                        "animate-rise group/row flex w-full items-center gap-2.5 rounded-xl border border-transparent p-2 text-left transition-all duration-300 ease-out",
+                        "animate-rise group/row flex w-full items-center gap-2.5 rounded-sm border border-transparent p-2 text-start transition-all duration-300 ease-out",
                         "hover:-translate-y-px hover:border-border/70 hover:bg-accent/50",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
+                        "disabled:pointer-events-none",
                         active
-                          ? "border-primary/40 bg-primary/10"
+                          ? "border-primary/40 bg-primary/10 shadow-[inset_2px_0_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)]"
                           : "bg-card/40",
+                        candidate.comingSoon && "opacity-[0.43] grayscale",
                       )}
                     >
                       <span
+                        aria-hidden="true"
+                        className="w-4 shrink-0 text-right font-mono text-[0.56rem] text-muted-foreground/60"
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span
                         className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
+                          "flex size-8 shrink-0 items-center justify-center rounded-sm transition-colors duration-300",
                           active
                             ? "bg-primary/15 text-primary"
                             : "bg-muted/60 text-muted-foreground group-hover/row:text-foreground",
@@ -186,14 +228,18 @@ export function LibraryPanel({ className }: { className?: string }) {
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[0.78rem] font-medium">
-                          {candidate.label}
+                          {t(candidate.label)}
                         </span>
                         <span className="block truncate text-[0.64rem] text-muted-foreground">
-                          {candidate.tagline}
+                          {t(candidate.tagline)}
                         </span>
                       </span>
                       {active ? (
                         <Check className="size-3.5 shrink-0 text-primary" />
+                      ) : candidate.comingSoon ? (
+                        <span className="shrink-0 font-mono text-[0.58rem] text-muted-foreground/70">
+                          {t("library.comingSoon")}
+                        </span>
                       ) : (
                         <span className="shrink-0 font-mono text-[0.58rem] text-muted-foreground/70">
                           {candidate.encoding === "direct" ? "direct" : "page"}
@@ -205,7 +251,7 @@ export function LibraryPanel({ className }: { className?: string }) {
               })}
               {filtered.length === 0 ? (
                 <li className="px-2 py-8 text-center text-xs text-muted-foreground">
-                  Aucun type ne correspond à cette recherche.
+                  {t("library.noMatch")}
                 </li>
               ) : null}
             </ul>
@@ -216,8 +262,7 @@ export function LibraryPanel({ className }: { className?: string }) {
           <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-2 px-3.5 py-3">
               <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-                Visualisez le rendu dans un contexte réel. Le décor est décoratif ; le code
-                reste identique.
+                {t("library.mockupsHint")}
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {MOCKUPS.map((mockup) => {
@@ -229,11 +274,11 @@ export function LibraryPanel({ className }: { className?: string }) {
                       onClick={() => dispatch({ type: "setMockup", mockupId: mockup.id })}
                       aria-pressed={active}
                       className={cn(
-                        "group/mock animate-rise overflow-hidden rounded-xl border text-left transition-all duration-300 ease-out",
+                        "group/mock animate-rise overflow-hidden rounded-sm border text-start transition-all duration-300 ease-out",
                         "hover:-translate-y-0.5 hover:shadow-md",
                         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
                         active
-                          ? "border-primary/50 ring-2 ring-primary/25"
+                          ? "border-primary/50 shadow-[inset_0_2px_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)] ring-2 ring-primary/25"
                           : "border-border/70",
                       )}
                     >
@@ -250,10 +295,10 @@ export function LibraryPanel({ className }: { className?: string }) {
                       </span>
                       <span className="block space-y-0.5 bg-card/70 p-2">
                         <span className="block truncate text-[0.72rem] font-medium">
-                          {mockup.name}
+                          {t(mockup.name)}
                         </span>
                         <span className="block truncate text-[0.6rem] text-muted-foreground">
-                          {mockup.detail}
+                          {t(mockup.detail)}
                         </span>
                       </span>
                     </button>
@@ -268,8 +313,7 @@ export function LibraryPanel({ className }: { className?: string }) {
           <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-2 px-3.5 py-3">
               <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
-                Appliquez un modèle complet (formes, couleurs, coins, cadre) puis ajustez-le
-                librement.
+                {t("library.templatesHint")}
               </p>
               {DESIGN_TEMPLATES.map((template) => {
                 const active =
@@ -284,14 +328,16 @@ export function LibraryPanel({ className }: { className?: string }) {
                       dispatch({ type: "setModule", module: "style" });
                     }}
                     className={cn(
-                      "group/tpl animate-rise flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-all duration-300 ease-out",
+                      "group/tpl animate-rise flex w-full items-center gap-3 rounded-sm border p-2.5 text-start transition-all duration-300 ease-out",
                       "hover:-translate-y-0.5 hover:border-border hover:shadow-md",
                       "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
-                      active ? "border-primary/50 bg-primary/8" : "border-border/70 bg-card/40",
+                      active
+                        ? "border-primary/50 bg-primary/8 shadow-[inset_2px_0_0_0_color-mix(in_oklch,_var(--primary)_85%,_transparent)]"
+                        : "border-border/70 bg-card/40",
                     )}
                   >
                     <span
-                      className="flex size-12 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset ring-black/10"
+                      className="flex size-12 shrink-0 items-center justify-center rounded-sm ring-1 ring-inset ring-black/10"
                       style={{
                         background: `linear-gradient(135deg, ${template.preview[0]}, ${template.preview[1]})`,
                       }}
@@ -305,7 +351,7 @@ export function LibraryPanel({ className }: { className?: string }) {
                         {template.name}
                       </span>
                       <span className="block truncate text-[0.64rem] text-muted-foreground">
-                        {template.hint}
+                        {t(template.hint)}
                       </span>
                     </span>
                   </button>
@@ -317,12 +363,20 @@ export function LibraryPanel({ className }: { className?: string }) {
       </Tabs>
 
       <footer className="border-t border-border/60 p-3">
-        <div className="flex items-center justify-between text-[0.62rem] text-muted-foreground">
+        <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            Fonctionne hors ligne
+            <HudStatusDot tone="ok" />
+            {hud ? (
+              <span className="text-hud">OFFLINE:OK</span>
+            ) : (
+              <span>{t("library.offline")}</span>
+            )}
           </span>
-          <span className="font-mono">{QR_TYPES.length} types</span>
+          <span>
+            {t("library.activeTypes", {
+              count: QR_TYPES.filter((candidate) => !candidate.comingSoon).length,
+            })}
+          </span>
         </div>
       </footer>
     </aside>

@@ -17,9 +17,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PALETTES } from "@/lib/qr-design";
+import { useT } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/dictionaries/en";
+
+/**
+ * Composants d'interface réutilisables (hors primitives shadcn) : ils ne
+ * dépendent d'aucun store ni d'aucune donnée métier. Un projet hôte peut
+ * copier ce fichier avec `src/components/ui/*` et `@/lib/utils` tel quel.
+ */
 
 const HEX_PATTERN = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
+
+export type ColorSwatch = { name: TranslationKey; value: string };
 
 export function InfoTip({ children }: { children: ReactNode }) {
   return (
@@ -110,15 +119,18 @@ export function ControlStack({
 export function SwatchRail({
   value,
   onChange,
+  swatches,
   columns = 8,
   className,
 }: {
   value: string;
   onChange: (color: string) => void;
+  /** Palette fournie par l'application hôte (aucune palette imposée). */
+  swatches: ColorSwatch[];
   columns?: number;
   className?: string;
 }) {
-  const swatches = PALETTES.flatMap((palette) => palette.colors);
+  const t = useT();
   return (
     <div
       className={cn("grid gap-1.5", className)}
@@ -128,7 +140,7 @@ export function SwatchRail({
         <button
           key={`${swatch.value}-${index}`}
           type="button"
-          title={`${swatch.name} · ${swatch.value}`}
+          title={`${t(swatch.name)} · ${swatch.value}`}
           onClick={() => onChange(swatch.value)}
           style={{ background: swatch.value }}
           className={cn(
@@ -146,12 +158,15 @@ export function ColorControl({
   value,
   onChange,
   label,
+  swatches,
   className,
   compact = false,
 }: {
   value: string;
   onChange: (color: string) => void;
   label: string;
+  /** Palette optionnelle affichée sous le sélecteur natif. */
+  swatches?: ColorSwatch[];
   className?: string;
   compact?: boolean;
 }) {
@@ -211,8 +226,12 @@ export function ColorControl({
             className="h-9 font-mono text-xs uppercase"
           />
         </div>
-        <Separator />
-        <SwatchRail value={value} onChange={onChange} />
+        {swatches?.length ? (
+          <>
+            <Separator />
+            <SwatchRail value={value} onChange={onChange} swatches={swatches} />
+          </>
+        ) : null}
       </PopoverContent>
     </Popover>
   );
@@ -302,6 +321,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       role="tablist"
+      data-slot="segmented-control"
       className={cn(
         "flex items-center gap-0.5 rounded-lg border border-border/70 bg-muted/40 p-0.5",
         className,
@@ -316,6 +336,7 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={active}
             data-active={active}
+            data-slot="segmented-trigger"
             onClick={() => onChange(option.value)}
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-[7px] font-medium whitespace-nowrap transition-all duration-300 ease-out",
@@ -407,6 +428,7 @@ export function GradientEditor({
   onToChange,
   onRotationChange,
   presets,
+  swatches,
 }: {
   from: string;
   to: string;
@@ -414,8 +436,10 @@ export function GradientEditor({
   onFromChange: (color: string) => void;
   onToChange: (color: string) => void;
   onRotationChange: (angle: number) => void;
-  presets: { id: string; name: string; from: string; to: string }[];
+  presets: { id: string; name: TranslationKey; from: string; to: string }[];
+  swatches?: ColorSwatch[];
 }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div
@@ -423,16 +447,26 @@ export function GradientEditor({
         style={{ background: `linear-gradient(${rotation}deg, ${from}, ${to})` }}
       />
       <div className="grid grid-cols-2 gap-2">
-        <ColorControl label="Couleur de départ" value={from} onChange={onFromChange} />
-        <ColorControl label="Couleur d'arrivée" value={to} onChange={onToChange} />
+        <ColorControl
+          label={t("controls.gradient.from")}
+          value={from}
+          onChange={onFromChange}
+          swatches={swatches}
+        />
+        <ColorControl
+          label={t("controls.gradient.to")}
+          value={to}
+          onChange={onToChange}
+          swatches={swatches}
+        />
       </div>
       <div className="flex flex-wrap gap-1.5">
         {presets.map((preset) => (
           <button
             key={preset.id}
             type="button"
-            title={preset.name}
-            aria-label={preset.name}
+            title={t(preset.name)}
+            aria-label={t(preset.name)}
             onClick={() => {
               onFromChange(preset.from);
               onToChange(preset.to);
@@ -479,6 +513,7 @@ export function FileControl({
   hint?: ReactNode;
   preview?: boolean;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -528,9 +563,8 @@ export function FileControl({
             {heading ?? label}
           </span>
           <span className="block text-[0.68rem] text-muted-foreground">
-            {heading ? "Cliquer pour remplacer" : "Déposer un fichier ou parcourir"}
-          </span>
-        </span>
+            {heading ? t("controls.file.replace") : t("controls.file.drop")}
+          </span>        </span>
         <input
           ref={inputRef}
           id={inputId}

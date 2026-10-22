@@ -1,7 +1,9 @@
 import { CheckCircle2, RotateCcw, ShieldAlert, Sparkles, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HudLabel } from "@/components/shell/hud";
 import { useBuilder } from "@/lib/builder-store";
 import { analyzeDesign, type ScanIssue } from "@/lib/qr-analysis";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const LEVEL_STYLES: Record<ScanIssue["level"], { ring: string; text: string; icon: typeof CheckCircle2 }> = {
@@ -13,6 +15,7 @@ const LEVEL_STYLES: Record<ScanIssue["level"], { ring: string; text: string; ico
 /** Carte de contrôle : lisibilité, corrections en un clic (spec 004, FR-9/FR-11). */
 export function TipsCard() {
   const { state, dispatch, patchDesign, payload, progress } = useBuilder();
+  const t = useT();
   const { issues, score } = analyzeDesign(state.design, payload.trim().length > 0 && progress === 100);
   const actionable = issues.filter((issue) => issue.fix);
   const others = issues.filter((issue) => !issue.fix);
@@ -21,7 +24,8 @@ export function TipsCard() {
   const offset = circumference * (1 - score / 100);
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/70 bg-card/60 p-3">
+    <div className="space-y-3 rounded-sm border border-border/70 bg-card/60 p-3">
+      <HudLabel className="block">SYS.DIAG</HudLabel>
       <div className="flex items-center gap-3">
         <div className="relative size-12 shrink-0">
           <svg viewBox="0 0 44 44" className="size-full -rotate-90">
@@ -55,10 +59,10 @@ export function TipsCard() {
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-[0.78rem] font-medium">
             <Sparkles className="size-3.5 text-primary" />
-            Contrôle de lisibilité
+            {t("tips.readability.title")}
           </p>
           <p className="text-[0.66rem] text-muted-foreground">
-            Vérifie contraste, logo et robustesse avant impression.
+            {t("tips.readability.description")}
           </p>
         </div>
       </div>
@@ -71,7 +75,7 @@ export function TipsCard() {
             return (
               <div
                 key={issue.id}
-                className="animate-fade-in space-y-1.5 rounded-xl border border-border/60 bg-background/60 p-2.5"
+                className="animate-fade-in space-y-1.5 rounded-sm border border-border/60 bg-background/60 p-2.5"
               >
                 <div className="flex items-start gap-2">
                   <Icon className={cn("mt-0.5 size-3.5 shrink-0", style.ring)} />
@@ -90,7 +94,7 @@ export function TipsCard() {
                     className="w-full"
                     onClick={() => patchDesign(issue.fix!.patch)}
                   >
-                    {issue.fix.label}
+                    {issue.fix!.label}
                   </Button>
                 ) : null}
               </div>
@@ -100,7 +104,7 @@ export function TipsCard() {
       ) : null}
 
       {others.length > 0 ? (
-        <ul className="space-y-1">
+        <ul data-slot="list" className="space-y-1">
           {others.map((issue) => (
             <li key={issue.id} className="flex items-center gap-1.5 text-[0.64rem] text-muted-foreground">
               <CheckCircle2 className="size-3 shrink-0 text-emerald-500" />
@@ -118,7 +122,7 @@ export function TipsCard() {
         onClick={() => dispatch({ type: "resetDesign" })}
       >
         <RotateCcw />
-        Réinitialiser le design
+        {t("tips.reset")}
       </Button>
     </div>
   );

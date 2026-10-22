@@ -1,7 +1,12 @@
 import QRCodeStyling from "qr-code-styling";
+import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
 import { FRAMES_BY_ID, type ExportFormat, type QrDesign } from "@/lib/qr-design";
 import { frameMetrics } from "@/lib/qr-frame";
 import { designToOptions } from "@/lib/qr-options";
+import { renderBarcodeSvg, type BarcodeDesign } from "@/lib/barcode";
+import { wrapSvg, sanitizeFileName } from "@/lib/qr-svg";
+import { blobToBase64, isTauriRuntime } from "@/lib/tauri";
 
 const MIME: Record<ExportFormat, string> = {
   png: "image/png",
@@ -10,6 +15,9 @@ const MIME: Record<ExportFormat, string> = {
   svg: "image/svg+xml",
 };
 
+/** Entrée code-barres pour l'export : symbologie + habillage 1D. */
+export type BarcodeExportInput = { symbology: string; design: BarcodeDesign };
+
 export type QrExportRequest = {
   design: QrDesign;
   payload: string;
@@ -17,6 +25,8 @@ export type QrExportRequest = {
   qrSize: number;
   format: ExportFormat;
   fileName: string;
+  /** Présent pour le type code-barres 1D (rendu dédié au lieu du QR). */
+  barcode?: BarcodeExportInput;
 };
 
 /** Rendu du QR seul, à la résolution demandée (canvas pour les rasters). */
@@ -44,23 +54,61 @@ async function renderRaster(
   }
 }
 
+/** Rasterise une source SVG (code-barres) en image dessinable. */
+async function imageFromSvg(source: string): Promise<HTMLImageElement> {
+  const image = new Image();
+  image.decoding = "sync";
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("Image illisible"));
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
+  });
+  return image;
+}
+
+/** SVG du code-barres à la taille demandée, ou échec avec message lisible. */
+function barcodeSvgSource(
+  input: BarcodeExportInput,
+  design: QrDesign,
+  payload: string,
+  size: number,
+): string {
+  const { svg, error } = renderBarcodeSvg({
+    value: payload,
+    symbology: input.symbology,
+    design: input.design,
+    background: design.transparentBackground ? null : design.background,
+    size,
+  });
+  if (!svg) throw new Error(error ?? "Rendu du code-barres indisponible");
+  return svg;
+}
+
+/** SVG vectoriel du QR seul, à la résolution demandée. */
+async function qrSvgSource(design: QrDesign, payload: string, size: number): Promise<string> {
+  const instance = new QRCodeStyling(designToOptions(design, payload, size));
+  const raw = await instance.getRawData("svg");
+  if (!(raw instanceof Blob)) throw new Error("Rendu vectoriel indisponible");
+  return await raw.text();
+}
+
 /**
- * Compose le QR et son cadre dans une image unique : le fichier téléchargé est
- * identique à l'aperçu (spec 004, FR-7 — identité pixel près).
+ * Compose le code (QR ou code-barres 1D) et son cadre dans une image unique :
+ * le fichier téléchargé est identique à l'aperçu (spec 004, FR-7).
  */
 export async function renderExportBlob({
   design,
   payload,
   qrSize,
   format,
+  barcode,
 }: Omit<QrExportRequest, "fileName">): Promise<Blob> {
   const frame = FRAMES_BY_ID[design.frameId] ?? FRAMES_BY_ID.none;
 
   if (format === "svg") {
-    const instance = new QRCodeStyling(designToOptions(design, payload, qrSize));
-    const raw = await instance.getRawData("svg");
-    if (!(raw instanceof Blob)) throw new Error("Rendu vectoriel indisponible");
-    const source = await raw.text();
+    const source = barcode
+      ? barcodeSvgSource(barcode, design, payload, qrSize)
+      : await qrSvgSource(design, payload, qrSize);
 
     if (frame.id === "none") return new Blob([source], { type: MIME.svg });
 
@@ -69,7 +117,9 @@ export async function renderExportBlob({
     return new Blob([wrapSvg(inner, design, metrics)], { type: MIME.svg });
   }
 
-  const image = await renderRaster(design, payload, qrSize, format);
+  const image = barcode
+    ? await imageFromSvg(barcodeSvgSource(barcode, design, payload, qrSize))
+    : await renderRaster(design, payload, qrSize, format);
   const metrics = frameMetrics(frame, qrSize, Boolean(design.frameText));
   const canvas = document.createElement("canvas");
   canvas.width = metrics.width;
@@ -163,96 +213,32 @@ async function inlineSvg(source: string, offset: number): Promise<string> {
   return root.outerHTML;
 }
 
-function wrapSvg(
-  inner: string,
-  design: QrDesign,
-  metrics: ReturnType<typeof frameMetrics>,
-): string {
-  const { width, height, radius, borderWidth } = metrics;
-  const frame = metrics.frame;
-  const inset = borderWidth / 2;
-  const parts: string[] = [];
-
-  if (frame.id !== "none") {
-    parts.push(
-      `<rect x="${inset}" y="${inset}" width="${width - borderWidth}" height="${
-        height - borderWidth
-      }" rx="${radius}" fill="${design.frameBackground}" stroke="${
-        borderWidth > 0 ? design.frameColor : "none"
-      }" stroke-width="${borderWidth}"${
-        frame.borderStyle === "dashed" ? ' stroke-dasharray="10 8"' : ""
-      }/>`,
-    );
-  }
-
-  const offset = metrics.pad + borderWidth;
-  const barY = frame.labelPosition === "top" ? offset : offset + metrics.qrSize;
-  const labelTop = barY + metrics.accentBar;
-
-  if (metrics.hasLabel && metrics.accentBar > 0) {
-    parts.push(
-      `<rect x="${offset}" y="${barY}" width="${metrics.qrSize}" height="${metrics.accentBar}" rx="${
-        metrics.accentBar / 2
-      }" fill="${design.frameColor}"/>`,
-    );
-  }
-
-  if (metrics.hasLabel) {
-    const fontSize = Math.max(10, (design.frameTextSize / 280) * metrics.qrSize);
-    parts.push(
-      `<text x="${width / 2}" y="${
-        labelTop + metrics.labelBand / 2
-      }" fill="${design.frameTextColor}" font-family="Manrope Variable, system-ui, sans-serif" font-size="${fontSize}" font-weight="600" text-anchor="middle" dominant-baseline="central">${escapeXml(
-        design.frameText,
-      )}</text>`,
-    );
-  }
-
-  const background =
-    frame.id === "none" && design.transparentBackground
-      ? ""
-      : `<rect width="${width}" height="${height}" rx="${radius}" fill="${
-          frame.id === "none" ? design.background : "none"
-        }"/>`;
-
-  return [
-    '<?xml version="1.0" standalone="no"?>',
-    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-    background,
-    parts.join(""),
-    inner,
-    "</svg>",
-  ].join("");
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function sanitize(name: string): string {
-  return (
-    name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9-_]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .toLowerCase() || "qr-code"
-  );
-}
-
-/** Nom de fichier sûr et sans accent, partagé par l'export et le partage. */
-export function sanitizeFileName(name: string): string {
-  return sanitize(name);
-}
-
-/** Déclenche le téléchargement local du fichier (aucun serveur, spec 005). */
+/** Déclenche le téléchargement local du fichier (aucun serveur, spec 005).
+ *
+ * Sous Tauri, le webview ignore le téléchargement par ancre `blob:` : on passe
+ * par le dialogue natif de sauvegarde puis l'écriture disque. Renvoie le nom du
+ * fichier (navigateur) ou le chemin complet (natif), ou `""` si annulé.
+ */
 export async function exportQr(request: QrExportRequest): Promise<string> {
   const blob = await renderExportBlob(request);
-  const filename = `${sanitize(request.fileName)}.${request.format}`;
+  const filename = `${sanitizeFileName(request.fileName)}.${request.format}`;
+
+  // Shell natif (Tauri) : dialogue système, puis écriture par commande Rust.
+  if (isTauriRuntime()) {
+    const target = await save({
+      title: "Exporter le fichier",
+      defaultPath: filename,
+      filters: [SAVE_FILTERS[request.format]],
+    });
+    if (!target) return "";
+    await invoke("save_export_file", {
+      path: target,
+      dataBase64: await blobToBase64(blob),
+    });
+    return target;
+  }
+
+  // Navigateur : téléchargement par ancre sur URL blob.
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -263,3 +249,11 @@ export async function exportQr(request: QrExportRequest): Promise<string> {
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
   return filename;
 }
+
+/** Filtres du dialogue de sauvegarde natif, par format d'export. */
+const SAVE_FILTERS: Record<ExportFormat, { name: string; extensions: string[] }> = {
+  png: { name: "Image PNG", extensions: ["png"] },
+  jpeg: { name: "Image JPEG", extensions: ["jpeg", "jpg"] },
+  webp: { name: "Image WebP", extensions: ["webp"] },
+  svg: { name: "Dessin vectoriel SVG", extensions: ["svg"] },
+};

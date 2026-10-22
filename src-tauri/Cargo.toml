@@ -1,6 +1,6 @@
 [package]
-name = "qrcode-studio"
-version = "0.1.1"
+name = "Eventages-Qr"
+version = "0.12.1"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2024"
@@ -23,6 +23,24 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
+zip = { version = "9.0.5", default-features = false, features = ["deflate"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp", "tiff"] }
+rqrr = "0.11.0"
+# Repli de décodage après rqrr : codes-barres 1D (EAN, UPC, Code 128…) et
+# matrices 2D exotiques (port Rust de ZXing). La feature « image » est
+# volontairement absente : rxing épingle image =0.25.8, incompatible avec la
+# version ci-dessus — on décode depuis des tampons luma8 bruts, sans la crate.
+rxing = { version = "0.9.3", default-features = false, features = [
+  "decoders",
+  "encoders",
+  "full_barcode_format_support",
+  "encoding_rs",
+] }
+resvg = "0.48.1"
+lopdf = "0.45.0"
+tauri-plugin-dialog = "2.8.3"
+tiny-skia = "0.12"
+usvg = "0.48.1"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
@@ -37,3 +55,6 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+qrcode = "0.14"
