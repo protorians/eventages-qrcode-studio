@@ -107,7 +107,22 @@ jobs:
           projectPath: .
           tagName: ${{ steps.release.outputs.tag }}
           releaseName: 'Eventages QrCode Studio ${{ steps.release.outputs.tag }}'
-          releaseBody: 'Installers for Windows (MSI/NSIS), macOS (universal DMG, Intel + Apple Silicon) and Linux (deb, rpm, AppImage).'
+          releaseBody: |
+            ## Downloads
+
+            The Tauri desktop builds for each platform are attached below as release assets.
+
+            ### Windows
+            - `.msi` (WiX) — system-wide installer
+            - `.exe` (NSIS) — setup wizard
+
+            ### macOS
+            - `.dmg` — universal binary (Intel + Apple Silicon)
+
+            ### Linux
+            - `.deb` — Debian / Ubuntu
+            - `.rpm` — Fedora / RHEL
+            - `.AppImage` — portable, no installation required
           # Tag pushes publish directly; branch pushes and manual runs
           # create a draft release.
           releaseDraft: ${{ !startsWith(github.ref, 'refs/tags/') }}
