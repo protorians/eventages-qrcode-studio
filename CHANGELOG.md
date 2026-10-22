@@ -8,6 +8,18 @@ en `0.x` et le produit n'est pas encore promis stable.
 
 ---
 
+## [0.1.1] — 2026-10-22 · Pipeline de release
+
+Tranche d'infrastructure : aucune évolution fonctionnelle, l'application est inchangée.
+
+### Interne
+- **Pipeline de release desktop** (`.github/workflows/release.yml`) : builds Tauri sur
+  `main`, `beta` et `alpha` (drafts glissants), publication directe à la poussée d'un
+  tag `v*`.
+- Correctif CI : `tauri-action` épinglé sur `v1` (le tag `v2` n'existe pas).
+
+---
+
 ## [0.1.0] — 2026-10-19 · Première version
 
 Tranche initiale de l'application : création de QR personnalisés **100 % locale**, sans
@@ -51,4 +63,5 @@ compte ni serveur — desktop Tauri avec partage système natif.
 
 ---
 
+[0.1.1]: https://example.invalid/releases/v0.1.1
 [0.1.0]: https://example.invalid/releases/v0.1.0
