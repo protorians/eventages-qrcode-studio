@@ -8,6 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ---
 
+## [0.12.2] — 2026-10-23 · chore(ci): tag on alpha/beta, release on main, auto changelog + ver...
+
+### Changes
+
+- chore(ci): tag on alpha/beta, release on main, auto changelog + version bump
+- Release: merge beta into main (#3)
+- release: v0.1.1
+- fix(ci): pin tauri-action to v1 (v2 tag does not exist)
+- chore(ci): add desktop release pipeline (main, beta, alpha triggers)
+- chore(release): v0.1.0
+- chore(agents): skills IA locales de design et d'interface
+- docs: specs produit SpecKit, README et guide agent
+- feat(app): interface complète du studio QR
+- feat(store): modèle de l'atelier et cycle de vie des projets
+- feat(share): partage natif du système pour les QR exportés
+- feat(qr): moteur de génération et d'export des QR codes
+- feat(ui): fondations UI — thème, design tokens shadcn/base-nova et hooks
+- chore: scaffold Tauri 2 + React 19 + TypeScript + Vite
+
+---
+
 ## [0.1.1] — 2026-10-22 · Pipeline de release
 
 Tranche d'infrastructure : aucune évolution fonctionnelle, l'application est inchangée.
