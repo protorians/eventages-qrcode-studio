@@ -1,6 +1,6 @@
 [package]
 name = "Eventages-Qr"
-version = "0.12.1"
+version = "0.12.3"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2024"
@@ -41,6 +41,9 @@ lopdf = "0.45.0"
 tauri-plugin-dialog = "2.8.3"
 tiny-skia = "0.12"
 usvg = "0.48.1"
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
+tauri-plugin-notification = "2.7.0"
+reqwest = { version = "0.13.5", default-features = false, features = ["blocking", "json", "gzip", "rustls"] }
 
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"

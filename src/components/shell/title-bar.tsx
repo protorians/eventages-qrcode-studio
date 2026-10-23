@@ -1,8 +1,16 @@
 import {getCurrentWindow} from "@tauri-apps/api/window";
 import type {LucideIcon} from "lucide-react";
-import {House, Loader2, Minus, Moon, Plus, ScanLine, Settings2, Square, SquareDashedBottom, Sun, X} from "lucide-react";
+import {ArrowDownToLine, House, Loader2, Minus, Moon, MonitorDown, Plus, ScanLine, Settings2, Square, SquareDashedBottom, Sun, X} from "lucide-react";
+import {useState} from "react";
 import type {ReactNode} from "react";
 import {Button} from "@/components/ui/button";
+import {
+    Popover,
+    PopoverContent,
+    PopoverDescription,
+    PopoverTitle,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import {Separator} from "@/components/ui/separator";
 import {
     Tooltip,
@@ -16,6 +24,8 @@ import {useBuilder} from "@/lib/builder-store";
 import {useT} from "@/lib/i18n";
 import {HOME_TAB_ID, IMPORT_TAB_ID, useWorkspace} from "@/lib/workspace-store";
 import {isTauriRuntime, detectOS} from "@/lib/tauri";
+import {formatAssetSize, openReleasePage} from "@/lib/updater";
+import {useUpdater} from "@/hooks/use-updater";
 import {useWindowState} from "@/hooks/use-window-state";
 import {useSettings} from "@/hooks/use-settings";
 import {cn} from "@/lib/utils";
@@ -165,6 +175,11 @@ export function TitleBar(
 
             {/* Actions globales puis contrôles de fenêtre (shell natif uniquement). */}
             <div className="flex items-center gap-0.5 px-2">
+                {/* Pastille de mise à jour : une version plus récente est disponible
+                    sur GitHub (shell natif uniquement). Ouvre un popover explicite —
+                    le téléchargement n'est lancé que sur clic de l'utilisateur,
+                    ou automatiquement si le réglage est activé. */}
+                <UpdateBadge />
                 <Tooltip>
                     <TooltipTrigger
                         render={
@@ -224,6 +239,121 @@ export function TitleBar(
 
             {!isMac ? <WindowControls fullscreen={fullscreen} maximized={maximized}/> : null}
         </header>
+    );
+}
+
+/**
+ * Pastille de mise à jour de la barre de titre : visible en shell natif quand
+ * une release plus récente est publiée sur GitHub. Trois états — disponible
+ * (flèche, pulsation), téléchargement (roue + pourcentage), installateur prêt
+ * (icône paquet). Le clic ouvre un popover explicite : lancer l'installation,
+ * lire les notes de version, ou ignorer pour la session. Hors runtime Tauri
+ * et en l'absence d'information, ne rend rien.
+ */
+function UpdateBadge() {
+    const t = useT();
+    const {status, info, progress, dismissed, installNow, dismiss} = useUpdater();
+    const [open, setOpen] = useState(false);
+    const [busy, setBusy] = useState(false);
+
+    if (!isTauriRuntime() || !info?.available || dismissed) return null;
+
+    const downloading = status === "downloading";
+    const ready = status === "ready";
+    const version = info.latestVersion;
+
+    const launch = async (): Promise<void> => {
+        setBusy(true);
+        try {
+            await installNow();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const label = downloading
+        ? t("titleBar.update.downloading", {version, percent: progress ?? 0})
+        : ready
+            ? t("titleBar.update.ready", {version})
+            : t("titleBar.update.available", {version});
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+                render={
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={label}
+                        className={cn(
+                            "h-7 gap-1.5 rounded-sm px-2 text-[0.68rem] font-medium",
+                            "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
+                            !downloading && "animate-pulse",
+                        )}
+                    >
+                        {downloading ? (
+                            <Loader2 className="size-3.5 animate-spin"/>
+                        ) : ready ? (
+                            <MonitorDown className="size-3.5"/>
+                        ) : (
+                            <ArrowDownToLine className="size-3.5"/>
+                        )}
+                        <span className="hidden max-w-32 truncate sm:inline font-mono">v{version}</span>
+                    </Button>
+                }
+            />
+            <PopoverContent align="end" className="w-80">
+                <PopoverTitle>{t("titleBar.update.title", {version})}</PopoverTitle>
+                {info.assetName ? (
+                    <PopoverDescription className="font-mono text-[0.68rem]">
+                        {info.assetName} · {formatAssetSize(info.assetSize)}
+                    </PopoverDescription>
+                ) : null}
+                <PopoverDescription className="text-[0.68rem] leading-relaxed">
+                    {downloading
+                        ? t("titleBar.update.downloading", {version, percent: progress ?? 0})
+                        : t("titleBar.update.installHint")}
+                </PopoverDescription>
+                <div className="flex items-center gap-2 pt-1">
+                    <Button
+                        type="button"
+                        size="sm"
+                        disabled={downloading || busy}
+                        onClick={() => void launch()}
+                    >
+                        {downloading || busy ? (
+                            <Loader2 className="size-3.5 animate-spin"/>
+                        ) : (
+                            <ArrowDownToLine className="size-3.5"/>
+                        )}
+                        {ready ? t("titleBar.update.launch") : t("titleBar.update.install")}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            void openReleasePage(info.releaseUrl);
+                        }}
+                    >
+                        {t("titleBar.update.whatsNew")}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-auto text-muted-foreground"
+                        onClick={() => {
+                            setOpen(false);
+                            dismiss();
+                        }}
+                    >
+                        {t("titleBar.update.later")}
+                    </Button>
+                </div>
+            </PopoverContent>
+        </Popover>
     );
 }
 

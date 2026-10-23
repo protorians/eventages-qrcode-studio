@@ -5,12 +5,14 @@ mod import;
 mod import_design;
 mod qcp;
 mod share;
+mod updater;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             set_ui_locale,
             share_image,
@@ -20,7 +22,11 @@ pub fn run() {
             save_export_file,
             cli_status,
             cli_install,
-            cli_uninstall
+            cli_uninstall,
+            updater_check,
+            updater_download,
+            updater_install,
+            updater_open_release
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -116,4 +122,38 @@ fn cli_install() -> Result<cli::CliStatus, String> {
 #[tauri::command]
 fn cli_uninstall() -> Result<cli::CliStatus, String> {
     cli::uninstall()
+}
+
+/// Lit la dernière release publiée du dépôt GitHub et la compare à la
+/// version installée (système de mise à jour, src-tauri/src/updater.rs).
+#[tauri::command]
+fn updater_check(app: tauri::AppHandle) -> Result<updater::UpdateCheck, String> {
+    updater::check(&app)
+}
+
+/// Télécharge l'artefact de la release adapté à l'OS courant dans le dossier
+/// temporaire ; la progression est poussée sur le canal. Traitement hors
+/// thread principal : un artefact de plusieurs dizaines de Mo ne doit pas
+/// geler la fenêtre.
+#[tauri::command]
+async fn updater_download(
+    url: String,
+    name: String,
+    on_progress: tauri::ipc::Channel<updater::DownloadProgress>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || updater::download(&url, &name, &on_progress))
+        .await
+        .map_err(|error| i18n::tr("updater.download.failed", &[("error", &error.to_string())]))?
+}
+
+/// Ouvre l'installateur téléchargé avec l'outil natif de l'OS.
+#[tauri::command]
+fn updater_install(path: String) -> Result<(), String> {
+    updater::install(&path)
+}
+
+/// Ouvre la page GitHub de la release (notes de version, autres artefacts).
+#[tauri::command]
+fn updater_open_release(url: String) -> Result<(), String> {
+    updater::open_release(&url)
 }

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import {
   Check,
   Globe,
+  Loader2,
+  MonitorDown,
   Moon,
   Palette,
   RefreshCw,
@@ -33,12 +35,15 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 import { HudLabel, HudReadout, HudStatusDot } from "@/components/shell/hud";
 import {
   COLOR_THEMES,
   useSettings,
   type ColorThemePalette,
 } from "@/hooks/use-settings";
+import { useUpdater } from "@/hooks/use-updater";
+import { GITHUB_REPO } from "@/lib/updater";
 import { useLocale, useT, type TranslationKey } from "@/lib/i18n";
 import { LOCALES, type LocaleId } from "@/lib/i18n/locales";
 import { useBuilder } from "@/lib/builder-store";
@@ -52,7 +57,8 @@ type SettingsSectionId =
   | "language"
   | "project"
   | "data"
-  | "cli";
+  | "cli"
+  | "updates";
 
 const SETTINGS_SECTIONS: {
   id: SettingsSectionId;
@@ -102,6 +108,13 @@ const SETTINGS_SECTIONS: {
     detailKey: "settings.section.cli.detail",
     code: "MOD.06",
     icon: Terminal,
+  },
+  {
+    id: "updates",
+    labelKey: "settings.section.updates.label",
+    detailKey: "settings.section.updates.detail",
+    code: "MOD.07",
+    icon: MonitorDown,
   },
 ];
 
@@ -200,6 +213,7 @@ export function SettingsDialog({
             {section === "project" ? <ProjectSection /> : null}
             {section === "data" ? <DataSection entries={projects.length} /> : null}
             {section === "cli" ? <CliSection /> : null}
+            {section === "updates" ? <UpdatesSection /> : null}
           </div>
         </div>
 
@@ -587,6 +601,139 @@ function scriptTail(path: string | null): string {
   if (!path) return "—";
   const parts = path.split(/[\\/]/);
   return parts.slice(-2).join("/");
+}
+
+/** Version lissée à trois décimales pour la ritournelle HUD (0.12.2). */
+function versionText(tag: string | null | undefined, fallback: string): string {
+  const stripped = (tag ?? "").replace(/^v/, "").trim();
+  return stripped || fallback;
+}
+
+/**
+ * Mises à jour : réglage d'installation automatique (désactivé par défaut)
+ * et vérification manuelle depuis les releases GitHub du dépôt. Le statut
+ * est partagé avec la barre de titre via le UpdaterProvider (use-updater.tsx)
+ * : vérifier ici met aussi à jour la pastille là-bas, et réciproquement.
+ */
+function UpdatesSection() {
+  const { autoUpdate, setAutoUpdate } = useSettings();
+  const { status, info, error, progress, checkForUpdate } = useUpdater();
+  const t = useT();
+  const busy = status === "checking" || status === "downloading";
+
+  // Ligne de statut unique, recyclée par tous les états du système.
+  const statusLine = (() => {
+    switch (status) {
+      case "checking":
+        return t("settings.updates.status.checking");
+      case "downloading":
+        return t("settings.updates.status.downloading", {
+          version: info?.latestVersion ?? "",
+          percent: progress ?? 0,
+        });
+      case "available":
+        return t("settings.updates.status.available", {
+          version: info?.latestVersion ?? "",
+          file: info?.assetName ?? "",
+        });
+      case "ready":
+        return t("settings.updates.status.ready", { file: info?.assetName ?? "" });
+      case "error":
+        return t("settings.updates.status.error", { error: error ?? "" });
+      case "uptodate":
+        return t("settings.updates.status.uptodate", {
+          version: info?.currentVersion ?? "",
+        });
+      default:
+        return t("settings.updates.status.idle");
+    }
+  })();
+
+  return (
+    <div className="space-y-5">
+      <section className="space-y-3">
+        <HudLabel className="block">{t("settings.updates.heading")}</HudLabel>
+        <SettingRow
+          icon={MonitorDown}
+          title={t("settings.updates.auto.title")}
+          description={t("settings.updates.auto.description")}
+        >
+          <Switch
+            checked={autoUpdate}
+            onCheckedChange={setAutoUpdate}
+            aria-label={t("settings.updates.auto.aria")}
+          />
+        </SettingRow>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <HudLabel className="block">{t("settings.updates.check.heading")}</HudLabel>
+        <SettingRow
+          icon={status === "downloading" ? Loader2 : RefreshCw}
+          title={t("settings.updates.check.title")}
+          description={t("settings.updates.check.description")}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy || status === "ready"}
+            onClick={() => void checkForUpdate()}
+          >
+            {status === "downloading" ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3.5" />
+            )}
+            {t("settings.updates.action.check")}
+          </Button>
+        </SettingRow>
+
+        {status === "downloading" && progress !== null ? (
+          <Progress value={progress} aria-label={t("settings.updates.status.downloading", { version: info?.latestVersion ?? "", percent: progress })} />
+        ) : null}
+
+        {error ? (
+          <Alert variant="destructive" className="border-destructive/40">
+            <TriangleAlert className="size-4" />
+            <AlertDescription className="text-[0.7rem] leading-snug">{statusLine}</AlertDescription>
+          </Alert>
+        ) : (
+          <p className="flex items-center gap-2 text-[0.68rem] leading-snug text-muted-foreground">
+            <HudStatusDot tone={status === "available" || status === "ready" ? "primary" : "ok"} />
+            <span className="min-w-0">{statusLine}</span>
+          </p>
+        )}
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <HudLabel className="block">{t("settings.updates.detail.heading")}</HudLabel>
+        <div className="hud-clip-tr space-y-2 bg-muted/40 p-3 ring-1 ring-border/60">
+          <p className="flex items-center gap-1.5 text-[0.72rem] font-medium">
+            <MonitorDown className="size-3.5 shrink-0 text-primary" />
+            {t("settings.updates.source.title")}
+          </p>
+          <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+            {t("settings.updates.sourceNote", { repo: GITHUB_REPO })}
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            <HudReadout label="INSTALLED" value={versionText(info?.tag, info?.currentVersion ?? "—")} />
+            <HudReadout label="LATEST" value={versionText(info?.tag, info?.latestVersion ?? "—")} />
+            <HudReadout label="ARTIFACT" value={info?.assetName ?? "—"} />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+          <p className="text-[0.68rem] leading-relaxed text-muted-foreground">
+            {t("settings.updates.autoHint")}
+          </p>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 /** Ligne de réglage : icône crantée + intitulé + description + contrôle. */

@@ -8,6 +8,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ---
 
+## [0.12.3] — 2026-10-23 · In-app updater and tagged release channels
+
+### Added
+
+- **In-app updates** (`src-tauri/src/updater.rs`, `src/lib/updater.ts`,
+  `src/hooks/use-updater.tsx`): the desktop app checks the latest published
+  release of the GitHub repository shortly after startup (a single request
+  to `releases/latest`, no tracking) and compares it with the installed
+  version. When a newer version exists, a badge appears in the title bar —
+  pulsing arrow while available, progress wheel while downloading, package
+  icon when the installer is ready — opening a popover to install, read the
+  release notes or dismiss for the session. The download streams the
+  matching platform artifact into the temp folder with a progress channel
+  (blocking work kept off the main thread), then the native OS tool opens
+  the installer; system notifications follow the same states (available,
+  ready, failure). A new "Updates" settings section (MOD.07) exposes a
+  manual check and an automatic-installation toggle (off by default), with
+  the state shared with the title bar through `UpdaterProvider`.
+- **Translated updater strings** across the eleven UI languages — settings,
+  title bar and notifications (`src/lib/i18n/dictionaries/`).
+
+### Changed
+
+- **Release pipeline** (`.github/workflows/release.yml`): pushes to `alpha`
+  and `beta` now publish a tagged pre-release (`v{version}-alpha` /
+  `v{version}-beta`) instead of rolling `build-*` drafts; pushes to `main`
+  publish the `v{version}` release directly. Every release body starts with
+  the matching `## [x.y.z]` section of `CHANGELOG.md`.
+- Versions aligned to 0.12.3 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`, `Cargo.lock`).
+
 ## [0.12.2] — 2026-10-23 · CI release pipeline fix
 
 ### Fixed

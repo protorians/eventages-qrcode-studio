@@ -29,6 +29,7 @@ import {
 import { SettingsDialog } from "@/components/shell/settings-dialog";
 import { useIsDesktop, useIsTablet } from "@/hooks/use-media-query";
 import { SettingsProvider, useSettings } from "@/hooks/use-settings";
+import { UpdaterProvider } from "@/hooks/use-updater";
 import { I18nProvider, useLocale, useT } from "@/lib/i18n";
 import { isRtlLocale } from "@/lib/i18n/locales";
 
@@ -161,13 +162,15 @@ function App() {
   return (
     <SettingsProvider>
       <I18nProvider>
-        <TooltipProvider delay={200}>
-          <BuilderProvider>
-            <WorkspaceProvider>
-              <WorkspaceShell />
-            </WorkspaceProvider>
-          </BuilderProvider>
-        </TooltipProvider>
+        <UpdaterProvider>
+          <TooltipProvider delay={200}>
+            <BuilderProvider>
+              <WorkspaceProvider>
+                <WorkspaceShell />
+              </WorkspaceProvider>
+            </BuilderProvider>
+          </TooltipProvider>
+        </UpdaterProvider>
       </I18nProvider>
     </SettingsProvider>
   );

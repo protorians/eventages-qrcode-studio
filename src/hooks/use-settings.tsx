@@ -311,6 +311,8 @@ type SettingsState = {
   animations: boolean;
   /** Enregistrement auto du fichier .qrd lié après stabilisation des modifications. */
   autoSaveFile: boolean;
+  /** Mises à jour automatiques : téléchargement + installation sans demander. */
+  autoUpdate: boolean;
   /** Langue de l'interface (dictionnaires src/lib/i18n/dictionaries). */
   language: LocaleId;
 };
@@ -322,6 +324,7 @@ type SettingsContextValue = SettingsState & {
   setHud: (hud: boolean) => void;
   setAnimations: (animations: boolean) => void;
   setAutoSaveFile: (autoSaveFile: boolean) => void;
+  setAutoUpdate: (autoUpdate: boolean) => void;
   setLanguage: (language: LocaleId) => void;
 };
 
@@ -335,6 +338,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   hud: true,
   animations: true,
   autoSaveFile: true,
+  autoUpdate: false,
   language: DEFAULT_LOCALE,
 };
 
@@ -374,6 +378,12 @@ function readInitialSettings(): SettingsState {
           typeof parsed.autoSaveFile === "boolean"
             ? parsed.autoSaveFile
             : DEFAULT_SETTINGS.autoSaveFile,
+        // Nouveau réglage (pas encore persisté) : volontairement désactivé
+        // — l'installation silencieuse doit être un choix explicite.
+        autoUpdate:
+          typeof parsed.autoUpdate === "boolean"
+            ? parsed.autoUpdate
+            : DEFAULT_SETTINGS.autoUpdate,
         language: isLocale(parsed.language)
           ? parsed.language
           : fallbackLanguage(),
@@ -475,6 +485,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHud: (hud) => setSettings((current) => ({ ...current, hud })),
       setAnimations: (animations) => setSettings((current) => ({ ...current, animations })),
       setAutoSaveFile: (autoSaveFile) => setSettings((current) => ({ ...current, autoSaveFile })),
+      setAutoUpdate: (autoUpdate) => setSettings((current) => ({ ...current, autoUpdate })),
       setLanguage: (language) => setSettings((current) => ({ ...current, language })),
     }),
     [settings, toggleMode],
