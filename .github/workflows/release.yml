@@ -7,17 +7,34 @@
 #   - Linux:   .deb, .rpm and .AppImage
 #
 # Triggers:
-#   - Push a `v*` tag (e.g. `git tag v0.9.0 && git push origin v0.9.0`)
-#     -> the release is published directly and assets are downloadable.
-#   - Push to `main`, `beta` or `alpha`
-#     -> a DRAFT release named after the branch (e.g. `build-beta`) is
-#        created/updated with the installers, for testing only.
+#   - Push to `alpha` or `beta`
+#     -> the `prepare` job bumps the version (prerelease suffix
+#        `-alpha.N` / `-beta.N`), generates the changelog entry from the
+#        commits since the last tag, updates `CHANGELOG.md`, commits and
+#        pushes the tag `v<version>`. The build job then publishes a
+#        PRERELEASE for that tag.
+#   - Push to `main`
+#     -> same as above but the version becomes stable (prerelease suffix
+#        stripped, or patch bumped): the build job publishes the final
+#        RELEASE for that tag.
+#   - Push a `v*` tag manually (e.g. `git tag v0.9.0 && git push origin v0.9.0`)
+#     -> `prepare` is skipped and the release is published directly with
+#        assets attached.
 #   - Run manually from the Actions tab (`workflow_dispatch`)
 #     -> a DRAFT release is created so the pipeline can be tested without
 #        publishing; publish the draft from the Releases page when happy.
 #
-# The tag name defaults to the `version` field of `src-tauri/tauri.conf.json`
-# for manual runs. Keep that version in sync with `package.json` / `Cargo.toml`.
+# Versioning rules (prepare job):
+#   - `main`  : stable release — the `-alpha.N`/`-beta.N` suffix is stripped
+#               (e.g. `0.12.1-beta.4` -> `0.12.1`); if the tag already
+#               exists, the patch is bumped until a free one is found.
+#   - `beta`  : patch bump + `-beta.<run_number>` (e.g. `0.12.1` -> `0.12.2-beta.17`).
+#   - `alpha` : patch bump + `-alpha.<run_number>`.
+# The new version is written to `package.json`, `src-tauri/tauri.conf.json`
+# and `src-tauri/Cargo.toml`. Keep them aligned.
+#
+# Note: pushes made with the default GITHUB_TOKEN do not retrigger
+# workflows, so committing/tagging in `prepare` cannot loop.
 
 name: Release desktop builds
 
@@ -34,8 +51,178 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  prepare:
+    # Version bump + changelog + tag. Only for branch pushes; tag pushes
+    # and manual runs build the existing ref directly.
+    if: startsWith(github.ref, 'refs/heads/')
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="${GITHUB_REF#refs/heads/}"
+          version=$(grep -m1 '"version"' src-tauri/tauri.conf.json | sed 's/.*"version" *: *"\([^"]*\)".*/\1/')
+          base="${version%%-*}"
+
+          new_version=$(python3 - "$base" "$branch" "$GITHUB_RUN_NUMBER" <<'PY'
+          import subprocess, sys
+
+          base, branch, run_number = sys.argv[1], sys.argv[2], int(sys.argv[3])
+
+          def tag_exists(tag):
+              return subprocess.run(
+                  ["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+                  capture_output=True
+              ).returncode == 0
+
+          major, minor, patch = (int(p) for p in base.split("."))
+          if branch == "main":
+              # Stable release: prerelease suffix is dropped; if the tag is
+              # already taken, keep patch-bumping until a free one is found.
+              while True:
+                  candidate = f"{major}.{minor}.{patch}"
+                  if not tag_exists(f"v{candidate}"):
+                      break
+                  patch += 1
+              print(candidate)
+          else:
+              while True:
+                  patch += 1
+                  candidate = f"{major}.{minor}.{patch}-{branch}.{run_number}"
+                  if not tag_exists(f"v{candidate}"):
+                      break
+              print(candidate)
+          PY
+          )
+
+          echo "version=${new_version}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${new_version}" >> "$GITHUB_OUTPUT"
+          echo "Next version for ${branch}: ${version} -> ${new_version}"
+
+      - name: Bump version files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "${{ steps.version.outputs.version }}" <<'PY'
+          import json, re, sys
+
+          version = sys.argv[1]
+
+          def bump_json(path):
+              with open(path, encoding="utf-8") as f:
+                  text = f.read()
+              text, n = re.subn(r'("version"\s*:\s*")[^"]*(")', rf'\g<1>{version}\g<2>', text, count=1)
+              assert n == 1, f"no version field found in {path}"
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(text)
+
+          bump_json("package.json")
+          bump_json("src-tauri/tauri.conf.json")
+
+          with open("src-tauri/Cargo.toml", encoding="utf-8") as f:
+              text = f.read()
+          section = text.split("[package]", 1)
+          assert len(section) == 2, "[package] section not found in Cargo.toml"
+          head, rest = section
+          rest, n = re.subn(r'^version = "[^"]*"', f'version = "{version}"', rest, count=1, flags=re.M)
+          assert n == 1, "no version field found in Cargo.toml [package]"
+          with open("src-tauri/Cargo.toml", "w", encoding="utf-8") as f:
+              f.write(head + "[package]" + rest)
+
+          print(f"versions bumped to {version}")
+          PY
+
+      - name: Update CHANGELOG.md
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "${{ steps.version.outputs.version }}" <<'PY'
+          import re, subprocess, sys, datetime
+
+          version = sys.argv[1]
+
+          last_tag = subprocess.run(
+              ["git", "describe", "--tags", "--abbrev=0"],
+              capture_output=True, text=True
+          ).stdout.strip()
+
+          rev_range = f"{last_tag}..HEAD" if last_tag else "HEAD"
+          log = subprocess.run(
+              ["git", "log", "--no-merges", "--pretty=format:- %s", rev_range],
+              capture_output=True, text=True
+          ).stdout.strip()
+
+          # Fallback when only merge commits exist in the range.
+          if not log:
+              log = subprocess.run(
+                  ["git", "log", "--pretty=format:- %s", rev_range],
+                  capture_output=True, text=True
+              ).stdout.strip()
+          if not log:
+              log = f"- Release {version}"
+
+          # Keep entries readable when a release spans many commits.
+          lines = log.splitlines()
+          if len(lines) > 30:
+              log = "\n".join(lines[:30]) + f"\n- ... ({len(lines) - 30} additional commits)"
+
+          first_subject = log.splitlines()[0].lstrip("- ").strip()
+          title = first_subject if first_subject else f"Release {version}"
+          if len(title) > 70:
+              title = title[:67].rstrip() + "..."
+
+          today = datetime.date.today().isoformat()
+          entry = (
+              f"## [{version}] — {today} · {title}\n\n"
+              f"### Changes\n\n"
+              f"{log}\n\n"
+              f"---\n"
+          )
+
+          with open("CHANGELOG.md", encoding="utf-8") as f:
+              changelog = f.read()
+
+          marker = "\n---\n"
+          idx = changelog.find(marker)
+          assert idx != -1, "no '---' separator found in CHANGELOG.md"
+          insert_at = idx + len(marker)
+
+          updated = changelog[:insert_at] + "\n" + entry + "\n" + changelog[insert_at:].lstrip("\n")
+          with open("CHANGELOG.md", "w", encoding="utf-8") as f:
+              f.write(updated)
+
+          print(f"CHANGELOG.md updated with entry [{version}] — {today} · {title}")
+          PY
+
+      - name: Commit, tag and push
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml CHANGELOG.md
+          git commit -m "chore(release): ${tag}"
+          git tag "${tag}"
+          git push origin "HEAD:${GITHUB_REF#refs/heads/}" "${tag}"
+
   build:
+    needs: prepare
+    if: ${{ always() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +240,10 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # On branch pushes, build the commit that `prepare` just tagged;
+          # otherwise build the pushed tag / current ref as-is.
+          ref: ${{ needs.prepare.outputs.tag || github.ref }}
 
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
@@ -85,22 +276,41 @@ jobs:
             refs/tags/*)
               tag="${GITHUB_REF#refs/tags/}"
               ;;
-            refs/heads/*)
-              # Branch pushes (main/beta/alpha) produce a rolling draft
-              # release named after the branch so published releases stay
-              # tag-only.
-              tag="build-${GITHUB_REF#refs/heads/}"
-              ;;
             *)
-              # Extraction native en Bash de la version dans tauri.conf.json (évite d'avoir besoin de Node.js)
-              version=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | awk -F '"' '{print $4}')
-              tag="v${version}"
+              # Branch push: use the tag created by the `prepare` job.
+              tag="${{ needs.prepare.outputs.tag }}"
+              if [ -z "$tag" ]; then
+                # Manual run fallback: version from tauri.conf.json.
+                version=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | awk -F '"' '{print $4}')
+                tag="v${version}"
+              fi
               ;;
           esac
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
+      - name: Extract changelog for the release body
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.release.outputs.tag }}"
+          version="${tag#v}"
+          body=$(awk -v ver="$version" '
+            !found && $0 ~ ("^## \\[" ver "\\]") { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$body" ]; then
+            body="Release ${version}"
+          fi
+          {
+            echo "body<<EOF_NOTES"
+            printf '%s\n' "$body"
+            echo "EOF_NOTES"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and upload release assets
-        uses: tauri-apps/tauri-action@v2
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -108,6 +318,8 @@ jobs:
           tagName: ${{ steps.release.outputs.tag }}
           releaseName: 'Eventages QrCode Studio ${{ steps.release.outputs.tag }}'
           releaseBody: |
+            ${{ steps.notes.outputs.body }}
+
             ## Downloads
 
             The Tauri desktop builds for each platform are attached below as release assets.
@@ -123,9 +335,9 @@ jobs:
             - `.deb` — Debian / Ubuntu
             - `.rpm` — Fedora / RHEL
             - `.AppImage` — portable, no installation required
-          # Tag pushes publish directly; branch pushes and manual runs
-          # create a draft release.
-          releaseDraft: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          prerelease: false
+          # Manual runs create a draft release; tag and branch pushes publish
+          # directly (alpha/beta tags land as prereleases, main as release).
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' }}
+          prerelease: ${{ contains(steps.release.outputs.tag, '-') }}
           generateReleaseNotes: true
           args: ${{ matrix.args }}
