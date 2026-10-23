@@ -1,6 +1,6 @@
 [package]
 name = "Eventages-Qr"
-version = "0.12.2"
+version = "0.12.1"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2024"

@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "Eventages-Qr"
-version = "0.12.2"
+version = "0.12.1"
 dependencies = [
  "base64 0.22.1",
  "image",
