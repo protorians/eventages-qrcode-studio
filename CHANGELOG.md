@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ---
 
+## [0.12.2] — 2026-10-23 · CI release pipeline fix
+
+### Fixed
+
+- **Release pipeline could not start**: `tauri-apps/tauri-action` was
+  referenced as `@v2`, but that tag does not exist on the action
+  (latest major is `v1`), so every run failed in "Prepare all required
+  actions" with `unable to find version v2`. The pin is restored to
+  `@v1` (`.github/workflows/release.yml`).
+
+### Changed
+
+- Versions aligned to 0.12.2 (`package.json`, `tauri.conf.json`,
+  `Cargo.toml`, `Cargo.lock`).
+
 ## [0.1.1] — 2026-10-22 · Pipeline de release
 
 Tranche d'infrastructure : aucune évolution fonctionnelle, l'application est inchangée.
